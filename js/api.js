@@ -809,7 +809,31 @@ const DataAPI = (() => {
             }
         });
 
-        results.success = !!(results.etf || results.bond || results.valuation || results.fearGreed || results.aShareBreadth);
+        // ========== A股市场温度兜底：当A股广度获取失败时，用CNN Fear & Greed替代 ==========
+        // 逻辑：A股非交易时段（夜间/周末/节假日）涨跌家数为0且无缓存 → aShareBreadth为null
+        //       此时尝试获取CNN Fear & Greed作为兜底（美股交易时段更长、数据更稳定）
+        //       这比硬编码50的默认值更有参考价值
+        if (promiseLabels.includes('aShareBreadth') && !results.aShareBreadth) {
+            console.info('A股市场广度不可用，尝试CNN Fear & Greed兜底...');
+            try {
+                const fgResult = await fetchFearGreedIndex();
+                if (fgResult && fgResult.score !== null && !isNaN(fgResult.score)) {
+                    // 标记为CNN兜底数据
+                    results.fearGreedFallback = {
+                        ...fgResult,
+                        source: `CNN Fear & Greed (A股广度兜底)`,
+                        isFallbackForAShare: true
+                    };
+                    console.info(`CNN F&G兜底成功: ${fgResult.score}分 (${fgResult.rating})`);
+                } else {
+                    console.warn('CNN F&G兜底也失败');
+                }
+            } catch (e) {
+                console.warn('CNN F&G兜底请求异常:', e.message);
+            }
+        }
+
+        results.success = !!(results.etf || results.bond || results.valuation || results.fearGreed || results.aShareBreadth || results.fearGreedFallback);
         return results;
     }
 
@@ -877,6 +901,7 @@ const DataAPI = (() => {
             const rawYield = parseFloat(target.yeild) || parseFloat(target.dy) || 0;
             const rawPePct = parseFloat(target.pe_percentile) || 0;
             const rawPbPct = parseFloat(target.pb_percentile) || 0;
+            const rawRoe = parseFloat(target.roe) || 0;
 
             return {
                 pe: parseFloat(target.pe) || 0,
@@ -884,7 +909,7 @@ const DataAPI = (() => {
                 dividendYield: rawYield > 1 ? rawYield : rawYield * 100,
                 pePercentile: rawPePct > 1 ? rawPePct : rawPePct * 100,
                 pbPercentile: rawPbPct > 1 ? rawPbPct : rawPbPct * 100,
-                roe: parseFloat(target.roe) || 0,
+                roe: rawRoe > 1 ? rawRoe : rawRoe * 100,  // 蛋卷返回0-1格式，转为百分比
                 tradeDate: target.date || '',
                 evaluationStatus: target.eva_type || '',
                 source: `蛋卷基金-${target.name}`,
@@ -977,6 +1002,23 @@ const DataAPI = (() => {
                 data.marketTempAutoFetched = true;
                 data.marketTempSource = 'a_share_breadth'; // 标记来源
                 data.dataSource.push('市场温度:自动(A股涨跌广度' + (apiData.aShareBreadth.isCachedFallback ? '·缓存' : '') + ')');
+                data.autoFetched = true;
+            }
+        }
+
+        // 填入CNN Fear & Greed兜底数据（当A股市场广度不可用时的替代方案）
+        if (apiData.fearGreedFallback && !data.marketTempAutoFetched) {
+            const tempVal = fearGreedToMarketTemp(apiData.fearGreedFallback.score);
+            if (tempVal !== null && !isNaN(tempVal)) {
+                data.marketTemp = tempVal;
+                data.fearGreedRating = apiData.fearGreedFallback.rating;
+                data.fearGreedPrevious = apiData.fearGreedFallback.previous;
+                data.fearGreedOneWeekAgo = apiData.fearGreedFallback.oneWeekAgo;
+                data.fearGreedOneMonthAgo = apiData.fearGreedFallback.oneMonthAgo;
+                data.fearGreedSource = apiData.fearGreedFallback.source || 'CNN Fear & Greed (兜底)';
+                data.marketTempAutoFetched = true;
+                data.marketTempSource = 'cnn_fallback'; // 标记为CNN兜底来源
+                data.dataSource.push('市场温度:自动(CNN F&G兜底·A股广度不可用)');
                 data.autoFetched = true;
             }
         }

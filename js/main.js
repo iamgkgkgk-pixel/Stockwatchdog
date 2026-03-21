@@ -745,8 +745,12 @@ const App = (() => {
                             detailText += ` <span style="font-size:10px;color:#ffc107;">📦 最近交易日</span>`;
                         }
                     } else if (data.marketTempSource === 'cnn') {
-                        // CNN F&G来源
+                        // CNN F&G来源（美股/港股原生）
                         ratingText = data.fearGreedRating ? ` · ${data.fearGreedRating}` : '';
+                    } else if (data.marketTempSource === 'cnn_fallback') {
+                        // CNN F&G兜底来源（A股广度不可用时替代）
+                        ratingText = data.fearGreedRating ? ` · ${data.fearGreedRating}` : '';
+                        detailText = ` <span style="font-size:10px;color:#ffc107;">🔄 CNN兜底(A股广度不可用)</span>`;
                     } else {
                         ratingText = data.fearGreedRating ? ` · ${data.fearGreedRating}` : (data.aShareBreadthRating ? ` · ${data.aShareBreadthRating}` : '');
                     }
@@ -951,6 +955,8 @@ const App = (() => {
                 } else if (apiData && apiData.aShareBreadth) {
                     const cachedTag = apiData.aShareBreadth.isCachedFallback ? '📦缓存' : '';
                     sources.push(`市场温度✅(A股广度:${apiData.aShareBreadth.score}${cachedTag}·涨${apiData.aShareBreadth.upCount}/跌${apiData.aShareBreadth.downCount})`);
+                } else if (apiData && apiData.fearGreedFallback) {
+                    sources.push(`市场温度✅(CNN F&G兜底:${apiData.fearGreedFallback.score.toFixed(0)}·A股广度不可用)`);
                 } else {
                     sources.push('市场温度:默认⚠️');
                 }

@@ -94,8 +94,8 @@ const ETF_CONFIG = (() => {
             trackIndex: {
                 name: '科创创业50指数',
                 code: '931643',
-                danjuanCode: null,
-                danjuanName: null,
+                danjuanCode: 'SH000688',
+                danjuanName: '科创50',
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
             useBondSpread: false,
@@ -119,7 +119,7 @@ const ETF_CONFIG = (() => {
             trackIndex: {
                 name: '创业板50指数',
                 code: '399673',
-                danjuanCode: null,
+                danjuanCode: 'SZ399006',
                 danjuanName: '创业板',
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
@@ -144,7 +144,7 @@ const ETF_CONFIG = (() => {
             trackIndex: {
                 name: '国证自由现金流指数',
                 code: '980092',
-                danjuanCode: null,
+                danjuanCode: null,   // 蛋卷基金暂无此指数
                 danjuanName: null,
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_VALUE,
@@ -169,7 +169,7 @@ const ETF_CONFIG = (() => {
             trackIndex: {
                 name: 'S&P 500',
                 code: 'SPX',
-                danjuanCode: null,
+                danjuanCode: 'SP500',
                 danjuanName: '标普500',
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_US,
@@ -194,8 +194,8 @@ const ETF_CONFIG = (() => {
             trackIndex: {
                 name: 'Nasdaq 100',
                 code: 'NDX',
-                danjuanCode: null,
-                danjuanName: '纳斯达克100',
+                danjuanCode: 'NDX',
+                danjuanName: '纳指100',
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_US,
             useBondSpread: false,
@@ -219,7 +219,7 @@ const ETF_CONFIG = (() => {
             trackIndex: {
                 name: '恒生科技指数',
                 code: 'HSTECH',
-                danjuanCode: null,
+                danjuanCode: 'HKHSTECH',
                 danjuanName: '恒生科技',
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_HK,
@@ -268,8 +268,8 @@ const ETF_CONFIG = (() => {
             icon: '🏥',
             trackIndex: {
                 name: '沪深300医药卫生指数',
-                code: null,
-                danjuanCode: null,
+                code: 'SH000978',
+                danjuanCode: 'SH000978',
                 danjuanName: '医药100',
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_PHARMA,
