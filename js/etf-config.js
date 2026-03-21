@@ -1,0 +1,1047 @@
+/**
+ * etf-config.js - 多ETF配置中心（巴菲特多维度估值体系）
+ * 
+ * 设计哲学（致敬巴菲特/芒格）：
+ *   1. "用合理的价格买入优质公司" — 不止看PE，还要看PB、股息率、安全边际
+ *   2. "在别人恐惧时贪婪，在别人贪婪时恐惧" — 引入市场情绪/温度维度
+ *   3. "永远不要亏损" — 安全边际 = 股息率 vs 无风险收益率
+ *   4. "了解你的能力圈" — 每类ETF使用差异化权重
+ *   5. "宏观经济很重要" — 经济周期判断辅助择时
+ * 
+ * 多维度评分体系 (总分 0-100)：
+ *   维度A: 估值分位 — PE/PB历史分位（越低越好）
+ *   维度B: 安全边际 — 股息率/FCF收益率 vs 国债收益率
+ *   维度C: 盈利质量 — ROE、盈利趋势
+ *   维度D: 市场温度 — 整体市场情绪（可选手动输入）
+ * 
+ * ETF分类（12只）：
+ *   A股价值：红利低波(512890), 自由现金流(159201)
+ *   A股宽基：沪深300ETF(510300)
+ *   A股成长：科创创业50(159781), 创业板50(159949)
+ *   A股行业：医药ETF(512010)
+ *   美股QDII：标普500(513650), 纳指(513110)
+ *   港股QDII：恒生科技(513180)
+ *   避险资产：黄金ETF(518850)
+ *   固收债券：十年国债ETF(511260)
+ *   商品期货：豆粕ETF(159985)
+ */
+
+const ETF_CONFIG = (() => {
+    'use strict';
+
+    // ========== ETF类型枚举 ==========
+    const ETF_TYPE = {
+        A_SHARE_INDEX: 'a_share_index',
+        US_SHARE_INDEX: 'us_share_index',
+        HK_SHARE_INDEX: 'hk_share_index',
+        COMMODITY: 'commodity',
+        SMART_BETA: 'smart_beta',
+        GOLD: 'gold',
+        BOND: 'bond',
+    };
+
+    // ========== 估值方法枚举 ==========
+    const VALUATION_METHOD = {
+        MULTI_DIM_VALUE: 'multi_dim_value',
+        MULTI_DIM_GROWTH: 'multi_dim_growth',
+        MULTI_DIM_US: 'multi_dim_us',
+        MULTI_DIM_HK: 'multi_dim_hk',
+        MULTI_DIM_BROAD: 'multi_dim_broad',
+        MULTI_DIM_PHARMA: 'multi_dim_pharma',
+        TREND_FOLLOW: 'trend_follow',
+        BOND_YIELD: 'bond_yield',
+    };
+
+    // ========== 所有ETF配置（12只）==========
+    const ETF_LIST = [
+        // ===== 1. 红利低波ETF =====
+        {
+            id: 'dividend-low-vol',
+            code: '512890',
+            name: '红利低波ETF',
+            shortName: '红利低波',
+            fullName: '华泰柏瑞红利低波动ETF',
+            type: ETF_TYPE.SMART_BETA,
+            market: 'SH',
+            secid: '1.512890',
+            color: '#28a745',
+            icon: '💰',
+            trackIndex: {
+                name: '中证红利低波动指数',
+                code: 'CSIH30269',
+                danjuanCode: 'CSIH30269',
+                danjuanName: '红利低波',
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_VALUE,
+            useBondSpread: true,
+            description: '跟踪中证红利低波动指数，选取股息率高且波动率低的50只股票。巴菲特理念：稳定现金流回报+安全边际。',
+            signalRules: 'buffett_value',
+            dimWeights: { valuation: 35, safety: 30, quality: 15, sentiment: 20 },
+        },
+
+        // ===== 2. 科创创业ETF =====
+        {
+            id: 'sci-tech-50',
+            code: '159781',
+            name: '科创创业ETF',
+            shortName: '科创创业',
+            fullName: '科创创业ETF易方达',
+            type: ETF_TYPE.A_SHARE_INDEX,
+            market: 'SZ',
+            secid: '0.159781',
+            color: '#e040fb',
+            icon: '🚀',
+            trackIndex: {
+                name: '科创创业50指数',
+                code: '931643',
+                danjuanCode: null,
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
+            useBondSpread: false,
+            description: '从科创板和创业板选取市值最大的50只新兴产业上市公司。芒格理念：以合理价格买入优质成长公司。',
+            signalRules: 'buffett_growth',
+            dimWeights: { valuation: 45, safety: 10, quality: 20, sentiment: 25 },
+        },
+
+        // ===== 3. 创业板50ETF =====
+        {
+            id: 'gem-50',
+            code: '159949',
+            name: '创业板50ETF',
+            shortName: '创业板50',
+            fullName: '创业板50ETF华安',
+            type: ETF_TYPE.A_SHARE_INDEX,
+            market: 'SZ',
+            secid: '0.159949',
+            color: '#ff6f00',
+            icon: '🔥',
+            trackIndex: {
+                name: '创业板50指数',
+                code: '399673',
+                danjuanCode: null,
+                danjuanName: '创业板',
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
+            useBondSpread: false,
+            description: '创业板流动性最好的50只股票，聚焦新能源+信息技术+医药。',
+            signalRules: 'buffett_growth',
+            dimWeights: { valuation: 45, safety: 10, quality: 20, sentiment: 25 },
+        },
+
+        // ===== 4. 自由现金流ETF =====
+        {
+            id: 'free-cashflow',
+            code: '159201',
+            name: '自由现金流ETF',
+            shortName: '自由现金流',
+            fullName: '华夏国证自由现金流ETF',
+            type: ETF_TYPE.SMART_BETA,
+            market: 'SZ',
+            secid: '0.159201',
+            color: '#00bcd4',
+            icon: '💎',
+            trackIndex: {
+                name: '国证自由现金流指数',
+                code: '980092',
+                danjuanCode: null,
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_VALUE,
+            useBondSpread: true,
+            description: '跟踪国证自由现金流指数。巴菲特核心：企业的内在价值等于未来自由现金流的折现值。',
+            signalRules: 'buffett_value',
+            dimWeights: { valuation: 30, safety: 35, quality: 20, sentiment: 15 },
+        },
+
+        // ===== 5. 标普500ETF =====
+        {
+            id: 'sp500-cn',
+            code: '513650',
+            name: '标普500ETF',
+            shortName: '标普500',
+            fullName: '标普500ETF南方(QDII)',
+            type: ETF_TYPE.US_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.513650',
+            color: '#1976d2',
+            icon: '🇺🇸',
+            trackIndex: {
+                name: 'S&P 500',
+                code: 'SPX',
+                danjuanCode: null,
+                danjuanName: '标普500',
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_US,
+            useBondSpread: false,
+            description: '跟踪标普500指数。巴菲特遗嘱配置：90%资金投入标普500。美股长牛但需警惕周期性高估。',
+            signalRules: 'buffett_us',
+            dimWeights: { valuation: 40, safety: 15, quality: 15, sentiment: 30 },
+        },
+
+        // ===== 6. 纳指ETF =====
+        {
+            id: 'nasdaq100-cn',
+            code: '513110',
+            name: '纳指ETF',
+            shortName: '纳指100',
+            fullName: '纳指ETF华泰柏瑞(QDII)',
+            type: ETF_TYPE.US_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.513110',
+            color: '#7c4dff',
+            icon: '💜',
+            trackIndex: {
+                name: 'Nasdaq 100',
+                code: 'NDX',
+                danjuanCode: null,
+                danjuanName: '纳斯达克100',
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_US,
+            useBondSpread: false,
+            description: '跟踪纳斯达克100指数，聚焦美国科技龙头。成长股PE波动大，需更关注市场情绪。',
+            signalRules: 'buffett_us_growth',
+            dimWeights: { valuation: 35, safety: 10, quality: 20, sentiment: 35 },
+        },
+
+        // ===== 7. 恒生科技指数ETF =====
+        {
+            id: 'hstech',
+            code: '513180',
+            name: '恒生科技指数ETF',
+            shortName: '恒生科技',
+            fullName: '恒生科技指数ETF',
+            type: ETF_TYPE.HK_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.513180',
+            color: '#d32f2f',
+            icon: '🇭🇰',
+            trackIndex: {
+                name: '恒生科技指数',
+                code: 'HSTECH',
+                danjuanCode: null,
+                danjuanName: '恒生科技',
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_HK,
+            useBondSpread: false,
+            description: '跟踪恒生科技指数，覆盖腾讯/阿里/美团等互联网龙头。港股受AH溢价和资金面影响大。',
+            signalRules: 'buffett_hk',
+            dimWeights: { valuation: 40, safety: 10, quality: 20, sentiment: 30 },
+        },
+
+        // ===== 8. 沪深300ETF =====
+        {
+            id: 'csi300',
+            code: '510300',
+            name: '沪深300ETF',
+            shortName: '沪深300',
+            fullName: '华泰柏瑞沪深300ETF',
+            type: ETF_TYPE.A_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.510300',
+            color: '#2962ff',
+            icon: '🏛️',
+            trackIndex: {
+                name: '沪深300指数',
+                code: 'SH000300',
+                danjuanCode: 'SH000300',
+                danjuanName: '沪深300',
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_BROAD,
+            useBondSpread: true,
+            description: 'A股的"锚"，由沪深两市规模最大、流动性最好的300只股票组成。巴菲特遗嘱配置理念的A股版本。规模3300+亿，费率0.2%，全市场最低。',
+            signalRules: 'buffett_broad',
+            dimWeights: { valuation: 35, safety: 25, quality: 15, sentiment: 25 },
+        },
+
+        // ===== 9. 医药ETF =====
+        {
+            id: 'pharma',
+            code: '512010',
+            name: '医药ETF',
+            shortName: '医药',
+            fullName: '易方达沪深300医药ETF',
+            type: ETF_TYPE.A_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.512010',
+            color: '#e91e63',
+            icon: '🏥',
+            trackIndex: {
+                name: '沪深300医药卫生指数',
+                code: null,
+                danjuanCode: null,
+                danjuanName: '医药100',
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_PHARMA,
+            useBondSpread: false,
+            description: '跟踪沪深300医药卫生指数，覆盖恒瑞医药、药明康德、迈瑞医疗等龙头。独立周期防御型行业，与科技/消费相关性低。规模170亿，医药ETF中最大。',
+            signalRules: 'buffett_pharma',
+            dimWeights: { valuation: 40, safety: 15, quality: 25, sentiment: 20 },
+        },
+
+        // ===== 10. 黄金ETF =====
+        {
+            id: 'gold',
+            code: '518850',
+            name: '黄金ETF',
+            shortName: '黄金',
+            fullName: '华夏黄金ETF',
+            type: ETF_TYPE.GOLD,
+            market: 'SH',
+            secid: '1.518850',
+            color: '#ffc107',
+            icon: '🥇',
+            trackIndex: {
+                name: '上海金Au99.99',
+                code: 'AU9999',
+                danjuanCode: null,
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.TREND_FOLLOW,
+            useBondSpread: false,
+            description: '跟踪上海黄金交易所Au99.99现货黄金。全球公认避险+抗通胀资产，与股市负相关。费率0.2%为全市场黄金ETF最低。',
+            signalRules: 'gold_trend',
+            dimWeights: { valuation: 0, safety: 0, quality: 0, sentiment: 100 },
+        },
+
+        // ===== 11. 十年国债ETF =====
+        {
+            id: 'bond-10y',
+            code: '511260',
+            name: '十年国债ETF',
+            shortName: '十年国债',
+            fullName: '国泰上证10年期国债ETF',
+            type: ETF_TYPE.BOND,
+            market: 'SH',
+            secid: '1.511260',
+            color: '#607d8b',
+            icon: '🏦',
+            trackIndex: {
+                name: '上证10年期国债指数',
+                code: 'CN10Y',
+                danjuanCode: null,
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.BOND_YIELD,
+            useBondSpread: true,
+            description: '跟踪上证10年期国债指数。股债跷跷板效应的核心标的——国债大涨=市场避险升温=股市可能有机会。费率0.2%，规模165亿。',
+            signalRules: 'bond_yield',
+            dimWeights: { valuation: 40, safety: 30, quality: 0, sentiment: 30 },
+        },
+
+        // ===== 12. 豆粕ETF =====
+        {
+            id: 'soybean-meal',
+            code: '159985',
+            name: '豆粕ETF',
+            shortName: '豆粕',
+            fullName: '华夏饲料豆粕期货ETF',
+            type: ETF_TYPE.COMMODITY,
+            market: 'SZ',
+            secid: '0.159985',
+            color: '#8d6e63',
+            icon: '🌾',
+            trackIndex: {
+                name: '大商所豆粕期货价格指数',
+                code: 'DCEMIDX',
+                danjuanCode: null,
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.TREND_FOLLOW,
+            useBondSpread: false,
+            description: '商品期货ETF，跟踪大商所豆粕期货价格指数，与股市低相关性。商品无估值，纯趋势跟踪。',
+            signalRules: 'commodity_trend',
+            dimWeights: { valuation: 0, safety: 0, quality: 0, sentiment: 100 },
+        },
+    ];
+
+    // ========== 巴菲特多维度信号规则集合 ==========
+    //
+    // 核心理念：每个维度打0-100分，按ETF特性加权后得到总分
+    // 总分 ≥ 80 → 强烈买入    总分 70-80 → 买入
+    // 总分 55-70 → 持有/加仓   总分 40-55 → 持有观望
+    // 总分 25-40 → 减仓预警    总分 15-25 → 卖出
+    // 总分 < 15 → 强烈卖出/过热
+    //
+    // 维度得分（统一方向：分越高=越值得买）：
+    //   估值分 = 100 - PE分位（PE越低 → 越便宜 → 分越高）
+    //   安全边际分 = f(股息率 - 国债收益率)
+    //   盈利质量分 = f(ROE, PB合理性)
+    //   情绪温度分 = 100 - 市场温度（市场越冷 → 越是买点）
+
+    const SIGNAL_RULES = {
+
+        // ========== A股价值类（红利低波、自由现金流）==========
+        buffett_value: {
+            name: '巴菲特多维估值法（价值型）',
+            dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
+            dimensionNames: {
+                valuation: '📊 估值分位',
+                safety: '🛡️ 安全边际',
+                quality: '💪 盈利质量',
+                sentiment: '🌡️ A股涨跌广度',
+            },
+            gauges: [
+                { id: 'composite', title: '综合投资评分', colorReverse: false },
+            ],
+            calcScores: (data, weights) => {
+                const scores = {};
+
+                // 维度A: 估值（PE分位越低=越便宜=分越高）
+                if (data.pePercentile !== null && data.pePercentile !== undefined) {
+                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
+                } else {
+                    scores.valuation = null;
+                }
+
+                // 维度B: 安全边际（股息率 - 国债收益率）
+                if (data.dividendYield > 0 && data.bondYield > 0) {
+                    const spread = data.dividendYield - data.bondYield;
+                    scores.safety = Math.max(0, Math.min(100, 40 + spread * 20));
+                } else if (data.spreadPercentile !== null && data.spreadPercentile !== undefined) {
+                    scores.safety = data.spreadPercentile;
+                } else {
+                    scores.safety = null;
+                }
+
+                // 维度C: 盈利质量（ROE + PB修正）
+                if (data.roe > 0) {
+                    const roeScore = Math.max(0, Math.min(100, data.roe * 5 + 15));
+                    let pbAdj = 0;
+                    if (data.pb > 0) {
+                        pbAdj = data.pb < 1 ? 15 : (data.pb > 3 ? -15 : 0);
+                    }
+                    scores.quality = Math.max(0, Math.min(100, roeScore + pbAdj));
+                } else {
+                    scores.quality = 50;
+                }
+
+                // 维度D: 市场温度（手动输入，越高=越热=情绪分越低）
+                if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
+                    scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
+                } else {
+                    scores.sentiment = 50;
+                }
+
+                return scores;
+            },
+            generate: (data, weights) => {
+                const w = weights || { valuation: 35, safety: 30, quality: 15, sentiment: 20 };
+                const scores = SIGNAL_RULES.buffett_value.calcScores(data, w);
+
+                let totalWeight = 0, weightedSum = 0;
+                Object.keys(w).forEach(dim => {
+                    if (scores[dim] !== null && scores[dim] !== undefined) {
+                        weightedSum += scores[dim] * w[dim];
+                        totalWeight += w[dim];
+                    }
+                });
+
+                if (totalWeight === 0) return 'DATA_INCOMPLETE';
+                const total = weightedSum / totalWeight;
+
+                // 硬性极端规则
+                if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
+                if (scores.valuation !== null && scores.valuation <= 10 && scores.safety !== null && scores.safety <= 20) return 'STRONG_SELL';
+
+                if (total >= 80) return 'STRONG_BUY';
+                if (total >= 70) return 'BUY';
+                if (total >= 55) return 'HOLD_ADD';
+                if (total >= 40) return 'HOLD';
+                if (total >= 25) return 'REDUCE_WARN';
+                if (total >= 15) return 'SELL';
+                return 'STRONG_SELL';
+            }
+        },
+
+        // ========== A股成长类 ==========
+        buffett_growth: {
+            name: '芒格成长价值法（成长型）',
+            dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
+            dimensionNames: {
+                valuation: '📊 PE估值分位',
+                safety: '🛡️ 相对安全性',
+                quality: '💪 盈利成长性',
+                sentiment: '🌡️ A股涨跌广度',
+            },
+            gauges: [
+                { id: 'composite', title: '综合投资评分', colorReverse: false },
+            ],
+            calcScores: (data, weights) => {
+                const scores = {};
+
+                if (data.pePercentile !== null && data.pePercentile !== undefined) {
+                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
+                } else {
+                    scores.valuation = null;
+                }
+
+                // 成长股用PE绝对值判断安全性
+                if (data.pe > 0) {
+                    scores.safety = Math.max(0, Math.min(100, 130 - data.pe * 2));
+                } else {
+                    scores.safety = null;
+                }
+
+                if (data.roe > 0) {
+                    scores.quality = Math.max(0, Math.min(100, data.roe * 5 + 10));
+                } else {
+                    scores.quality = 50;
+                }
+
+                if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
+                    scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
+                } else {
+                    scores.sentiment = 50;
+                }
+
+                return scores;
+            },
+            generate: (data, weights) => {
+                const w = weights || { valuation: 45, safety: 10, quality: 20, sentiment: 25 };
+                const scores = SIGNAL_RULES.buffett_growth.calcScores(data, w);
+
+                let totalWeight = 0, weightedSum = 0;
+                Object.keys(w).forEach(dim => {
+                    if (scores[dim] !== null && scores[dim] !== undefined) {
+                        weightedSum += scores[dim] * w[dim];
+                        totalWeight += w[dim];
+                    }
+                });
+
+                if (totalWeight === 0) return 'DATA_INCOMPLETE';
+                const total = weightedSum / totalWeight;
+
+                if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
+
+                if (total >= 80) return 'STRONG_BUY';
+                if (total >= 70) return 'BUY';
+                if (total >= 55) return 'HOLD_ADD';
+                if (total >= 40) return 'HOLD';
+                if (total >= 25) return 'REDUCE_WARN';
+                if (total >= 15) return 'SELL';
+                return 'STRONG_SELL';
+            }
+        },
+
+        // ========== 美股宽基（标普500 QDII）==========
+        buffett_us: {
+            name: '巴菲特美股估值法（宽基）',
+            dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
+            dimensionNames: {
+                valuation: '📊 PE估值分位',
+                safety: '🛡️ 盈利收益率vs国债',
+                quality: '💪 盈利质量',
+                sentiment: '🌡️ 恐惧贪婪指数',
+            },
+            gauges: [
+                { id: 'composite', title: '综合投资评分', colorReverse: false },
+            ],
+            calcScores: (data, weights) => {
+                const scores = {};
+
+                if (data.pePercentile !== null && data.pePercentile !== undefined) {
+                    const rawScore = 100 - data.pePercentile;
+                    scores.valuation = Math.max(0, Math.min(100, rawScore * 0.9 + 10));
+                } else {
+                    scores.valuation = null;
+                }
+
+                // 盈利收益率(E/P) vs 美债
+                if (data.pe > 0) {
+                    const earningsYield = (1 / data.pe) * 100;
+                    const bondY = data.bondYield || 4.2;
+                    const gap = earningsYield - bondY;
+                    scores.safety = Math.max(0, Math.min(100, 50 + gap * 15));
+                } else {
+                    scores.safety = null;
+                }
+
+                scores.quality = 60; // 标普500本身质量高
+
+                if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
+                    scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
+                } else {
+                    scores.sentiment = 50;
+                }
+
+                return scores;
+            },
+            generate: (data, weights) => {
+                const w = weights || { valuation: 40, safety: 15, quality: 15, sentiment: 30 };
+                const scores = SIGNAL_RULES.buffett_us.calcScores(data, w);
+
+                let totalWeight = 0, weightedSum = 0;
+                Object.keys(w).forEach(dim => {
+                    if (scores[dim] !== null && scores[dim] !== undefined) {
+                        weightedSum += scores[dim] * w[dim];
+                        totalWeight += w[dim];
+                    }
+                });
+
+                if (totalWeight === 0) return 'DATA_INCOMPLETE';
+                const total = weightedSum / totalWeight;
+
+                if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
+
+                if (total >= 80) return 'STRONG_BUY';
+                if (total >= 70) return 'BUY';
+                if (total >= 55) return 'HOLD_ADD';
+                if (total >= 40) return 'HOLD';
+                if (total >= 25) return 'REDUCE_WARN';
+                if (total >= 15) return 'SELL';
+                return 'STRONG_SELL';
+            }
+        },
+
+        // ========== 美股成长（纳指100 QDII）==========
+        buffett_us_growth: {
+            name: '芒格美股成长法（科技）',
+            dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
+            dimensionNames: {
+                valuation: '📊 PE估值分位',
+                safety: '🛡️ 盈利收益率',
+                quality: '💪 创新溢价',
+                sentiment: '🌡️ 恐惧贪婪指数',
+            },
+            gauges: [
+                { id: 'composite', title: '综合投资评分', colorReverse: false },
+            ],
+            calcScores: (data, weights) => {
+                const scores = {};
+
+                if (data.pePercentile !== null && data.pePercentile !== undefined) {
+                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
+                } else {
+                    scores.valuation = null;
+                }
+
+                if (data.pe > 0) {
+                    const earningsYield = (1 / data.pe) * 100;
+                    scores.safety = Math.max(0, Math.min(100, earningsYield * 18));
+                } else {
+                    scores.safety = null;
+                }
+
+                scores.quality = 65; // 纳指创新力强
+
+                if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
+                    scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
+                } else {
+                    scores.sentiment = 50;
+                }
+
+                return scores;
+            },
+            generate: (data, weights) => {
+                const w = weights || { valuation: 35, safety: 10, quality: 20, sentiment: 35 };
+                const scores = SIGNAL_RULES.buffett_us_growth.calcScores(data, w);
+
+                let totalWeight = 0, weightedSum = 0;
+                Object.keys(w).forEach(dim => {
+                    if (scores[dim] !== null && scores[dim] !== undefined) {
+                        weightedSum += scores[dim] * w[dim];
+                        totalWeight += w[dim];
+                    }
+                });
+
+                if (totalWeight === 0) return 'DATA_INCOMPLETE';
+                const total = weightedSum / totalWeight;
+
+                if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
+
+                if (total >= 80) return 'STRONG_BUY';
+                if (total >= 70) return 'BUY';
+                if (total >= 55) return 'HOLD_ADD';
+                if (total >= 40) return 'HOLD';
+                if (total >= 25) return 'REDUCE_WARN';
+                if (total >= 15) return 'SELL';
+                return 'STRONG_SELL';
+            }
+        },
+
+        // ========== 港股科技 ==========
+        buffett_hk: {
+            name: '港股多维估值法',
+            dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
+            dimensionNames: {
+                valuation: '📊 PE估值分位',
+                safety: '🛡️ 绝对估值水平',
+                quality: '💪 盈利质量',
+                sentiment: '🌡️ 恐惧贪婪(参考美股)',
+            },
+            gauges: [
+                { id: 'composite', title: '综合投资评分', colorReverse: false },
+            ],
+            calcScores: (data, weights) => {
+                const scores = {};
+
+                if (data.pePercentile !== null && data.pePercentile !== undefined) {
+                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
+                } else {
+                    scores.valuation = null;
+                }
+
+                if (data.pe > 0) {
+                    scores.safety = Math.max(0, Math.min(100, 120 - data.pe * 2.5));
+                } else {
+                    scores.safety = null;
+                }
+
+                if (data.roe > 0) {
+                    scores.quality = Math.max(0, Math.min(100, data.roe * 4 + 20));
+                } else {
+                    scores.quality = 50;
+                }
+
+                if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
+                    scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
+                } else {
+                    scores.sentiment = 50;
+                }
+
+                return scores;
+            },
+            generate: (data, weights) => {
+                const w = weights || { valuation: 40, safety: 10, quality: 20, sentiment: 30 };
+                const scores = SIGNAL_RULES.buffett_hk.calcScores(data, w);
+
+                let totalWeight = 0, weightedSum = 0;
+                Object.keys(w).forEach(dim => {
+                    if (scores[dim] !== null && scores[dim] !== undefined) {
+                        weightedSum += scores[dim] * w[dim];
+                        totalWeight += w[dim];
+                    }
+                });
+
+                if (totalWeight === 0) return 'DATA_INCOMPLETE';
+                const total = weightedSum / totalWeight;
+
+                if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
+
+                if (total >= 80) return 'STRONG_BUY';
+                if (total >= 70) return 'BUY';
+                if (total >= 55) return 'HOLD_ADD';
+                if (total >= 40) return 'HOLD';
+                if (total >= 25) return 'REDUCE_WARN';
+                if (total >= 15) return 'SELL';
+                return 'STRONG_SELL';
+            }
+        },
+
+        // ========== A股宽基（沪深300）==========
+        buffett_broad: {
+            name: '巴菲特多维估值法（宽基）',
+            dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
+            dimensionNames: {
+                valuation: '📊 PE估值分位',
+                safety: '🛡️ 股债利差',
+                quality: '💪 盈利质量(ROE)',
+                sentiment: '🌡️ A股涨跌广度',
+            },
+            gauges: [
+                { id: 'composite', title: '综合投资评分', colorReverse: false },
+            ],
+            calcScores: (data, weights) => {
+                const scores = {};
+
+                // 维度A: 估值（PE分位越低=越便宜=分越高）
+                if (data.pePercentile !== null && data.pePercentile !== undefined) {
+                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
+                } else {
+                    scores.valuation = null;
+                }
+
+                // 维度B: 股债利差（股息率 - 国债收益率）
+                if (data.dividendYield > 0 && data.bondYield > 0) {
+                    const spread = data.dividendYield - data.bondYield;
+                    // 沪深300股息率约2-3%，国债约1.5-2.5%
+                    scores.safety = Math.max(0, Math.min(100, 45 + spread * 18));
+                } else if (data.spreadPercentile !== null && data.spreadPercentile !== undefined) {
+                    scores.safety = data.spreadPercentile;
+                } else {
+                    scores.safety = null;
+                }
+
+                // 维度C: 盈利质量（ROE + PB修正）
+                if (data.roe > 0) {
+                    const roeScore = Math.max(0, Math.min(100, data.roe * 5 + 10));
+                    let pbAdj = 0;
+                    if (data.pb > 0) {
+                        pbAdj = data.pb < 1.2 ? 10 : (data.pb > 2.5 ? -10 : 0);
+                    }
+                    scores.quality = Math.max(0, Math.min(100, roeScore + pbAdj));
+                } else {
+                    scores.quality = 55; // 沪深300整体盈利质量中等偏上
+                }
+
+                // 维度D: 市场温度
+                if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
+                    scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
+                } else {
+                    scores.sentiment = 50;
+                }
+
+                return scores;
+            },
+            generate: (data, weights) => {
+                const w = weights || { valuation: 35, safety: 25, quality: 15, sentiment: 25 };
+                const scores = SIGNAL_RULES.buffett_broad.calcScores(data, w);
+
+                let totalWeight = 0, weightedSum = 0;
+                Object.keys(w).forEach(dim => {
+                    if (scores[dim] !== null && scores[dim] !== undefined) {
+                        weightedSum += scores[dim] * w[dim];
+                        totalWeight += w[dim];
+                    }
+                });
+
+                if (totalWeight === 0) return 'DATA_INCOMPLETE';
+                const total = weightedSum / totalWeight;
+
+                if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
+                if (scores.valuation !== null && scores.valuation <= 10 && scores.safety !== null && scores.safety <= 20) return 'STRONG_SELL';
+
+                if (total >= 80) return 'STRONG_BUY';
+                if (total >= 70) return 'BUY';
+                if (total >= 55) return 'HOLD_ADD';
+                if (total >= 40) return 'HOLD';
+                if (total >= 25) return 'REDUCE_WARN';
+                if (total >= 15) return 'SELL';
+                return 'STRONG_SELL';
+            }
+        },
+
+        // ========== A股医药行业 ==========
+        buffett_pharma: {
+            name: '医药行业多维估值法',
+            dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
+            dimensionNames: {
+                valuation: '📊 PE估值分位',
+                safety: '🛡️ 绝对估值水平',
+                quality: '💪 盈利质量(ROE)',
+                sentiment: '🌡️ A股涨跌广度',
+            },
+            gauges: [
+                { id: 'composite', title: '综合投资评分', colorReverse: false },
+            ],
+            calcScores: (data, weights) => {
+                const scores = {};
+
+                // 维度A: 估值（PE分位）
+                if (data.pePercentile !== null && data.pePercentile !== undefined) {
+                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
+                } else {
+                    scores.valuation = null;
+                }
+
+                // 维度B: 绝对PE安全性（医药PE正常区间20-50）
+                if (data.pe > 0) {
+                    // PE<20极低估, PE=35中性, PE>60高估
+                    scores.safety = Math.max(0, Math.min(100, 140 - data.pe * 2.5));
+                } else {
+                    scores.safety = null;
+                }
+
+                // 维度C: 盈利质量（医药ROE一般10-20%）
+                if (data.roe > 0) {
+                    scores.quality = Math.max(0, Math.min(100, data.roe * 5 + 10));
+                } else {
+                    scores.quality = 50; // 医药行业平均盈利中等
+                }
+
+                // 维度D: 市场温度
+                if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
+                    scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
+                } else {
+                    scores.sentiment = 50;
+                }
+
+                return scores;
+            },
+            generate: (data, weights) => {
+                const w = weights || { valuation: 40, safety: 15, quality: 25, sentiment: 20 };
+                const scores = SIGNAL_RULES.buffett_pharma.calcScores(data, w);
+
+                let totalWeight = 0, weightedSum = 0;
+                Object.keys(w).forEach(dim => {
+                    if (scores[dim] !== null && scores[dim] !== undefined) {
+                        weightedSum += scores[dim] * w[dim];
+                        totalWeight += w[dim];
+                    }
+                });
+
+                if (totalWeight === 0) return 'DATA_INCOMPLETE';
+                const total = weightedSum / totalWeight;
+
+                if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
+
+                if (total >= 80) return 'STRONG_BUY';
+                if (total >= 70) return 'BUY';
+                if (total >= 55) return 'HOLD_ADD';
+                if (total >= 40) return 'HOLD';
+                if (total >= 25) return 'REDUCE_WARN';
+                if (total >= 15) return 'SELL';
+                return 'STRONG_SELL';
+            }
+        },
+
+        // ========== 黄金趋势跟踪 ==========
+        gold_trend: {
+            name: '趋势跟踪法（黄金避险）',
+            dimensions: ['sentiment'],
+            dimensionNames: {
+                sentiment: '📈 趋势强度',
+            },
+            gauges: [
+                { id: 'trend', title: '趋势强度', colorReverse: false },
+            ],
+            calcScores: (data) => {
+                const scores = {};
+                if (data.trendScore !== null && data.trendScore !== undefined) {
+                    scores.sentiment = 100 - data.trendScore;
+                } else {
+                    scores.sentiment = null;
+                }
+                return scores;
+            },
+            generate: (data) => {
+                const trend = data.trendScore;
+                if (trend === null || trend === undefined) return 'DATA_INCOMPLETE';
+                if (trend >= 85) return 'OVERHEAT';
+                if (trend >= 70) return 'REDUCE_WARN';
+                if (trend >= 50 && trend < 70) return 'HOLD';
+                if (trend >= 30 && trend < 50) return 'HOLD_ADD';
+                if (trend >= 15 && trend < 30) return 'BUY';
+                if (trend < 15) return 'STRONG_BUY';
+                return 'NEUTRAL';
+            }
+        },
+
+        // ========== 国债收益率择时（债券ETF）==========
+        bond_yield: {
+            name: '国债收益率择时法',
+            dimensions: ['valuation', 'safety', 'sentiment'],
+            dimensionNames: {
+                valuation: '📊 收益率水平',
+                safety: '🛡️ 利率趋势',
+                sentiment: '🌡️ A股广度(反向)',
+            },
+            gauges: [
+                { id: 'composite', title: '综合配置评分', colorReverse: false },
+            ],
+            calcScores: (data, weights) => {
+                const scores = {};
+
+                // 维度A: 国债收益率水平（收益率越高=债券越便宜=分越高）
+                // 中国10Y国债收益率历史区间1.5%-4.5%，2.5%为近年中枢
+                if (data.bondYield > 0) {
+                    // 收益率2.5%以上为偏高（债券便宜），1.5%以下为偏低（债券贵）
+                    const yieldScore = Math.max(0, Math.min(100, (data.bondYield - 1.0) * 50));
+                    scores.valuation = yieldScore;
+                } else {
+                    scores.valuation = null;
+                }
+
+                // 维度B: 利率趋势（手动输入趋势分数，或基于近期变化）
+                // 利率下行=债券涨=持有债券分高
+                if (data.trendScore !== null && data.trendScore !== undefined) {
+                    // trendScore: 0=快速下行(利好债券), 50=稳定, 100=快速上行(利空债券)
+                    scores.safety = Math.max(0, Math.min(100, 100 - data.trendScore));
+                } else {
+                    scores.safety = 50; // 默认中性
+                }
+
+                // 维度C: 股市温度（反向逻辑：股市越恐慌=资金流向债券=利好债券）
+                if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
+                    // 股市恐惧(marketTemp低)→利好债券→分高
+                    scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
+                } else {
+                    scores.sentiment = 50;
+                }
+
+                return scores;
+            },
+            generate: (data, weights) => {
+                const w = weights || { valuation: 40, safety: 30, sentiment: 30 };
+                const scores = SIGNAL_RULES.bond_yield.calcScores(data, w);
+
+                let totalWeight = 0, weightedSum = 0;
+                Object.keys(w).forEach(dim => {
+                    if (scores[dim] !== null && scores[dim] !== undefined) {
+                        weightedSum += scores[dim] * w[dim];
+                        totalWeight += w[dim];
+                    }
+                });
+
+                if (totalWeight === 0) return 'DATA_INCOMPLETE';
+                const total = weightedSum / totalWeight;
+
+                // 国债ETF不用OVERHEAT概念
+                if (total >= 80) return 'STRONG_BUY';
+                if (total >= 70) return 'BUY';
+                if (total >= 55) return 'HOLD_ADD';
+                if (total >= 40) return 'HOLD';
+                if (total >= 25) return 'REDUCE_WARN';
+                if (total >= 15) return 'SELL';
+                return 'STRONG_SELL';
+            }
+        },
+
+        // ========== 商品趋势跟踪（豆粕）==========
+        commodity_trend: {
+            name: '趋势跟踪法（商品期货）',
+            dimensions: ['sentiment'],
+            dimensionNames: {
+                sentiment: '📈 趋势强度',
+            },
+            gauges: [
+                { id: 'trend', title: '趋势强度', colorReverse: false },
+            ],
+            calcScores: (data) => {
+                const scores = {};
+                if (data.trendScore !== null && data.trendScore !== undefined) {
+                    scores.sentiment = 100 - data.trendScore;
+                } else {
+                    scores.sentiment = null;
+                }
+                return scores;
+            },
+            generate: (data) => {
+                const trend = data.trendScore;
+                if (trend === null || trend === undefined) return 'DATA_INCOMPLETE';
+                if (trend >= 85) return 'OVERHEAT';
+                if (trend >= 70) return 'REDUCE_WARN';
+                if (trend >= 50 && trend < 70) return 'HOLD';
+                if (trend >= 30 && trend < 50) return 'HOLD_ADD';
+                if (trend >= 15 && trend < 30) return 'BUY';
+                if (trend < 15) return 'STRONG_BUY';
+                return 'NEUTRAL';
+            }
+        },
+    };
+
+    // ========== 公开API ==========
+    return {
+        ETF_TYPE,
+        VALUATION_METHOD,
+        ETF_LIST,
+        SIGNAL_RULES,
+
+        getETFById(id) {
+            return ETF_LIST.find(e => e.id === id);
+        },
+
+        getETFByCode(code) {
+            return ETF_LIST.find(e => e.code === code);
+        },
+
+        getSignalRules(ruleKey) {
+            return SIGNAL_RULES[ruleKey] || SIGNAL_RULES.buffett_growth;
+        },
+
+        getAllETFIds() {
+            return ETF_LIST.map(e => e.id);
+        }
+    };
+})();

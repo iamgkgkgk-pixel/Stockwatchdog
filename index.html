@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="description" content="ETF择时决策辅助工具 - 多品种择时信号一站式查看">
+    <title>ETF择时助手</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
+    </div>
+
+    <!-- ==================== ETF Tab Bar ==================== -->
+    <nav class="tab-bar" id="tab-bar">
+        <!-- 由JS动态生成 -->
+    </nav>
+
+    <!-- ==================== Header ==================== -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="logo-icon" id="header-logo-icon">红</div>
+                    <div>
+                        <div class="header-title" id="header-title">红利低波ETF择时助手</div>
+                        <div class="header-subtitle" id="header-subtitle">512890 · 华泰柏瑞红利低波动ETF</div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="price-display">
+                        <span class="price-label">最新价</span>
+                        <span class="price-value" id="val-price">--</span>
+                        <span class="price-change" id="val-price-change">--</span>
+                    </div>
+                    <span class="update-time" id="update-time">
+                        <span class="pulse-dot"></span>
+                        数据加载中...
+                    </span>
+                    <button class="btn" id="btn-refresh" title="刷新实时数据">
+                        <span class="btn-icon refresh-icon">🔄</span>
+                        刷新
+                    </button>
+                    <button class="btn btn-primary" id="btn-input-data" title="手动补充PE/股息率等数据">
+                        <span class="btn-icon">📝</span>
+                        补充数据
+                    </button>
+                </div>
+            </div>
+            <!-- 数据来源状态栏 -->
+            <div class="data-source-bar" id="data-source-status">
+                <span class="status-dot status-loading"></span> 正在连接数据源...
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== Main Content ==================== -->
+    <main class="container">
+
+        <!-- Hero Signal Section -->
+        <section class="hero-section animate-fade-in" id="hero-section">
+            <div class="signal-label">当前综合信号</div>
+            <div class="signal-icon" id="signal-icon">⏳</div>
+            <div class="signal-text" id="signal-text">数据加载中</div>
+            <div class="signal-position" id="signal-position">等待数据...</div>
+            <p class="signal-advice" id="signal-advice">
+                正在获取实时数据，请稍候...
+            </p>
+            <div class="signal-method" id="signal-method"></div>
+            <p class="signal-disclaimer">⚠️ 本工具仅供投资学习参考，不构成任何投资建议</p>
+        </section>
+
+        <!-- Dashboard: Gauges -->
+        <section class="dashboard animate-fade-in animate-delay-1" id="gauges-section">
+            <!-- 仪表盘由JS动态生成 -->
+        </section>
+
+        <!-- Dashboard: Data Cards -->
+        <section class="dashboard animate-fade-in animate-delay-2">
+            <div class="card card-full">
+                <div class="card-title">
+                    <span class="card-title-icon">📋</span>
+                    核心数据指标
+                </div>
+                <div class="data-grid" id="data-grid">
+                    <!-- 数据卡片由JS动态生成 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="chart-section animate-fade-in animate-delay-3" id="chart-section-1">
+            <div class="card card-full">
+                <div class="card-title">
+                    <span class="card-title-icon">📉</span>
+                    <span id="chart1-title">历史走势图1</span>
+                </div>
+                <div class="chart-container" id="chart-line-1"></div>
+            </div>
+        </section>
+
+        <section class="chart-section animate-fade-in animate-delay-4" id="chart-section-2">
+            <div class="card card-full">
+                <div class="card-title">
+                    <span class="card-title-icon">📈</span>
+                    <span id="chart2-title">历史走势图2</span>
+                </div>
+                <div class="chart-container" id="chart-line-2"></div>
+            </div>
+        </section>
+
+        <!-- Strategy Explanation -->
+        <section class="footer">
+            <div class="collapse-panel">
+                <div class="collapse-header" role="button" tabindex="0">
+                    <span class="collapse-header-text">
+                        <span>📖</span>
+                        策略说明
+                    </span>
+                    <span class="collapse-icon rotated">▼</span>
+                </div>
+                <div class="collapse-content collapsed" id="strategy-content">
+                    <!-- 由JS根据当前ETF动态填充 -->
+                </div>
+            </div>
+
+            <div class="collapse-panel">
+                <div class="collapse-header" role="button" tabindex="0">
+                    <span class="collapse-header-text">
+                        <span>🔗</span>
+                        数据来源说明
+                    </span>
+                    <span class="collapse-icon rotated">▼</span>
+                </div>
+                <div class="collapse-content collapsed" id="datasource-content">
+                    <p><strong>自动获取数据（实时）：</strong></p>
+                    <p>• <strong>ETF最新价/涨跌幅：</strong>东方财富实时行情API（A股/港股通），盘中自动刷新。</p>
+                    <p>• <strong>十年期国债收益率：</strong>东方财富CN10Y实时行情API。</p>
+                    <p>• <strong>指数估值（PE/PB/股息率）：</strong>蛋卷基金API（通过CORS代理），每日更新。</p>
+                    <p>• <strong>A股市场情绪：</strong>东方财富上证指数涨跌家数比（A股ETF/债券ETF使用）。</p>
+                    <p>• <strong>美股市场情绪：</strong>CNN Fear & Greed Index（美股ETF/港股ETF使用）。</p>
+                    <p>• <strong>美股行情：</strong>不支持自动获取，请手动录入。</p>
+                    <p><strong>刷新机制：</strong>交易时段（工作日9:15-15:05）每60秒自动刷新；也可点击"🔄刷新"手动获取。</p>
+                </div>
+            </div>
+
+            <div class="footer-actions">
+                <button class="btn btn-sm" id="btn-export">
+                    <span class="btn-icon">📥</span>
+                    导出CSV
+                </button>
+                <button class="btn btn-sm" id="btn-reset">
+                    <span class="btn-icon">🔄</span>
+                    重置数据
+                </button>
+            </div>
+
+            <div class="footer-disclaimer">
+                ⚠️ 免责声明：本工具仅供投资学习参考，不构成任何投资建议。市场有风险，投资需谨慎。
+                历史数据不代表未来表现，请结合自身风险承受能力独立决策。
+            </div>
+        </section>
+    </main>
+
+    <!-- ==================== Input Modal ==================== -->
+    <div class="modal-overlay" id="input-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">📝 补充/修正数据</div>
+                <button class="modal-close" id="modal-close">✕</button>
+            </div>
+            <div class="modal-body" id="modal-form-body">
+                <!-- 由JS根据当前ETF动态生成表单 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== Scripts ==================== -->
+    <script src="js/etf-config.js"></script>
+    <script src="js/signal.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
