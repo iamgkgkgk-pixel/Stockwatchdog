@@ -958,14 +958,26 @@ const DataAPI = (() => {
         }
 
         // 填入估值数据（如果API成功获取到）
+        // 安全检查：如果API获取的PE与本地预设PE差异过大（>100%），说明可能指数错配，忽略API估值
         if (apiData.valuation) {
-            if (apiData.valuation.pe) data.pe = apiData.valuation.pe;
-            if (apiData.valuation.pb) data.pb = apiData.valuation.pb;
-            if (apiData.valuation.dividendYield) data.dividendYield = apiData.valuation.dividendYield;
-            if (apiData.valuation.pePercentile) data.pePercentile = apiData.valuation.pePercentile;
-            if (apiData.valuation.pbPercentile) data.pbPercentile = apiData.valuation.pbPercentile;
-            data.valuationSource = apiData.valuation.source || '';
-            data.dataSource.push('估值数据:自动(' + (apiData.valuation.source || '') + ')');
+            const apiPE = apiData.valuation.pe || 0;
+            const localPE = manualData.pe || 0;
+            const peDeviation = (localPE > 0 && apiPE > 0) ? Math.abs(apiPE - localPE) / localPE : 0;
+
+            if (peDeviation > 1.0) {
+                // PE偏差超过100%，很可能是指数错配（如科创50 vs 科创创业50）
+                console.warn(`⚠️ API估值PE(${apiPE.toFixed(1)})与本地预设PE(${localPE.toFixed(1)})偏差${(peDeviation * 100).toFixed(0)}%，疑似指数错配，忽略API估值数据`);
+                console.warn(`  API来源: ${apiData.valuation.source || '未知'}`);
+                data.dataSource.push('估值数据:忽略(偏差过大⚠️)');
+            } else {
+                if (apiData.valuation.pe) data.pe = apiData.valuation.pe;
+                if (apiData.valuation.pb) data.pb = apiData.valuation.pb;
+                if (apiData.valuation.dividendYield) data.dividendYield = apiData.valuation.dividendYield;
+                if (apiData.valuation.pePercentile) data.pePercentile = apiData.valuation.pePercentile;
+                if (apiData.valuation.pbPercentile) data.pbPercentile = apiData.valuation.pbPercentile;
+                data.valuationSource = apiData.valuation.source || '';
+                data.dataSource.push('估值数据:自动(' + (apiData.valuation.source || '') + ')');
+            }
         }
 
         // 填入恐惧贪婪指数 → 自动转换为市场温度（美股/港股使用）

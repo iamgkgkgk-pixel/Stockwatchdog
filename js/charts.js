@@ -213,7 +213,153 @@ const ChartManager = (() => {
         return chart;
     }
 
-    return { initGauge, updateGauge, updateGaugePending, getGaugeChart, initLineChart, initSignalHistoryChart, resizeAll,
+    /**
+     * 初始化日级别综合信号历史走势图
+     * 与月级别版本的区别：数据点密集、不显示每个点标签、x轴格式化为日期、增加slider缩放
+     * @param {string} containerId - DOM容器ID
+     * @param {Array} signalData - [{date(YYYY-MM-DD), score, signalText, signalColor, scores, pe, ...}]
+     * @param {string} etfColor - ETF主题色
+     */
+    function initDailySignalHistoryChart(containerId, signalData, etfColor) {
+        const dom = document.getElementById(containerId);
+        if (!dom) return null;
+
+        let chart = echarts.getInstanceByDom(dom);
+        if (chart) chart.dispose();
+        chart = echarts.init(dom);
+
+        if (!signalData || signalData.length === 0) {
+            chart.setOption({
+                title: { text: '暂无日级别历史信号数据', left: 'center', top: 'center', textStyle: { color: '#718096', fontSize: 14 } }
+            });
+            return chart;
+        }
+
+        const dates = signalData.map(d => d.date);
+        const scores = signalData.map(d => d.score);
+
+        chart.setOption({
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(26,26,46,0.95)',
+                borderColor: '#4a5568',
+                borderWidth: 1,
+                textStyle: { color: '#e2e8f0', fontSize: 12 },
+                formatter: function(params) {
+                    const idx = params[0].dataIndex;
+                    const d = signalData[idx];
+                    let html = `<strong>${d.date}</strong><br/>`;
+                    html += `<span style="color:${d.signalColor};font-weight:bold;font-size:14px;">● ${d.signalText}</span>`;
+                    html += `<br/>综合评分: <strong style="color:${d.signalColor}">${d.score.toFixed(1)}</strong>`;
+                    if (d.scores) {
+                        const dimNames = { valuation: '估值', safety: '安全边际', quality: '盈利质量', sentiment: '市场温度' };
+                        Object.keys(d.scores).forEach(dim => {
+                            if (d.scores[dim] !== null && d.scores[dim] !== undefined) {
+                                html += `<br/>${dimNames[dim] || dim}: ${d.scores[dim].toFixed(1)}`;
+                            }
+                        });
+                    }
+                    if (d.pe) html += `<br/>PE: ${d.pe.toFixed(2)}`;
+                    if (d.pePercentile !== null && d.pePercentile !== undefined) html += ` (分位:${d.pePercentile.toFixed(1)}%)`;
+                    if (d.dividend) html += `<br/>股息率: ${d.dividend.toFixed(2)}%`;
+                    if (d.bond) html += `<br/>国债收益率: ${d.bond.toFixed(2)}%`;
+                    html += `<br/><span style="color:#718096;font-size:10px;">* 基于月度数据插值</span>`;
+                    return html;
+                }
+            },
+            grid: { left: '3%', right: '4%', bottom: '18%', top: '8%', containLabel: true },
+            xAxis: {
+                type: 'category',
+                data: dates,
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: '#2d3748' } },
+                axisLabel: {
+                    color: '#a0aec0', fontSize: 10, rotate: 30,
+                    // 日级别数据点多，只显示部分标签
+                    formatter: function(value) {
+                        // 显示 MM-DD 格式，每年1月1日显示完整年
+                        if (value.endsWith('-01-01') || value.endsWith('-01-02') || value.endsWith('-01-03')) {
+                            return value.slice(0, 7);
+                        }
+                        // 每月1号附近显示月份
+                        if (value.endsWith('-01') || value.endsWith('-02')) {
+                            return value.slice(5, 7) + '月';
+                        }
+                        return '';
+                    },
+                    interval: 0,
+                },
+                axisTick: { show: false },
+            },
+            yAxis: {
+                type: 'value',
+                min: 0, max: 100,
+                axisLine: { show: false },
+                axisLabel: { color: '#a0aec0', fontSize: 10, formatter: '{value}' },
+                splitLine: { lineStyle: { color: '#2d3748', type: 'dashed' } },
+            },
+            visualMap: {
+                show: false,
+                pieces: [
+                    { gte: 80, color: '#0d7337' },
+                    { gte: 70, lt: 80, color: '#28a745' },
+                    { gte: 55, lt: 70, color: '#9be3b0' },
+                    { gte: 40, lt: 55, color: '#ffc107' },
+                    { gte: 25, lt: 40, color: '#fd7e14' },
+                    { lt: 25, color: '#dc3545' },
+                ],
+                seriesIndex: 0,
+            },
+            series: [{
+                name: '综合评分',
+                type: 'line',
+                data: scores,
+                smooth: true,
+                symbol: 'none', // 日级别不显示圆点
+                lineStyle: { width: 2 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: (etfColor || '#28a745') + '40' },
+                        { offset: 1, color: (etfColor || '#28a745') + '05' }
+                    ])
+                },
+                label: { show: false }, // 日级别不显示每个点的标签
+                markLine: {
+                    silent: true,
+                    lineStyle: { type: 'dashed', width: 1 },
+                    data: [
+                        { yAxis: 80, label: { formatter: '强买 80', color: '#0d7337', fontSize: 10, position: 'end' }, lineStyle: { color: '#0d733744' } },
+                        { yAxis: 70, label: { formatter: '买入 70', color: '#28a745', fontSize: 10, position: 'end' }, lineStyle: { color: '#28a74544' } },
+                        { yAxis: 55, label: { formatter: '加仓 55', color: '#9be3b0', fontSize: 10, position: 'end' }, lineStyle: { color: '#9be3b044' } },
+                        { yAxis: 40, label: { formatter: '观望 40', color: '#ffc107', fontSize: 10, position: 'end' }, lineStyle: { color: '#ffc10744' } },
+                        { yAxis: 25, label: { formatter: '减仓 25', color: '#fd7e14', fontSize: 10, position: 'end' }, lineStyle: { color: '#fd7e1444' } },
+                    ]
+                },
+                animationDuration: 1500,
+            }],
+            dataZoom: [
+                { type: 'inside', start: 0, end: 100 },
+                {
+                    type: 'slider', start: 0, end: 100,
+                    bottom: '3%', height: 20,
+                    borderColor: '#2d3748',
+                    backgroundColor: 'rgba(26,26,46,0.5)',
+                    fillerColor: 'rgba(100,150,200,0.15)',
+                    handleStyle: { color: '#4a5568' },
+                    textStyle: { color: '#a0aec0', fontSize: 10 },
+                    dataBackground: {
+                        lineStyle: { color: '#4a5568' },
+                        areaStyle: { color: 'rgba(100,150,200,0.1)' },
+                    },
+                },
+            ],
+        });
+
+        return chart;
+    }
+
+    return { initGauge, updateGauge, updateGaugePending, getGaugeChart, initLineChart, initSignalHistoryChart, initDailySignalHistoryChart, resizeAll,
         // 兼容旧版接口
         initSpreadGauge: (id)=>initGauge(id,'股债利差分位',false),
         initPEGauge: (id)=>initGauge(id,'PE历史分位',true),

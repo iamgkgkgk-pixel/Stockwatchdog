@@ -278,10 +278,11 @@ const SignalEngine = (() => {
      * 
      * @param {Object} historyData - JSON中的历史数据 (spreadHistory, peHistory, dividendYieldHistory, bondYieldHistory)
      * @param {Object} etfConfig - ETF配置（含signalRules, dimWeights）
-     * @param {number} months - 回溯月数（默认12个月）
+     * @param {number} months - 回溯月数（默认96个月，即8年；数据不足时自动回退到全部可用历史）
+     * @param {number|null} currentMarketTemp - 当前市场温度（用于最近一个月，使历史走势图末端与实时信号一致）
      * @returns {Array<{date, score, signal, signalText, signalColor}>}
      */
-    function calcHistoricalSignals(historyData, etfConfig, months = 12) {
+    function calcHistoricalSignals(historyData, etfConfig, months = 96, currentMarketTemp = null) {
         if (!historyData || !etfConfig) return [];
 
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
@@ -293,19 +294,42 @@ const SignalEngine = (() => {
         const dividendMap = buildDateMap(historyData.dividendYieldHistory);
         const bondMap = buildDateMap(historyData.bondYieldHistory);
 
-        // 获取所有可用的月末日期（取PE历史和利差历史的并集）
+        // 获取所有可用的月末日期（取所有历史数据的并集）
         const allDates = new Set();
         if (historyData.peHistory) historyData.peHistory.forEach(d => allDates.add(d.date));
         if (historyData.spreadHistory) historyData.spreadHistory.forEach(d => allDates.add(d.date));
+        if (historyData.bondYieldHistory) historyData.bondYieldHistory.forEach(d => allDates.add(d.date));
+        if (historyData.dividendYieldHistory) historyData.dividendYieldHistory.forEach(d => allDates.add(d.date));
+        if (historyData.priceHistory) historyData.priceHistory.forEach(d => allDates.add(d.date));
 
         // 按时间排序，取最近N个月
         const sortedDates = Array.from(allDates).sort();
         const recentDates = sortedDates.slice(-months);
 
-        if (recentDates.length === 0) return [];
+        if (recentDates.length === 0) {
+            console.warn(`[calcHistoricalSignals] ${etfConfig.id}: 无可用日期数据`);
+            return [];
+        }
 
-        // 获取PE历史值数组（用于计算分位数）
+        console.log(`[calcHistoricalSignals] ${etfConfig.id}: 找到 ${sortedDates.length} 个日期，取最近 ${recentDates.length} 个:`, recentDates[0], '...', recentDates[recentDates.length - 1]);
+
+        // 构建PE分位映射：优先使用JSON中预计算的percentile字段（基于全市场历史校准）
+        // 如果没有预计算值，则退化为本地全量PE数据计算（精度较低）
+        const pePercentileMap = {};
+        if (historyData.peHistory) {
+            historyData.peHistory.forEach(d => {
+                if (d.percentile !== null && d.percentile !== undefined) {
+                    pePercentileMap[d.date] = d.percentile;
+                }
+            });
+        }
+        const hasPrecomputedPercentile = Object.keys(pePercentileMap).length > 0;
+
+        // 退化方案：本地全量PE值
         const allPeValues = historyData.peHistory ? historyData.peHistory.map(d => d.value) : [];
+
+        // 全量利差历史值数组
+        const allSpreadValues = historyData.spreadHistory ? historyData.spreadHistory.map(d => d.value) : [];
 
         const results = [];
         for (const dateStr of recentDates) {
@@ -314,39 +338,37 @@ const SignalEngine = (() => {
             const dividend = dividendMap[dateStr] || findNearestValue(dividendMap, dateStr);
             const bond = bondMap[dateStr] || findNearestValue(bondMap, dateStr);
 
-            // 计算PE分位（基于该日期之前的所有历史PE）
+            // PE分位：优先用预计算值（与实时信号的pePercentile基准一致）
             let pePercentile = null;
-            if (pe !== null && pe !== undefined && allPeValues.length > 0) {
-                // 使用该日期之前（含）的所有PE值计算分位
-                const peIdx = historyData.peHistory.findIndex(d => d.date === dateStr);
-                const historicalPE = peIdx >= 0 ? allPeValues.slice(0, peIdx + 1) : allPeValues;
-                if (historicalPE.length >= 5) {
-                    pePercentile = calcPercentile(pe, historicalPE);
-                }
+            if (hasPrecomputedPercentile && pePercentileMap[dateStr] !== undefined) {
+                pePercentile = pePercentileMap[dateStr];
+            } else if (pe !== null && pe !== undefined && allPeValues.length >= 5) {
+                // 退化：本地计算（样本有限，可能与实时信号有偏差）
+                pePercentile = calcPercentile(pe, allPeValues);
             }
 
             // 构建信号输入数据
+            // marketTemp: 历史月份用中性50（无法回溯），最后一个月用当前实际值（使末端与实时信号一致）
+            const isLastMonth = (dateStr === recentDates[recentDates.length - 1]);
+            const marketTemp = (isLastMonth && currentMarketTemp !== null && currentMarketTemp !== undefined && !isNaN(currentMarketTemp))
+                ? currentMarketTemp
+                : 50;
+
             const signalData = {
                 pePercentile: pePercentile,
-                spreadPercentile: null, // 简化处理，利差分位用利差值推算
+                spreadPercentile: null,
                 trendScore: null,
                 pe: pe || 0,
                 pb: 0, // 历史PB数据不全，用默认
                 dividendYield: dividend || 0,
                 bondYield: bond || 0,
                 roe: 0, // 历史ROE不可用
-                marketTemp: 50, // 历史市场温度用中性默认（无法回溯）
+                marketTemp: marketTemp,
             };
 
-            // 对于使用利差的ETF，手动计算spreadPercentile
-            if (etfConfig.useBondSpread && spread !== null && spread !== undefined && historyData.spreadHistory) {
-                const spreadIdx = historyData.spreadHistory.findIndex(d => d.date === dateStr);
-                const historicalSpread = spreadIdx >= 0
-                    ? historyData.spreadHistory.slice(0, spreadIdx + 1).map(d => d.value)
-                    : historyData.spreadHistory.map(d => d.value);
-                if (historicalSpread.length >= 5) {
-                    signalData.spreadPercentile = calcPercentile(spread, historicalSpread);
-                }
+            // 对于使用利差的ETF，使用全量利差数据计算分位
+            if (etfConfig.useBondSpread && spread !== null && spread !== undefined && allSpreadValues.length >= 5) {
+                signalData.spreadPercentile = calcPercentile(spread, allSpreadValues);
             }
 
             // 生成综合信号
@@ -392,6 +414,242 @@ const SignalEngine = (() => {
         return nearest;
     }
 
+    /**
+     * 在两个日期之间线性插值数值
+     * @param {string} startDate - 起始日期 YYYY-MM
+     * @param {number} startVal - 起始值
+     * @param {string} endDate - 结束日期 YYYY-MM
+     * @param {number} endVal - 结束值
+     * @param {string} targetDate - 目标日期 YYYY-MM-DD
+     * @returns {number} 插值结果
+     */
+    function interpolate(startDate, startVal, endDate, endVal, targetDate) {
+        const s = new Date(startDate + '-01').getTime();
+        const e = new Date(endDate + '-01').getTime();
+        const t = new Date(targetDate).getTime();
+        if (e === s) return startVal;
+        const ratio = Math.max(0, Math.min(1, (t - s) / (e - s)));
+        return startVal + (endVal - startVal) * ratio;
+    }
+
+    /**
+     * 从月度映射表中，为指定日期做线性插值取值
+     * @param {Object} dateMap - {YYYY-MM: value}
+     * @param {string[]} sortedKeys - dateMap的键，已排序
+     * @param {string} targetDate - YYYY-MM-DD
+     * @returns {number|null}
+     */
+    function interpolateFromMap(dateMap, sortedKeys, targetDate) {
+        if (!sortedKeys || sortedKeys.length === 0) return null;
+        const targetMonth = targetDate.slice(0, 7); // YYYY-MM
+
+        // 精确命中月份
+        if (dateMap[targetMonth] !== undefined) {
+            // 找下一个月来插值
+            const idx = sortedKeys.indexOf(targetMonth);
+            if (idx >= 0 && idx < sortedKeys.length - 1) {
+                const nextMonth = sortedKeys[idx + 1];
+                return interpolate(targetMonth, dateMap[targetMonth], nextMonth, dateMap[nextMonth], targetDate);
+            }
+            return dateMap[targetMonth]; // 最后一个月，直接返回
+        }
+
+        // 在两个月之间
+        let before = null, after = null;
+        for (let i = 0; i < sortedKeys.length; i++) {
+            if (sortedKeys[i] <= targetMonth) before = sortedKeys[i];
+            if (sortedKeys[i] > targetMonth && after === null) after = sortedKeys[i];
+        }
+
+        if (before !== null && after !== null) {
+            return interpolate(before, dateMap[before], after, dateMap[after], targetDate);
+        }
+        if (before !== null) return dateMap[before];
+        if (after !== null) return dateMap[after];
+        return null;
+    }
+
+    /**
+     * 从月度PE分位映射表中，为指定日期做线性插值
+     */
+    function interpolatePercentile(pePercentileMap, sortedPercentileKeys, peMap, sortedPeKeys, allPeValues, targetDate) {
+        const targetMonth = targetDate.slice(0, 7);
+
+        // 优先用预计算分位插值
+        if (sortedPercentileKeys.length >= 2) {
+            let before = null, after = null;
+            for (let i = 0; i < sortedPercentileKeys.length; i++) {
+                if (sortedPercentileKeys[i] <= targetMonth) before = sortedPercentileKeys[i];
+                if (sortedPercentileKeys[i] > targetMonth && after === null) after = sortedPercentileKeys[i];
+            }
+            if (before !== null && after !== null) {
+                return interpolate(before, pePercentileMap[before], after, pePercentileMap[after], targetDate);
+            }
+            if (before !== null && pePercentileMap[before] !== undefined) return pePercentileMap[before];
+        }
+
+        // 退化：用PE值做插值后计算分位
+        const pe = interpolateFromMap(peMap, sortedPeKeys, targetDate);
+        if (pe !== null && allPeValues.length >= 5) {
+            return calcPercentile(pe, allPeValues);
+        }
+        return null;
+    }
+
+    /**
+     * 生成日期序列 (YYYY-MM-DD)
+     * @param {string} startDate - 起始日期 YYYY-MM-DD
+     * @param {string} endDate - 结束日期 YYYY-MM-DD
+     * @returns {string[]}
+     */
+    function generateDateRange(startDate, endDate) {
+        const dates = [];
+        const current = new Date(startDate);
+        const end = new Date(endDate);
+        while (current <= end) {
+            dates.push(current.toISOString().slice(0, 10));
+            current.setDate(current.getDate() + 1);
+        }
+        return dates;
+    }
+
+    /**
+     * 基于月度历史数据，通过插值生成日级别综合信号走势
+     * 
+     * 原理：月度数据点之间做线性插值，生成每日的PE/股息率/国债收益率等估计值，
+     * 再对每日数据调用同一套信号评分函数，得到日级别评分。
+     * 
+     * @param {Object} historyData - JSON中的历史数据
+     * @param {Object} etfConfig - ETF配置
+     * @param {number} days - 回溯天数（默认365天，即1年）
+     * @param {number|null} currentMarketTemp - 当前市场温度
+     * @returns {Array<{date, score, signal, signalText, signalColor, scores}>}
+     */
+    function calcDailyHistoricalSignals(historyData, etfConfig, days = 365, currentMarketTemp = null) {
+        if (!historyData || !etfConfig) return [];
+
+        const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
+        if (!rules || !rules.calcScores) return [];
+
+        // 构建月度映射表
+        const peMap = buildDateMap(historyData.peHistory);
+        const spreadMap = buildDateMap(historyData.spreadHistory);
+        const dividendMap = buildDateMap(historyData.dividendYieldHistory);
+        const bondMap = buildDateMap(historyData.bondYieldHistory);
+
+        const sortedPeKeys = Object.keys(peMap).sort();
+        const sortedSpreadKeys = Object.keys(spreadMap).sort();
+        const sortedDividendKeys = Object.keys(dividendMap).sort();
+        const sortedBondKeys = Object.keys(bondMap).sort();
+
+        // PE分位预计算映射
+        const pePercentileMap = {};
+        if (historyData.peHistory) {
+            historyData.peHistory.forEach(d => {
+                if (d.percentile !== null && d.percentile !== undefined) {
+                    pePercentileMap[d.date] = d.percentile;
+                }
+            });
+        }
+        const sortedPercentileKeys = Object.keys(pePercentileMap).sort();
+        const allPeValues = historyData.peHistory ? historyData.peHistory.map(d => d.value) : [];
+
+        // 全量利差历史值
+        const allSpreadValues = historyData.spreadHistory ? historyData.spreadHistory.map(d => d.value) : [];
+
+        // 确定日期范围：从数据最早可用月的第1天，到今天
+        const allMonths = new Set();
+        [sortedPeKeys, sortedSpreadKeys, sortedDividendKeys, sortedBondKeys].forEach(keys => {
+            keys.forEach(k => allMonths.add(k));
+        });
+        const sortedMonths = Array.from(allMonths).sort();
+        if (sortedMonths.length < 2) return []; // 至少需要2个月才能插值
+
+        // 结束日期：今天
+        const today = new Date();
+        const endDate = today.toISOString().slice(0, 10);
+
+        // 起始日期：往前推 days 天
+        const startDateObj = new Date(today);
+        startDateObj.setDate(startDateObj.getDate() - days);
+        // 不能早于数据最早月份
+        const dataStart = sortedMonths[0] + '-01';
+        const actualStart = startDateObj.toISOString().slice(0, 10) > dataStart
+            ? startDateObj.toISOString().slice(0, 10) : dataStart;
+
+        const dailyDates = generateDateRange(actualStart, endDate);
+        if (dailyDates.length === 0) return [];
+
+        // 采样：如果天数太多（>1000天），每隔N天取一个点，保持图表流畅
+        let sampledDates = dailyDates;
+        let sampleInterval = 1;
+        if (dailyDates.length > 800) {
+            sampleInterval = Math.ceil(dailyDates.length / 800);
+            sampledDates = dailyDates.filter((_, i) => i % sampleInterval === 0);
+            // 确保最后一天（今天）被包含
+            if (sampledDates[sampledDates.length - 1] !== dailyDates[dailyDates.length - 1]) {
+                sampledDates.push(dailyDates[dailyDates.length - 1]);
+            }
+        }
+
+        const results = [];
+        const lastDate = sampledDates[sampledDates.length - 1];
+
+        for (const dateStr of sampledDates) {
+            // 对每个日期做插值
+            const pe = interpolateFromMap(peMap, sortedPeKeys, dateStr);
+            const dividend = interpolateFromMap(dividendMap, sortedDividendKeys, dateStr);
+            const bond = interpolateFromMap(bondMap, sortedBondKeys, dateStr);
+            const pePercentile = interpolatePercentile(
+                pePercentileMap, sortedPercentileKeys,
+                peMap, sortedPeKeys, allPeValues, dateStr
+            );
+
+            // 市场温度：仅最后一天用实时值
+            const isLastDay = (dateStr === lastDate);
+            const marketTemp = (isLastDay && currentMarketTemp !== null && currentMarketTemp !== undefined && !isNaN(currentMarketTemp))
+                ? currentMarketTemp
+                : 50;
+
+            const signalData = {
+                pePercentile: pePercentile,
+                spreadPercentile: null,
+                trendScore: null,
+                pe: pe || 0,
+                pb: 0,
+                dividendYield: dividend || 0,
+                bondYield: bond || 0,
+                roe: 0,
+                marketTemp: marketTemp,
+            };
+
+            // 利差分位
+            if (etfConfig.useBondSpread) {
+                const spread = interpolateFromMap(spreadMap, sortedSpreadKeys, dateStr);
+                if (spread !== null && allSpreadValues.length >= 5) {
+                    signalData.spreadPercentile = calcPercentile(spread, allSpreadValues);
+                }
+            }
+
+            const { signal, scores, total } = generateMultiDimSignal(signalData, etfConfig);
+
+            results.push({
+                date: dateStr,
+                score: total,
+                signal: signal.level,
+                signalText: signal.text,
+                signalColor: signal.color,
+                scores: { ...scores },
+                pe: pe,
+                pePercentile: pePercentile,
+                dividend: dividend,
+                bond: bond,
+            });
+        }
+
+        return results;
+    }
+
     // ========== 公开API ==========
     return {
         SIGNAL_LEVELS,
@@ -400,6 +658,7 @@ const SignalEngine = (() => {
         generateSignal,
         generateMultiDimSignal,
         calcHistoricalSignals,
+        calcDailyHistoricalSignals,
         getPercentileZone,
         getPEPercentileZone,
         getCompositeScoreZone,

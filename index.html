@@ -127,7 +127,7 @@
             <div class="card card-full">
                 <div class="card-title">
                     <span class="card-title-icon">📊</span>
-                    <span id="signal-history-title">综合信号历史走势（近12个月）</span>
+                    <span id="signal-history-title">综合信号历史走势（近8年）</span>
                 </div>
                 <div class="signal-history-legend">
                     <span class="legend-item"><span class="legend-dot" style="background:#0d7337"></span>强烈买入(≥80)</span>
@@ -140,6 +140,28 @@
                 <div class="chart-container" id="chart-signal-history" style="height:350px;"></div>
                 <div class="signal-history-note">
                     ⚠️ 历史信号为基于历史数据回算，市场温度维度使用默认中性值(50)，实际信号可能略有差异
+                </div>
+            </div>
+        </section>
+
+        <!-- 日级别综合信号历史走势图 -->
+        <section class="chart-section animate-fade-in animate-delay-4" id="chart-section-daily-signal-history">
+            <div class="card card-full">
+                <div class="card-title">
+                    <span class="card-title-icon">📈</span>
+                    <span id="daily-signal-history-title">综合信号日级别走势（近3年）</span>
+                </div>
+                <div class="signal-history-legend">
+                    <span class="legend-item"><span class="legend-dot" style="background:#0d7337"></span>强烈买入(≥80)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#28a745"></span>买入(70-80)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#9be3b0"></span>持有加仓(55-70)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#ffc107"></span>持有观望(40-55)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#fd7e14"></span>减仓预警(25-40)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#dc3545"></span>卖出(&lt;25)</span>
+                </div>
+                <div class="chart-container" id="chart-daily-signal-history" style="height:400px;"></div>
+                <div class="signal-history-note">
+                    ⚠️ 日级别走势基于月度数据插值生成，反映趋势方向而非精确日度值。拖动底部滑块可缩放时间范围。
                 </div>
             </div>
         </section>

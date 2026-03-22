@@ -76,7 +76,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: true,
             description: '跟踪中证红利低波动指数，选取股息率高且波动率低的50只股票。巴菲特理念：稳定现金流回报+安全边际。',
             signalRules: 'buffett_value',
-            dimWeights: { valuation: 35, safety: 30, quality: 15, sentiment: 20 },
+            dimWeights: { valuation: 40, safety: 35, quality: 5, sentiment: 20 },
         },
 
         // ===== 2. 科创创业ETF =====
@@ -94,14 +94,14 @@ const ETF_CONFIG = (() => {
             trackIndex: {
                 name: '科创创业50指数',
                 code: '931643',
-                danjuanCode: 'SH000688',
-                danjuanName: '科创50',
+                danjuanCode: null,   // 蛋卷基金无此指数！SH000688是科创50(PE~164)，与科创创业50(PE~40)完全不同
+                danjuanName: null,
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
             useBondSpread: false,
             description: '从科创板和创业板选取市值最大的50只新兴产业上市公司。芒格理念：以合理价格买入优质成长公司。',
             signalRules: 'buffett_growth',
-            dimWeights: { valuation: 45, safety: 10, quality: 20, sentiment: 25 },
+            dimWeights: { valuation: 55, safety: 15, quality: 5, sentiment: 25 },
         },
 
         // ===== 3. 创业板50ETF =====
@@ -126,7 +126,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '创业板流动性最好的50只股票，聚焦新能源+信息技术+医药。',
             signalRules: 'buffett_growth',
-            dimWeights: { valuation: 45, safety: 10, quality: 20, sentiment: 25 },
+            dimWeights: { valuation: 55, safety: 15, quality: 5, sentiment: 25 },
         },
 
         // ===== 4. 自由现金流ETF =====
@@ -151,7 +151,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: true,
             description: '跟踪国证自由现金流指数。巴菲特核心：企业的内在价值等于未来自由现金流的折现值。',
             signalRules: 'buffett_value',
-            dimWeights: { valuation: 30, safety: 35, quality: 20, sentiment: 15 },
+            dimWeights: { valuation: 35, safety: 45, quality: 5, sentiment: 15 },
         },
 
         // ===== 5. 标普500ETF =====
@@ -176,7 +176,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪标普500指数。巴菲特遗嘱配置：90%资金投入标普500。美股长牛但需警惕周期性高估。',
             signalRules: 'buffett_us',
-            dimWeights: { valuation: 40, safety: 15, quality: 15, sentiment: 30 },
+            dimWeights: { valuation: 45, safety: 20, quality: 5, sentiment: 30 },
         },
 
         // ===== 6. 纳指ETF =====
@@ -201,7 +201,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪纳斯达克100指数，聚焦美国科技龙头。成长股PE波动大，需更关注市场情绪。',
             signalRules: 'buffett_us_growth',
-            dimWeights: { valuation: 35, safety: 10, quality: 20, sentiment: 35 },
+            dimWeights: { valuation: 45, safety: 15, quality: 5, sentiment: 35 },
         },
 
         // ===== 7. 恒生科技指数ETF =====
@@ -226,7 +226,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪恒生科技指数，覆盖腾讯/阿里/美团等互联网龙头。港股受AH溢价和资金面影响大。',
             signalRules: 'buffett_hk',
-            dimWeights: { valuation: 40, safety: 10, quality: 20, sentiment: 30 },
+            dimWeights: { valuation: 50, safety: 15, quality: 5, sentiment: 30 },
         },
 
         // ===== 8. 沪深300ETF =====
@@ -251,7 +251,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: true,
             description: 'A股的"锚"，由沪深两市规模最大、流动性最好的300只股票组成。巴菲特遗嘱配置理念的A股版本。规模3300+亿，费率0.2%，全市场最低。',
             signalRules: 'buffett_broad',
-            dimWeights: { valuation: 35, safety: 25, quality: 15, sentiment: 25 },
+            dimWeights: { valuation: 40, safety: 30, quality: 5, sentiment: 25 },
         },
 
         // ===== 9. 医药ETF =====
@@ -276,7 +276,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪沪深300医药卫生指数，覆盖恒瑞医药、药明康德、迈瑞医疗等龙头。独立周期防御型行业，与科技/消费相关性低。规模170亿，医药ETF中最大。',
             signalRules: 'buffett_pharma',
-            dimWeights: { valuation: 40, safety: 15, quality: 25, sentiment: 20 },
+            dimWeights: { valuation: 50, safety: 25, quality: 5, sentiment: 20 },
         },
 
         // ===== 10. 黄金ETF =====
@@ -426,7 +426,7 @@ const ETF_CONFIG = (() => {
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 35, safety: 30, quality: 15, sentiment: 20 };
+                const w = weights || { valuation: 40, safety: 35, quality: 5, sentiment: 20 };
                 const scores = SIGNAL_RULES.buffett_value.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -498,7 +498,7 @@ const ETF_CONFIG = (() => {
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 45, safety: 10, quality: 20, sentiment: 25 };
+                const w = weights || { valuation: 55, safety: 15, quality: 5, sentiment: 25 };
                 const scores = SIGNAL_RULES.buffett_growth.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -568,7 +568,7 @@ const ETF_CONFIG = (() => {
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 40, safety: 15, quality: 15, sentiment: 30 };
+                const w = weights || { valuation: 45, safety: 20, quality: 5, sentiment: 30 };
                 const scores = SIGNAL_RULES.buffett_us.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -634,7 +634,7 @@ const ETF_CONFIG = (() => {
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 35, safety: 10, quality: 20, sentiment: 35 };
+                const w = weights || { valuation: 45, safety: 15, quality: 5, sentiment: 35 };
                 const scores = SIGNAL_RULES.buffett_us_growth.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -703,7 +703,7 @@ const ETF_CONFIG = (() => {
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 40, safety: 10, quality: 20, sentiment: 30 };
+                const w = weights || { valuation: 50, safety: 15, quality: 5, sentiment: 30 };
                 const scores = SIGNAL_RULES.buffett_hk.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -785,7 +785,7 @@ const ETF_CONFIG = (() => {
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 35, safety: 25, quality: 15, sentiment: 25 };
+                const w = weights || { valuation: 40, safety: 30, quality: 5, sentiment: 25 };
                 const scores = SIGNAL_RULES.buffett_broad.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -860,7 +860,7 @@ const ETF_CONFIG = (() => {
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 40, safety: 15, quality: 25, sentiment: 20 };
+                const w = weights || { valuation: 50, safety: 25, quality: 5, sentiment: 20 };
                 const scores = SIGNAL_RULES.buffett_pharma.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;

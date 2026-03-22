@@ -547,14 +547,29 @@ const App = (() => {
             const resp = await fetch(`data/${etfId}.json`);
             if (resp.ok) {
                 const data = await resp.json();
+                console.log(`[loadHistoryData] ${etfId}: 加载成功`, {
+                    peHistory: data.peHistory ? data.peHistory.length : 0,
+                    spreadHistory: data.spreadHistory ? data.spreadHistory.length : 0,
+                    bondYieldHistory: data.bondYieldHistory ? data.bondYieldHistory.length : 0,
+                    dividendYieldHistory: data.dividendYieldHistory ? data.dividendYieldHistory.length : 0,
+                    priceHistory: data.priceHistory ? data.priceHistory.length : 0,
+                });
                 DataStorage.saveHistoryData(etfId, data);
                 return data;
+            } else {
+                console.warn(`[loadHistoryData] ${etfId}: fetch返回 ${resp.status}`);
             }
-        } catch (_) {}
+        } catch (e) {
+            console.warn(`[loadHistoryData] ${etfId}: fetch失败`, e.message);
+        }
 
         const cached = DataStorage.getHistoryData(etfId);
-        if (cached) return cached;
+        if (cached) {
+            console.log(`[loadHistoryData] ${etfId}: 使用localStorage缓存数据`);
+            return cached;
+        }
 
+        console.warn(`[loadHistoryData] ${etfId}: 无数据，使用默认空数据`);
         return getDefaultHistoryData();
     }
 
@@ -626,6 +641,12 @@ const App = (() => {
         updateGaugeValues(etfConfig, total, scores, trendScore);
         updateDimScoresDisplay(etfConfig, scores);
         updatePriceDisplay(data, etfConfig);
+
+        // 刷新综合信号历史走势图（传入当前市场温度，使最新月份与实时信号一致）
+        if (historyData) {
+            renderSignalHistoryChart(etfConfig, historyData, signalData.marketTemp);
+            renderDailySignalHistoryChart(etfConfig, historyData, signalData.marketTemp);
+        }
 
         // 更新信号方法标签
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
@@ -1004,17 +1025,24 @@ const App = (() => {
 
         // ========== 综合信号历史走势图 ==========
         renderSignalHistoryChart(etfConfig, historyData);
+
+        // ========== 日级别综合信号历史走势图 ==========
+        renderDailySignalHistoryChart(etfConfig, historyData);
     }
 
     /**
      * 渲染综合信号历史走势图
-     * 对于商品/黄金/债券类ETF，隐藏该区域（缺少PE等核心估值数据）
+     * 对于商品/黄金类ETF，隐藏该区域（缺少估值数据，纯趋势跟踪无法回算历史）
+     * 对于债券类ETF，可以基于历史收益率回算信号
+     * @param {Object} etfConfig
+     * @param {Object} historyData
+     * @param {number|null} currentMarketTemp - 当前市场温度（使最新月份与实时信号一致）
      */
-    function renderSignalHistoryChart(etfConfig, historyData) {
+    function renderSignalHistoryChart(etfConfig, historyData, currentMarketTemp) {
         const section = document.getElementById('chart-section-signal-history');
         const titleEl = document.getElementById('signal-history-title');
 
-        // 商品/黄金类无PE估值，不支持历史信号回算
+        // 商品/黄金类无PE估值且趋势需手动输入，不支持历史信号回算
         if (etfConfig.type === ETF_CONFIG.ETF_TYPE.COMMODITY || etfConfig.type === ETF_CONFIG.ETF_TYPE.GOLD) {
             if (section) section.style.display = 'none';
             return;
@@ -1023,19 +1051,76 @@ const App = (() => {
         if (section) section.style.display = '';
 
         if (!historyData) {
+            console.warn(`[renderSignalHistoryChart] ${etfConfig.id}: historyData为空`);
             ChartManager.initSignalHistoryChart('chart-signal-history', [], etfConfig.color);
             return;
         }
 
-        // 计算12个月的历史信号
-        const signals = SignalEngine.calcHistoricalSignals(historyData, etfConfig, 12);
+        // 计算96个月（8年）的历史信号，传入当前市场温度（用于最近一个月）
+        // 数据不足8年的ETF会自动回退到全部可用历史
+        const mktTemp = (currentMarketTemp !== null && currentMarketTemp !== undefined) ? currentMarketTemp : null;
+        const signals = SignalEngine.calcHistoricalSignals(historyData, etfConfig, 96, mktTemp);
 
         if (titleEl) {
             const monthCount = signals.length;
-            titleEl.textContent = `综合信号历史走势（近${monthCount}个月 · ${etfConfig.shortName}）`;
+            const timeRange = monthCount >= 12 ? `近${(monthCount / 12).toFixed(0)}年` : `近${monthCount}个月`;
+            titleEl.textContent = `综合信号历史走势（${timeRange} · ${etfConfig.shortName}）`;
+        }
+
+        if (signals.length === 0) {
+            console.warn(`[renderSignalHistoryChart] ${etfConfig.id}: 历史信号计算结果为空`);
         }
 
         ChartManager.initSignalHistoryChart('chart-signal-history', signals, etfConfig.color);
+    }
+
+    /**
+     * 渲染日级别综合信号历史走势图
+     * @param {Object} etfConfig
+     * @param {Object} historyData
+     * @param {number|null} currentMarketTemp
+     */
+    function renderDailySignalHistoryChart(etfConfig, historyData, currentMarketTemp) {
+        const section = document.getElementById('chart-section-daily-signal-history');
+        const titleEl = document.getElementById('daily-signal-history-title');
+
+        // 商品/黄金类不支持历史信号回算
+        if (etfConfig.type === ETF_CONFIG.ETF_TYPE.COMMODITY || etfConfig.type === ETF_CONFIG.ETF_TYPE.GOLD) {
+            if (section) section.style.display = 'none';
+            return;
+        }
+
+        if (section) section.style.display = '';
+
+        if (!historyData) {
+            ChartManager.initDailySignalHistoryChart('chart-daily-signal-history', [], etfConfig.color);
+            return;
+        }
+
+        // 默认显示近1年（365天），用户可通过dataZoom slider缩放
+        const days = 365 * 3; // 3年日级别数据
+        const mktTemp = (currentMarketTemp !== null && currentMarketTemp !== undefined) ? currentMarketTemp : null;
+        const signals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp);
+
+        if (titleEl) {
+            const dayCount = signals.length;
+            let timeRange;
+            if (dayCount >= 365) {
+                const years = (dayCount / 365).toFixed(1);
+                timeRange = years.endsWith('.0') ? `近${parseInt(years)}年` : `近${years}年`;
+            } else if (dayCount >= 30) {
+                timeRange = `近${Math.round(dayCount / 30)}个月`;
+            } else {
+                timeRange = `近${dayCount}天`;
+            }
+            titleEl.textContent = `综合信号日级别走势（${timeRange} · ${etfConfig.shortName}）`;
+        }
+
+        if (signals.length === 0) {
+            console.warn(`[renderDailySignalHistoryChart] ${etfConfig.id}: 日级别历史信号计算结果为空`);
+        }
+
+        ChartManager.initDailySignalHistoryChart('chart-daily-signal-history', signals, etfConfig.color);
     }
 
     // ========== 刷新 ==========
