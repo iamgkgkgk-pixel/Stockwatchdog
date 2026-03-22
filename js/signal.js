@@ -271,6 +271,127 @@ const SignalEngine = (() => {
         return { text: '极度恐惧 😱', color: '#28a745' };
     }
 
+    // ========== 历史信号回算 ==========
+
+    /**
+     * 基于历史数据回算每个月末的综合信号评分
+     * 
+     * @param {Object} historyData - JSON中的历史数据 (spreadHistory, peHistory, dividendYieldHistory, bondYieldHistory)
+     * @param {Object} etfConfig - ETF配置（含signalRules, dimWeights）
+     * @param {number} months - 回溯月数（默认12个月）
+     * @returns {Array<{date, score, signal, signalText, signalColor}>}
+     */
+    function calcHistoricalSignals(historyData, etfConfig, months = 12) {
+        if (!historyData || !etfConfig) return [];
+
+        const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
+        if (!rules || !rules.calcScores) return [];
+
+        // 构建日期-值映射表
+        const peMap = buildDateMap(historyData.peHistory);
+        const spreadMap = buildDateMap(historyData.spreadHistory);
+        const dividendMap = buildDateMap(historyData.dividendYieldHistory);
+        const bondMap = buildDateMap(historyData.bondYieldHistory);
+
+        // 获取所有可用的月末日期（取PE历史和利差历史的并集）
+        const allDates = new Set();
+        if (historyData.peHistory) historyData.peHistory.forEach(d => allDates.add(d.date));
+        if (historyData.spreadHistory) historyData.spreadHistory.forEach(d => allDates.add(d.date));
+
+        // 按时间排序，取最近N个月
+        const sortedDates = Array.from(allDates).sort();
+        const recentDates = sortedDates.slice(-months);
+
+        if (recentDates.length === 0) return [];
+
+        // 获取PE历史值数组（用于计算分位数）
+        const allPeValues = historyData.peHistory ? historyData.peHistory.map(d => d.value) : [];
+
+        const results = [];
+        for (const dateStr of recentDates) {
+            const pe = peMap[dateStr];
+            const spread = spreadMap[dateStr];
+            const dividend = dividendMap[dateStr] || findNearestValue(dividendMap, dateStr);
+            const bond = bondMap[dateStr] || findNearestValue(bondMap, dateStr);
+
+            // 计算PE分位（基于该日期之前的所有历史PE）
+            let pePercentile = null;
+            if (pe !== null && pe !== undefined && allPeValues.length > 0) {
+                // 使用该日期之前（含）的所有PE值计算分位
+                const peIdx = historyData.peHistory.findIndex(d => d.date === dateStr);
+                const historicalPE = peIdx >= 0 ? allPeValues.slice(0, peIdx + 1) : allPeValues;
+                if (historicalPE.length >= 5) {
+                    pePercentile = calcPercentile(pe, historicalPE);
+                }
+            }
+
+            // 构建信号输入数据
+            const signalData = {
+                pePercentile: pePercentile,
+                spreadPercentile: null, // 简化处理，利差分位用利差值推算
+                trendScore: null,
+                pe: pe || 0,
+                pb: 0, // 历史PB数据不全，用默认
+                dividendYield: dividend || 0,
+                bondYield: bond || 0,
+                roe: 0, // 历史ROE不可用
+                marketTemp: 50, // 历史市场温度用中性默认（无法回溯）
+            };
+
+            // 对于使用利差的ETF，手动计算spreadPercentile
+            if (etfConfig.useBondSpread && spread !== null && spread !== undefined && historyData.spreadHistory) {
+                const spreadIdx = historyData.spreadHistory.findIndex(d => d.date === dateStr);
+                const historicalSpread = spreadIdx >= 0
+                    ? historyData.spreadHistory.slice(0, spreadIdx + 1).map(d => d.value)
+                    : historyData.spreadHistory.map(d => d.value);
+                if (historicalSpread.length >= 5) {
+                    signalData.spreadPercentile = calcPercentile(spread, historicalSpread);
+                }
+            }
+
+            // 生成综合信号
+            const { signal, scores, total } = generateMultiDimSignal(signalData, etfConfig);
+
+            results.push({
+                date: dateStr,
+                score: total,
+                signal: signal.level,
+                signalText: signal.text,
+                signalColor: signal.color,
+                // 附带各维度分数（用于tooltip）
+                scores: { ...scores },
+                pe: pe,
+                pePercentile: pePercentile,
+                dividend: dividend,
+                bond: bond,
+            });
+        }
+
+        return results;
+    }
+
+    /**
+     * 构建 {date: value} 映射表
+     */
+    function buildDateMap(arr) {
+        const map = {};
+        if (!arr) return map;
+        arr.forEach(d => { map[d.date] = d.value; });
+        return map;
+    }
+
+    /**
+     * 查找最近日期的值（向前查找）
+     */
+    function findNearestValue(dateMap, targetDate) {
+        const dates = Object.keys(dateMap).sort();
+        let nearest = null;
+        for (const d of dates) {
+            if (d <= targetDate) nearest = dateMap[d];
+        }
+        return nearest;
+    }
+
     // ========== 公开API ==========
     return {
         SIGNAL_LEVELS,
@@ -278,6 +399,7 @@ const SignalEngine = (() => {
         calcPercentile,
         generateSignal,
         generateMultiDimSignal,
+        calcHistoricalSignals,
         getPercentileZone,
         getPEPercentileZone,
         getCompositeScoreZone,

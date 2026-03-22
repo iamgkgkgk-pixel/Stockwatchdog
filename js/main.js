@@ -1001,6 +1001,41 @@ const App = (() => {
                 }
             }
         }
+
+        // ========== 综合信号历史走势图 ==========
+        renderSignalHistoryChart(etfConfig, historyData);
+    }
+
+    /**
+     * 渲染综合信号历史走势图
+     * 对于商品/黄金/债券类ETF，隐藏该区域（缺少PE等核心估值数据）
+     */
+    function renderSignalHistoryChart(etfConfig, historyData) {
+        const section = document.getElementById('chart-section-signal-history');
+        const titleEl = document.getElementById('signal-history-title');
+
+        // 商品/黄金类无PE估值，不支持历史信号回算
+        if (etfConfig.type === ETF_CONFIG.ETF_TYPE.COMMODITY || etfConfig.type === ETF_CONFIG.ETF_TYPE.GOLD) {
+            if (section) section.style.display = 'none';
+            return;
+        }
+
+        if (section) section.style.display = '';
+
+        if (!historyData) {
+            ChartManager.initSignalHistoryChart('chart-signal-history', [], etfConfig.color);
+            return;
+        }
+
+        // 计算12个月的历史信号
+        const signals = SignalEngine.calcHistoricalSignals(historyData, etfConfig, 12);
+
+        if (titleEl) {
+            const monthCount = signals.length;
+            titleEl.textContent = `综合信号历史走势（近${monthCount}个月 · ${etfConfig.shortName}）`;
+        }
+
+        ChartManager.initSignalHistoryChart('chart-signal-history', signals, etfConfig.color);
     }
 
     // ========== 刷新 ==========
