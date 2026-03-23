@@ -927,14 +927,19 @@ const DataAPI = (() => {
      * @param {Object} manualData - 手动补充的数据（PE/股息率等）
      * @returns {Object} 标准化数据
      */
+    // 安全取值：区分"值为0"（合法）和"未提供"（null/undefined）
+    function _safeVal(val, fallback) {
+        return (val !== null && val !== undefined && !isNaN(val)) ? val : (fallback || 0);
+    }
+
     function normalizeData(apiData, manualData = {}) {
         const data = {
             // 默认值（从手动补充或localStorage）
-            dividendYield: manualData.dividendYield || 0,
+            dividendYield: _safeVal(manualData.dividendYield, 0),
             bondYield: 0,
-            pe: manualData.pe || 0,
-            pb: manualData.pb || 0,
-            pbPercentile: manualData.pbPercentile || 0,
+            pe: _safeVal(manualData.pe, 0),
+            pb: _safeVal(manualData.pb, 0),
+            pbPercentile: _safeVal(manualData.pbPercentile, 0),
             price: 0,
             priceChange: 0,
             updateTime: formatDateTime(new Date()),
@@ -1036,12 +1041,14 @@ const DataAPI = (() => {
         }
 
         // 手动数据覆盖：仅在API未提供该字段时才用手动数据（避免旧缓存覆盖新API数据）
-        if (manualData.dividendYield && !apiData.valuation) data.dividendYield = manualData.dividendYield;
-        if (manualData.pe && !apiData.valuation) data.pe = manualData.pe;
-        if (manualData.pb && !apiData.valuation) data.pb = manualData.pb;
-        if (manualData.spreadPercentile) data.spreadPercentile = manualData.spreadPercentile;
-        if (manualData.pePercentile && !apiData.valuation) data.pePercentile = manualData.pePercentile;
-        if (manualData.pbPercentile && !apiData.valuation) data.pbPercentile = manualData.pbPercentile;
+        // 使用严格检查，不再用 || 以避免合法0值被跳过
+        const _hasVal = (v) => v !== null && v !== undefined && v !== '' && !isNaN(v);
+        if (_hasVal(manualData.dividendYield) && !apiData.valuation) data.dividendYield = manualData.dividendYield;
+        if (_hasVal(manualData.pe) && !apiData.valuation) data.pe = manualData.pe;
+        if (_hasVal(manualData.pb) && !apiData.valuation) data.pb = manualData.pb;
+        if (_hasVal(manualData.spreadPercentile)) data.spreadPercentile = manualData.spreadPercentile;
+        if (_hasVal(manualData.pePercentile) && !apiData.valuation) data.pePercentile = manualData.pePercentile;
+        if (_hasVal(manualData.pbPercentile) && !apiData.valuation) data.pbPercentile = manualData.pbPercentile;
 
         return data;
     }

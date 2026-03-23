@@ -139,7 +139,7 @@
                 </div>
                 <div class="chart-container" id="chart-signal-history" style="height:350px;"></div>
                 <div class="signal-history-note">
-                    ⚠️ 历史信号为基于历史数据回算，市场温度维度使用默认中性值(50)，实际信号可能略有差异
+                    ⚠️ 历史信号为基于历史数据回算，市场温度/盈利质量等维度因无历史数据自动跳过（权重分配给估值+安全边际），仅最新月份使用实时数据
                 </div>
             </div>
         </section>
@@ -197,7 +197,7 @@
                     <p>• <strong>A股市场情绪：</strong>东方财富上证指数涨跌家数比（A股ETF/债券ETF使用）。</p>
                     <p>• <strong>美股市场情绪：</strong>CNN Fear & Greed Index（美股ETF/港股ETF使用）。</p>
                     <p>• <strong>美股行情：</strong>不支持自动获取，请手动录入。</p>
-                    <p><strong>刷新机制：</strong>交易时段（工作日9:15-15:05）每60秒自动刷新；也可点击"🔄刷新"手动获取。</p>
+                    <p><strong>刷新机制：</strong>交易时段（工作日9:15-15:05）每5分钟自动刷新；也可点击"🔄刷新"手动获取。</p>
                 </div>
             </div>
 

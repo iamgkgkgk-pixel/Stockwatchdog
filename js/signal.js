@@ -279,7 +279,7 @@ const SignalEngine = (() => {
      * @param {Object} historyData - JSON中的历史数据 (spreadHistory, peHistory, dividendYieldHistory, bondYieldHistory)
      * @param {Object} etfConfig - ETF配置（含signalRules, dimWeights）
      * @param {number} months - 回溯月数（默认96个月，即8年；数据不足时自动回退到全部可用历史）
-     * @param {number|null} currentMarketTemp - 当前市场温度（用于最近一个月，使历史走势图末端与实时信号一致）
+     * @param {number|null} currentMarketTemp - 已弃用，保留参数兼容性。走势图统一使用marketTemp=50（中性）保证数据一致性
      * @returns {Array<{date, score, signal, signalText, signalColor}>}
      */
     function calcHistoricalSignals(historyData, etfConfig, months = 96, currentMarketTemp = null) {
@@ -348,11 +348,11 @@ const SignalEngine = (() => {
             }
 
             // 构建信号输入数据
-            // marketTemp: 历史月份用中性50（无法回溯），最后一个月用当前实际值（使末端与实时信号一致）
-            const isLastMonth = (dateStr === recentDates[recentDates.length - 1]);
-            const marketTemp = (isLastMonth && currentMarketTemp !== null && currentMarketTemp !== undefined && !isNaN(currentMarketTemp))
-                ? currentMarketTemp
-                : 50;
+            // marketTemp: 所有月份统一使用50（中性），保证走势图数据一致性
+            // 原因：历史月份无法获取真实的市场情绪数据，如果设为null会跳过sentiment维度（权重25%），
+            //       导致历史月份只用65权重计算，而当前月用90权重计算，分数基准不同无法对比。
+            //       统一用50=中性，让sentiment维度对所有月份贡献一致（50分），走势图只反映估值变化。
+            const marketTemp = 50;
 
             const signalData = {
                 pePercentile: pePercentile,
@@ -522,7 +522,7 @@ const SignalEngine = (() => {
      * @param {Object} historyData - JSON中的历史数据
      * @param {Object} etfConfig - ETF配置
      * @param {number} days - 回溯天数（默认365天，即1年）
-     * @param {number|null} currentMarketTemp - 当前市场温度
+     * @param {number|null} currentMarketTemp - 已弃用，保留参数兼容性。走势图统一使用marketTemp=50（中性）保证数据一致性
      * @returns {Array<{date, score, signal, signalText, signalColor, scores}>}
      */
     function calcDailyHistoricalSignals(historyData, etfConfig, days = 365, currentMarketTemp = null) {
@@ -605,11 +605,9 @@ const SignalEngine = (() => {
                 peMap, sortedPeKeys, allPeValues, dateStr
             );
 
-            // 市场温度：仅最后一天用实时值
-            const isLastDay = (dateStr === lastDate);
-            const marketTemp = (isLastDay && currentMarketTemp !== null && currentMarketTemp !== undefined && !isNaN(currentMarketTemp))
-                ? currentMarketTemp
-                : 50;
+            // 市场温度：所有日期统一使用50（中性），保证走势图数据一致性
+            // 与月级别走势保持同一策略：走势图只反映估值+安全边际的变化趋势
+            const marketTemp = 50;
 
             const signalData = {
                 pePercentile: pePercentile,

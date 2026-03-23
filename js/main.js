@@ -475,17 +475,62 @@ const App = (() => {
             etfDataCache[etfId].lastApiData = apiData;
 
             if (apiData.success) {
-                const savedManual = DataStorage.getCurrentData(etfId);
+                let savedManual = DataStorage.getCurrentData(etfId);
                 const fallback = historyData ? historyData.currentData : {};
                 const manualOverride = {};
 
+                // 辅助函数：安全取第一个有效数值（区分0和undefined/null）
+                const _pickValid = (...vals) => {
+                    for (const v of vals) {
+                        if (v !== null && v !== undefined && v !== '' && !isNaN(v)) return v;
+                    }
+                    return undefined;
+                };
+
+                // ========== 缓存数据合理性校验（防止旧缓存污染信号）==========
+                // 当localStorage缓存的PE/pePercentile与JSON预设数据严重偏离时，
+                // 说明缓存可能是旧ETF代码/手动输入的残留数据，应清除并使用JSON预设值
+                if (savedManual && fallback && fallback.pe > 0) {
+                    const cachedPE = savedManual.pe || 0;
+                    const presetPE = fallback.pe || 0;
+                    const cachedPePct = savedManual.pePercentile;
+                    const presetPePct = fallback.pePercentile;
+
+                    let cacheStale = false;
+                    // 检查PE偏差：如果缓存PE与预设PE差异>50%，判定为过期缓存
+                    if (cachedPE > 0 && presetPE > 0 && Math.abs(cachedPE - presetPE) / presetPE > 0.5) {
+                        console.warn(`⚠️ [${etfId}] localStorage缓存PE(${cachedPE.toFixed(1)})与JSON预设PE(${presetPE.toFixed(1)})偏差过大，清除旧缓存`);
+                        cacheStale = true;
+                    }
+                    // 检查PE分位偏差：如果方向完全相反（一个<30一个>60），判定为过期缓存
+                    if (!cacheStale && cachedPePct !== null && cachedPePct !== undefined && presetPePct !== null && presetPePct !== undefined) {
+                        if (Math.abs(cachedPePct - presetPePct) > 30) {
+                            console.warn(`⚠️ [${etfId}] localStorage缓存pePercentile(${cachedPePct.toFixed(1)}%)与JSON预设(${presetPePct.toFixed(1)}%)偏差超过30pp，清除旧缓存`);
+                            cacheStale = true;
+                        }
+                    }
+
+                    if (cacheStale) {
+                        console.info(`🧹 [${etfId}] 清除过期localStorage缓存，使用JSON预设数据`);
+                        DataStorage.clearETFData(etfId);
+                        savedManual = null; // 不再使用旧缓存
+                    }
+                }
+
                 if (!apiData.valuation) {
-                    manualOverride.dividendYield = (savedManual && savedManual.dividendYield) || (fallback && fallback.dividendYield) || 0;
-                    manualOverride.pe = (savedManual && savedManual.pe) || (fallback && fallback.pe) || 0;
-                    manualOverride.pb = (savedManual && savedManual.pb) || (fallback && fallback.pb) || 0;
-                    manualOverride.pePercentile = (savedManual && savedManual.pePercentile) || (fallback && fallback.pePercentile) || 0;
-                    manualOverride.pbPercentile = (savedManual && savedManual.pbPercentile) || (fallback && fallback.pbPercentile) || 0;
-                    Object.keys(manualOverride).forEach(key => { if (!manualOverride[key]) delete manualOverride[key]; });
+                    // 优先级调整：JSON预设(fallback) 优先于 localStorage缓存(savedManual)
+                    // 原因：JSON是开发者校准的基准数据，localStorage可能因切换ETF代码等原因残留旧值
+                    const dv = _pickValid(fallback && fallback.dividendYield, savedManual && savedManual.dividendYield);
+                    const pe = _pickValid(fallback && fallback.pe, savedManual && savedManual.pe);
+                    const pb = _pickValid(fallback && fallback.pb, savedManual && savedManual.pb);
+                    const pePct = _pickValid(fallback && fallback.pePercentile, savedManual && savedManual.pePercentile);
+                    const pbPct = _pickValid(fallback && fallback.pbPercentile, savedManual && savedManual.pbPercentile);
+                    if (dv !== undefined) manualOverride.dividendYield = dv;
+                    if (pe !== undefined) manualOverride.pe = pe;
+                    if (pb !== undefined) manualOverride.pb = pb;
+                    if (pePct !== undefined) manualOverride.pePercentile = pePct;
+                    if (pbPct !== undefined) manualOverride.pbPercentile = pbPct;
+                    console.info(`📊 [${etfId}] 估值数据来源: PE=${pe}, pePercentile=${pePct}% (来自${fallback && fallback.pe > 0 ? 'JSON预设' : 'localStorage缓存'})`);
                 }
 
                 const normalized = DataAPI.normalizeData(apiData, manualOverride);
@@ -600,13 +645,13 @@ const App = (() => {
 
         let spreadPercentile = null;
         if (canCalcSpread) {
-            if (data.spreadPercentile && data.spreadPercentile > 0) spreadPercentile = data.spreadPercentile;
+            if (data.spreadPercentile !== null && data.spreadPercentile !== undefined && !isNaN(data.spreadPercentile)) spreadPercentile = data.spreadPercentile;
             else if (spreadValues.length > 0) spreadPercentile = SignalEngine.calcPercentile(spread, spreadValues);
         }
 
         let pePercentile = null;
         if (peAvailable) {
-            if (data.pePercentile && data.pePercentile > 0) pePercentile = data.pePercentile;
+            if (data.pePercentile !== null && data.pePercentile !== undefined && !isNaN(data.pePercentile)) pePercentile = data.pePercentile;
             else if (peValues.length > 0) pePercentile = SignalEngine.calcPercentile(data.pe, peValues);
         }
 
@@ -632,8 +677,12 @@ const App = (() => {
             marketTemp: safeNum(data.marketTemp),
         };
 
+        // 日志：输出实际用于信号计算的关键数据（方便调试信号与预期不符的问题）
+        console.info(`🎯 [${etfId}] 信号计算输入: PE=${signalData.pe}, pePercentile=${signalData.pePercentile !== null ? signalData.pePercentile.toFixed(1) + '%' : 'null'}, marketTemp=${signalData.marketTemp !== null ? signalData.marketTemp : 'null'}, roe=${signalData.roe}`);
+
         // 生成多维度综合信号
         const { signal: currentSignal, scores, total } = SignalEngine.generateMultiDimSignal(signalData, etfConfig);
+        console.info(`🎯 [${etfId}] 信号结果: 总分=${total.toFixed(1)}, 信号=${currentSignal.text}, 各维度=`, JSON.stringify(scores));
 
         // 更新UI
         updateSignalDisplay(currentSignal, total);
@@ -1143,11 +1192,21 @@ const App = (() => {
                 const fallback = historyData ? historyData.currentData : {};
                 const manualOverride = {};
                 if (!apiData.valuation) {
-                    manualOverride.dividendYield = (savedManual && savedManual.dividendYield) || (fallback && fallback.dividendYield) || 0;
-                    manualOverride.pe = (savedManual && savedManual.pe) || (fallback && fallback.pe) || 0;
-                    manualOverride.pb = (savedManual && savedManual.pb) || (fallback && fallback.pb) || 0;
-                    manualOverride.pePercentile = (savedManual && savedManual.pePercentile) || (fallback && fallback.pePercentile) || 0;
-                    Object.keys(manualOverride).forEach(key => { if (!manualOverride[key]) delete manualOverride[key]; });
+                    const _pickValid2 = (...vals) => {
+                        for (const v of vals) {
+                            if (v !== null && v !== undefined && v !== '' && !isNaN(v)) return v;
+                        }
+                        return undefined;
+                    };
+                    // 优先级调整：JSON预设(fallback) 优先于 localStorage缓存(savedManual)
+                    const dv = _pickValid2(fallback && fallback.dividendYield, savedManual && savedManual.dividendYield);
+                    const pe = _pickValid2(fallback && fallback.pe, savedManual && savedManual.pe);
+                    const pb = _pickValid2(fallback && fallback.pb, savedManual && savedManual.pb);
+                    const pePct = _pickValid2(fallback && fallback.pePercentile, savedManual && savedManual.pePercentile);
+                    if (dv !== undefined) manualOverride.dividendYield = dv;
+                    if (pe !== undefined) manualOverride.pe = pe;
+                    if (pb !== undefined) manualOverride.pb = pb;
+                    if (pePct !== undefined) manualOverride.pePercentile = pePct;
                 }
                 const normalized = DataAPI.normalizeData(apiData, manualOverride);
 
@@ -1184,7 +1243,7 @@ const App = (() => {
 
     function startAutoRefresh() {
         stopAutoRefresh();
-        autoRefreshTimer = setInterval(() => { if (isTradingHours()) refreshData(); }, 60000);
+        autoRefreshTimer = setInterval(() => { if (isTradingHours()) refreshData(); }, 300000);
     }
 
     function stopAutoRefresh() {
@@ -1441,15 +1500,21 @@ const App = (() => {
         const cached = DataStorage.getCurrentData(currentETFId) || {};
         const getVal = (id) => { const el = document.getElementById(id); return el ? parseFloat(el.value) : NaN; };
 
+        // 安全取值函数：区分"用户输入了0"和"用户没填"（NaN）
+        const safeGetVal = (id, fallback) => {
+            const v = getVal(id);
+            return !isNaN(v) ? v : (fallback !== undefined && fallback !== null ? fallback : 0);
+        };
+
         const data = {
-            dividendYield: getVal('input-dividend-yield') || cached.dividendYield || 0,
-            bondYield: getVal('input-bond-yield') || cached.bondYield || 0,
-            pe: getVal('input-pe') || cached.pe || 0,
-            pb: getVal('input-pb') || cached.pb || 0,
-            price: getVal('input-price') || cached.price || 0,
-            priceChange: getVal('input-price-change') || cached.priceChange || 0,
-            pePercentile: getVal('input-pe-percentile') || 0,
-            roe: getVal('input-roe') || cached.roe || 0,
+            dividendYield: safeGetVal('input-dividend-yield', cached.dividendYield),
+            bondYield: safeGetVal('input-bond-yield', cached.bondYield),
+            pe: safeGetVal('input-pe', cached.pe),
+            pb: safeGetVal('input-pb', cached.pb),
+            price: safeGetVal('input-price', cached.price),
+            priceChange: safeGetVal('input-price-change', cached.priceChange),
+            pePercentile: safeGetVal('input-pe-percentile', 0),
+            roe: safeGetVal('input-roe', cached.roe),
             updateTime: formatDateTime(new Date())
         };
 

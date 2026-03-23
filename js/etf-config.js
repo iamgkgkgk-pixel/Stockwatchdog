@@ -17,7 +17,7 @@
  * ETF分类（12只）：
  *   A股价值：红利低波(512890), 自由现金流(159201)
  *   A股宽基：沪深300ETF(510300)
- *   A股成长：科创创业50(159781), 创业板50(159949)
+ *   A股成长：科创创业50(588300), 创业板50(159949)
  *   A股行业：医药ETF(512010)
  *   美股QDII：标普500(513650), 纳指(513110)
  *   港股QDII：恒生科技(513180)
@@ -76,19 +76,19 @@ const ETF_CONFIG = (() => {
             useBondSpread: true,
             description: '跟踪中证红利低波动指数，选取股息率高且波动率低的50只股票。巴菲特理念：稳定现金流回报+安全边际。',
             signalRules: 'buffett_value',
-            dimWeights: { valuation: 40, safety: 35, quality: 5, sentiment: 20 },
+            dimWeights: { valuation: 40, safety: 30, quality: 10, sentiment: 20 },
         },
 
-        // ===== 2. 科创创业ETF =====
+        // ===== 2. 科创创业50ETF（招商） =====
         {
             id: 'sci-tech-50',
-            code: '159781',
-            name: '科创创业ETF',
-            shortName: '科创创业',
-            fullName: '科创创业ETF易方达',
+            code: '588300',
+            name: '科创创业50ETF',
+            shortName: '科创创业50',
+            fullName: '招商中证科创创业50ETF',
             type: ETF_TYPE.A_SHARE_INDEX,
-            market: 'SZ',
-            secid: '0.159781',
+            market: 'SH',
+            secid: '1.588300',
             color: '#e040fb',
             icon: '🚀',
             trackIndex: {
@@ -99,9 +99,9 @@ const ETF_CONFIG = (() => {
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
             useBondSpread: false,
-            description: '从科创板和创业板选取市值最大的50只新兴产业上市公司。芒格理念：以合理价格买入优质成长公司。',
+            description: '跟踪中证科创创业50指数(931643)，从科创板和创业板选取市值最大的50只新兴产业上市公司。芒格理念：以合理价格买入优质成长公司。场内简称：双创ETF。',
             signalRules: 'buffett_growth',
-            dimWeights: { valuation: 55, safety: 15, quality: 5, sentiment: 25 },
+            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
         },
 
         // ===== 3. 创业板50ETF =====
@@ -119,14 +119,14 @@ const ETF_CONFIG = (() => {
             trackIndex: {
                 name: '创业板50指数',
                 code: '399673',
-                danjuanCode: 'SZ399006',
-                danjuanName: '创业板',
+                danjuanCode: 'SZ399673',    // 修正：应为创业板50(399673)，非创业板指(399006)
+                danjuanName: '创业板50',    // 蛋卷基金中名称可能为"创业板50"
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
             useBondSpread: false,
             description: '创业板流动性最好的50只股票，聚焦新能源+信息技术+医药。',
             signalRules: 'buffett_growth',
-            dimWeights: { valuation: 55, safety: 15, quality: 5, sentiment: 25 },
+            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
         },
 
         // ===== 4. 自由现金流ETF =====
@@ -151,7 +151,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: true,
             description: '跟踪国证自由现金流指数。巴菲特核心：企业的内在价值等于未来自由现金流的折现值。',
             signalRules: 'buffett_value',
-            dimWeights: { valuation: 35, safety: 45, quality: 5, sentiment: 15 },
+            dimWeights: { valuation: 35, safety: 40, quality: 10, sentiment: 15 },
         },
 
         // ===== 5. 标普500ETF =====
@@ -176,7 +176,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪标普500指数。巴菲特遗嘱配置：90%资金投入标普500。美股长牛但需警惕周期性高估。',
             signalRules: 'buffett_us',
-            dimWeights: { valuation: 45, safety: 20, quality: 5, sentiment: 30 },
+            dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
         },
 
         // ===== 6. 纳指ETF =====
@@ -201,7 +201,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪纳斯达克100指数，聚焦美国科技龙头。成长股PE波动大，需更关注市场情绪。',
             signalRules: 'buffett_us_growth',
-            dimWeights: { valuation: 45, safety: 15, quality: 5, sentiment: 35 },
+            dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
         },
 
         // ===== 7. 恒生科技指数ETF =====
@@ -226,7 +226,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪恒生科技指数，覆盖腾讯/阿里/美团等互联网龙头。港股受AH溢价和资金面影响大。',
             signalRules: 'buffett_hk',
-            dimWeights: { valuation: 50, safety: 15, quality: 5, sentiment: 30 },
+            dimWeights: { valuation: 50, safety: 15, quality: 10, sentiment: 25 },
         },
 
         // ===== 8. 沪深300ETF =====
@@ -251,7 +251,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: true,
             description: 'A股的"锚"，由沪深两市规模最大、流动性最好的300只股票组成。巴菲特遗嘱配置理念的A股版本。规模3300+亿，费率0.2%，全市场最低。',
             signalRules: 'buffett_broad',
-            dimWeights: { valuation: 40, safety: 30, quality: 5, sentiment: 25 },
+            dimWeights: { valuation: 40, safety: 30, quality: 10, sentiment: 20 },
         },
 
         // ===== 9. 医药ETF =====
@@ -276,7 +276,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪沪深300医药卫生指数，覆盖恒瑞医药、药明康德、迈瑞医疗等龙头。独立周期防御型行业，与科技/消费相关性低。规模170亿，医药ETF中最大。',
             signalRules: 'buffett_pharma',
-            dimWeights: { valuation: 50, safety: 25, quality: 5, sentiment: 20 },
+            dimWeights: { valuation: 50, safety: 20, quality: 10, sentiment: 20 },
         },
 
         // ===== 10. 黄金ETF =====
@@ -395,9 +395,13 @@ const ETF_CONFIG = (() => {
                 }
 
                 // 维度B: 安全边际（股息率 - 国债收益率）
+                // 修正：引入利率环境因子，低利率时利差天然偏大，需适度压缩避免虚高
                 if (data.dividendYield > 0 && data.bondYield > 0) {
                     const spread = data.dividendYield - data.bondYield;
-                    scores.safety = Math.max(0, Math.min(100, 40 + spread * 20));
+                    // 利率调节因子：国债收益率<2%时压缩系数0.7，>3%时系数1.0
+                    const rateAdj = Math.max(0.7, Math.min(1.0, (data.bondYield - 1.0) * 0.3 + 0.7));
+                    const rawSafety = 40 + spread * 20;
+                    scores.safety = Math.max(0, Math.min(100, rawSafety * rateAdj));
                 } else if (data.spreadPercentile !== null && data.spreadPercentile !== undefined) {
                     scores.safety = data.spreadPercentile;
                 } else {
@@ -413,20 +417,20 @@ const ETF_CONFIG = (() => {
                     }
                     scores.quality = Math.max(0, Math.min(100, roeScore + pbAdj));
                 } else {
-                    scores.quality = 50;
+                    scores.quality = null; // 无ROE数据时返回null，权重自动分配给其他维度
                 }
 
                 // 维度D: 市场温度（手动输入，越高=越热=情绪分越低）
                 if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
                     scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
                 } else {
-                    scores.sentiment = 50;
+                    scores.sentiment = null; // 无情绪数据时权重自动分配给其他维度
                 }
 
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 40, safety: 35, quality: 5, sentiment: 20 };
+                const w = weights || { valuation: 40, safety: 30, quality: 10, sentiment: 20 };
                 const scores = SIGNAL_RULES.buffett_value.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -476,9 +480,13 @@ const ETF_CONFIG = (() => {
                     scores.valuation = null;
                 }
 
-                // 成长股用PE绝对值判断安全性
+                // 成长股安全性：基于PE倒数(E/P)的安全评估
+                // PE=20 → E/P=5% → 安全性高(~75); PE=40 → E/P=2.5% → 中等(~55); PE=80 → E/P=1.25% → 低(~30)
+                // 比原来的 130-PE*2 更平滑，对高PE行业（科创板PE 50-80）更公平
                 if (data.pe > 0) {
-                    scores.safety = Math.max(0, Math.min(100, 130 - data.pe * 2));
+                    const earningsYield = (1 / data.pe) * 100; // E/P 百分比
+                    // E/P 1%→25分, 2%→45分, 3%→60分, 5%→80分, 8%→100分
+                    scores.safety = Math.max(0, Math.min(100, earningsYield * 12 + 13));
                 } else {
                     scores.safety = null;
                 }
@@ -486,19 +494,19 @@ const ETF_CONFIG = (() => {
                 if (data.roe > 0) {
                     scores.quality = Math.max(0, Math.min(100, data.roe * 5 + 10));
                 } else {
-                    scores.quality = 50;
+                    scores.quality = null;
                 }
 
                 if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
                     scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
                 } else {
-                    scores.sentiment = 50;
+                    scores.sentiment = null; // 无情绪数据时权重自动分配
                 }
 
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 55, safety: 15, quality: 5, sentiment: 25 };
+                const w = weights || { valuation: 55, safety: 10, quality: 10, sentiment: 25 };
                 const scores = SIGNAL_RULES.buffett_growth.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -541,8 +549,11 @@ const ETF_CONFIG = (() => {
                 const scores = {};
 
                 if (data.pePercentile !== null && data.pePercentile !== undefined) {
+                    // 美股PE中枢偏高是常态（长牛），用平缓衰减公式代替线性反转
+                    // PE分位50%时估值分50，分位80%时估值分约25，分位100%时估值分0
+                    // 公式设计：低分位时（便宜）得分接近100-pePercentile，高分位时适度缓冲
                     const rawScore = 100 - data.pePercentile;
-                    scores.valuation = Math.max(0, Math.min(100, rawScore * 0.9 + 10));
+                    scores.valuation = Math.max(0, Math.min(100, rawScore));
                 } else {
                     scores.valuation = null;
                 }
@@ -557,18 +568,28 @@ const ETF_CONFIG = (() => {
                     scores.safety = null;
                 }
 
-                scores.quality = 60; // 标普500本身质量高
+                // 盈利质量：标普500用盈利收益率E/P作为质量代理
+                // E/P越高→盈利能力越强→质量分越高
+                if (data.pe > 0) {
+                    const earningsYieldPct = (1 / data.pe) * 100;
+                    // E/P 2%→质量40, 4%→60, 6%→80（美股E/P通常3-6%）
+                    scores.quality = Math.max(0, Math.min(100, earningsYieldPct * 10));
+                } else if (data.roe > 0) {
+                    scores.quality = Math.max(0, Math.min(100, data.roe * 4 + 20));
+                } else {
+                    scores.quality = null; // 无数据时返回null，权重自动跳过
+                }
 
                 if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
                     scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
                 } else {
-                    scores.sentiment = 50;
+                    scores.sentiment = null; // 无情绪数据时权重自动分配
                 }
 
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 45, safety: 20, quality: 5, sentiment: 30 };
+                const w = weights || { valuation: 45, safety: 15, quality: 10, sentiment: 30 };
                 const scores = SIGNAL_RULES.buffett_us.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -623,18 +644,27 @@ const ETF_CONFIG = (() => {
                     scores.safety = null;
                 }
 
-                scores.quality = 65; // 纳指创新力强
+                // 盈利质量：纳指100用盈利收益率E/P作为质量代理
+                if (data.pe > 0) {
+                    const earningsYieldPct = (1 / data.pe) * 100;
+                    // 纳指E/P通常2-4%，给予创新溢价加成（+10）
+                    scores.quality = Math.max(0, Math.min(100, earningsYieldPct * 10 + 10));
+                } else if (data.roe > 0) {
+                    scores.quality = Math.max(0, Math.min(100, data.roe * 4 + 20));
+                } else {
+                    scores.quality = null;
+                }
 
                 if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
                     scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
                 } else {
-                    scores.sentiment = 50;
+                    scores.sentiment = null; // 无情绪数据时权重自动分配
                 }
 
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 45, safety: 15, quality: 5, sentiment: 35 };
+                const w = weights || { valuation: 45, safety: 15, quality: 10, sentiment: 30 };
                 const scores = SIGNAL_RULES.buffett_us_growth.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -683,7 +713,9 @@ const ETF_CONFIG = (() => {
                 }
 
                 if (data.pe > 0) {
-                    scores.safety = Math.max(0, Math.min(100, 120 - data.pe * 2.5));
+                    // 港股用E/P作为安全代理，更平滑
+                    const earningsYield = (1 / data.pe) * 100;
+                    scores.safety = Math.max(0, Math.min(100, earningsYield * 13 + 8));
                 } else {
                     scores.safety = null;
                 }
@@ -691,19 +723,19 @@ const ETF_CONFIG = (() => {
                 if (data.roe > 0) {
                     scores.quality = Math.max(0, Math.min(100, data.roe * 4 + 20));
                 } else {
-                    scores.quality = 50;
+                    scores.quality = null;
                 }
 
                 if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
                     scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
                 } else {
-                    scores.sentiment = 50;
+                    scores.sentiment = null; // 无情绪数据时权重自动分配
                 }
 
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 50, safety: 15, quality: 5, sentiment: 30 };
+                const w = weights || { valuation: 50, safety: 15, quality: 10, sentiment: 25 };
                 const scores = SIGNAL_RULES.buffett_hk.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -753,10 +785,13 @@ const ETF_CONFIG = (() => {
                 }
 
                 // 维度B: 股债利差（股息率 - 国债收益率）
+                // 修正：引入利率环境因子，低利率时适度压缩
                 if (data.dividendYield > 0 && data.bondYield > 0) {
                     const spread = data.dividendYield - data.bondYield;
                     // 沪深300股息率约2-3%，国债约1.5-2.5%
-                    scores.safety = Math.max(0, Math.min(100, 45 + spread * 18));
+                    const rateAdj = Math.max(0.7, Math.min(1.0, (data.bondYield - 1.0) * 0.3 + 0.7));
+                    const rawSafety = 45 + spread * 18;
+                    scores.safety = Math.max(0, Math.min(100, rawSafety * rateAdj));
                 } else if (data.spreadPercentile !== null && data.spreadPercentile !== undefined) {
                     scores.safety = data.spreadPercentile;
                 } else {
@@ -772,20 +807,20 @@ const ETF_CONFIG = (() => {
                     }
                     scores.quality = Math.max(0, Math.min(100, roeScore + pbAdj));
                 } else {
-                    scores.quality = 55; // 沪深300整体盈利质量中等偏上
+                    scores.quality = null; // 无ROE数据时权重自动跳过
                 }
 
                 // 维度D: 市场温度
                 if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
                     scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
                 } else {
-                    scores.sentiment = 50;
+                    scores.sentiment = null; // 无情绪数据时权重自动分配
                 }
 
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 40, safety: 30, quality: 5, sentiment: 25 };
+                const w = weights || { valuation: 40, safety: 30, quality: 10, sentiment: 20 };
                 const scores = SIGNAL_RULES.buffett_broad.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -836,9 +871,11 @@ const ETF_CONFIG = (() => {
                 }
 
                 // 维度B: 绝对PE安全性（医药PE正常区间20-50）
+                // 使用E/P(盈利收益率)作为安全代理，更平滑
+                // PE=20 → E/P=5% → ~73分; PE=35 → E/P=2.86% → ~47分; PE=50 → E/P=2% → ~37分
                 if (data.pe > 0) {
-                    // PE<20极低估, PE=35中性, PE>60高估
-                    scores.safety = Math.max(0, Math.min(100, 140 - data.pe * 2.5));
+                    const earningsYield = (1 / data.pe) * 100;
+                    scores.safety = Math.max(0, Math.min(100, earningsYield * 13 + 8));
                 } else {
                     scores.safety = null;
                 }
@@ -847,20 +884,20 @@ const ETF_CONFIG = (() => {
                 if (data.roe > 0) {
                     scores.quality = Math.max(0, Math.min(100, data.roe * 5 + 10));
                 } else {
-                    scores.quality = 50; // 医药行业平均盈利中等
+                    scores.quality = null; // 无ROE数据时权重自动跳过
                 }
 
                 // 维度D: 市场温度
                 if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
                     scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
                 } else {
-                    scores.sentiment = 50;
+                    scores.sentiment = null; // 无情绪数据时权重自动分配
                 }
 
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 50, safety: 25, quality: 5, sentiment: 20 };
+                const w = weights || { valuation: 50, safety: 20, quality: 10, sentiment: 20 };
                 const scores = SIGNAL_RULES.buffett_pharma.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -957,7 +994,7 @@ const ETF_CONFIG = (() => {
                     // 股市恐惧(marketTemp低)→利好债券→分高
                     scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
                 } else {
-                    scores.sentiment = 50;
+                    scores.sentiment = null; // 无情绪数据时权重自动分配
                 }
 
                 return scores;
