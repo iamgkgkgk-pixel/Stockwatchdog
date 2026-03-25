@@ -840,7 +840,16 @@ const DataAPI = (() => {
     /**
      * 通过secid获取实时行情（通用版）
      */
-    async function fetchQuoteBySecid(secid) {
+    /**
+     * 安全解析东方财富字段值（可能返回"-"或空字符串）
+     */
+    function _safeParseEMField(val) {
+        if (val === null || val === undefined || val === '-' || val === '--' || val === '') return null;
+        const num = parseFloat(val);
+        return isNaN(num) ? null : num;
+    }
+
+    async function fetchQuoteBySecid(secid, _retryCount = 0) {
         try {
             const data = await jsonp(API_CONFIG.EASTMONEY_QUOTE, {
                 secid: secid,
@@ -850,16 +859,41 @@ const DataAPI = (() => {
             });
             if (data && data.data) {
                 const d = data.data;
+                const price = _safeParseEMField(d.f43);
+                // 如果price为null（东方财富偶尔返回"-"），且还没重试过，则延迟1秒重试
+                if (price === null && _retryCount < 1) {
+                    console.info(`行情获取: ${secid} price为空/"-"，1秒后重试...`);
+                    await new Promise(r => setTimeout(r, 1000));
+                    return fetchQuoteBySecid(secid, _retryCount + 1);
+                }
                 return {
                     code: d.f57, name: d.f58,
-                    price: d.f43, open: d.f46, high: d.f44, low: d.f45,
-                    prevClose: d.f60, priceChange: d.f170, priceChangeAmt: d.f171,
-                    volume: d.f47, amount: d.f48,
+                    price: price || 0,
+                    open: _safeParseEMField(d.f46) || 0,
+                    high: _safeParseEMField(d.f44) || 0,
+                    low: _safeParseEMField(d.f45) || 0,
+                    prevClose: _safeParseEMField(d.f60) || 0,
+                    priceChange: _safeParseEMField(d.f170) || 0,
+                    priceChangeAmt: _safeParseEMField(d.f171) || 0,
+                    volume: _safeParseEMField(d.f47) || 0,
+                    amount: _safeParseEMField(d.f48) || 0,
                     source: '东方财富', fetchTime: new Date().toISOString()
                 };
             }
+            // data为空时重试一次
+            if (_retryCount < 1) {
+                console.info(`行情获取: ${secid} 返回空数据，1秒后重试...`);
+                await new Promise(r => setTimeout(r, 1000));
+                return fetchQuoteBySecid(secid, _retryCount + 1);
+            }
             return null;
         } catch (e) {
+            // 超时或网络异常时重试一次
+            if (_retryCount < 1) {
+                console.info(`行情获取: ${secid} 异常(${e.message})，1秒后重试...`);
+                await new Promise(r => setTimeout(r, 1000));
+                return fetchQuoteBySecid(secid, _retryCount + 1);
+            }
             console.warn('获取行情失败:', e.message);
             return null;
         }
