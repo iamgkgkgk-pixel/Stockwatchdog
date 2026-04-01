@@ -14,13 +14,13 @@
  *   维度C: 盈利质量 — ROE、盈利趋势
  *   维度D: 市场温度 — 整体市场情绪（可选手动输入）
  * 
- * ETF分类（12只）：
+ * ETF分类（13只）：
  *   A股价值：红利低波(512890), 自由现金流(159201)
  *   A股宽基：沪深300ETF(510300)
  *   A股成长：科创创业50(588300), 创业板50(159949)
  *   A股行业：医药ETF(512010)
  *   美股QDII：标普500(513650), 纳指(513110)
- *   港股QDII：恒生科技(513180)
+ *   港股QDII：恒生科技(513180), 港股通央企红利(513901)
  *   避险资产：黄金ETF(518850)
  *   固收债券：十年国债ETF(511260)
  *   商品期货：豆粕ETF(159985)
@@ -52,7 +52,7 @@ const ETF_CONFIG = (() => {
         BOND_YIELD: 'bond_yield',
     };
 
-    // ========== 所有ETF配置（12只）==========
+    // ========== 所有ETF配置（13只）==========
     const ETF_LIST = [
         // ===== 1. 红利低波ETF =====
         {
@@ -352,6 +352,31 @@ const ETF_CONFIG = (() => {
             description: '商品期货ETF，跟踪大商所豆粕期货价格指数，与股市低相关性。商品无估值，纯趋势跟踪。',
             signalRules: 'commodity_trend',
             dimWeights: { valuation: 0, safety: 0, quality: 0, sentiment: 100 },
+        },
+
+        // ===== 13. 港股通央企红利ETF =====
+        {
+            id: 'hk-soe-dividend',
+            code: '513901',
+            name: '港股通央企红利ETF',
+            shortName: '港股央企红利',
+            fullName: '港股通央企红利ETF',
+            type: ETF_TYPE.HK_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.513901',
+            color: '#c62828',
+            icon: '🏢',
+            trackIndex: {
+                name: '中证港股通央企红利指数',
+                code: '931233',
+                danjuanCode: null,    // 蛋卷基金暂无此指数
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_HK,
+            useBondSpread: true,
+            description: '跟踪中证港股通央企红利指数(931233)，从港股通央企中选取股息率高、分红稳定的上市公司。PE约7.5倍、PB约0.6倍、股息率约6%，"666组合"典型代表。兼具高股息+央企+港股低估三重安全边际。',
+            signalRules: 'buffett_hk_dividend',
+            dimWeights: { valuation: 35, safety: 35, quality: 10, sentiment: 20 },
         },
     ];
 
@@ -750,6 +775,105 @@ const ETF_CONFIG = (() => {
                 const total = weightedSum / totalWeight;
 
                 if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
+
+                if (total >= 80) return 'STRONG_BUY';
+                if (total >= 70) return 'BUY';
+                if (total >= 55) return 'HOLD_ADD';
+                if (total >= 40) return 'HOLD';
+                if (total >= 25) return 'REDUCE_WARN';
+                if (total >= 15) return 'SELL';
+                return 'STRONG_SELL';
+            }
+        },
+
+        // ========== 港股高股息央企（港股通央企红利）==========
+        buffett_hk_dividend: {
+            name: '港股高股息央企估值法',
+            dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
+            dimensionNames: {
+                valuation: '📊 PE估值分位',
+                safety: '🛡️ 股息安全边际',
+                quality: '💪 PB+盈利质量',
+                sentiment: '🌡️ 恐惧贪婪(参考美股)',
+            },
+            gauges: [
+                { id: 'composite', title: '综合投资评分', colorReverse: false },
+            ],
+            calcScores: (data, weights) => {
+                const scores = {};
+
+                // 维度A: 估值（PE分位越低=越便宜=分越高）
+                if (data.pePercentile !== null && data.pePercentile !== undefined) {
+                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
+                } else {
+                    scores.valuation = null;
+                }
+
+                // 维度B: 股息安全边际（高股息特色：股息率 - 国债收益率）
+                // 港股央企红利股息率通常5-7%，远高于国债，安全边际极强
+                // 引入利率环境因子：低利率时利差天然偏大，需适度压缩
+                if (data.dividendYield > 0 && data.bondYield > 0) {
+                    const spread = data.dividendYield - data.bondYield;
+                    const rateAdj = Math.max(0.7, Math.min(1.0, (data.bondYield - 1.0) * 0.3 + 0.7));
+                    // 港股央企红利利差通常3-5%，比A股红利低波更高
+                    const rawSafety = 35 + spread * 15;
+                    scores.safety = Math.max(0, Math.min(100, rawSafety * rateAdj));
+                } else if (data.pe > 0) {
+                    // 回退：用E/P作为安全代理
+                    const earningsYield = (1 / data.pe) * 100;
+                    scores.safety = Math.max(0, Math.min(100, earningsYield * 10 + 15));
+                } else {
+                    scores.safety = null;
+                }
+
+                // 维度C: PB+盈利质量（央企ROE中等但PB极低是核心优势）
+                // PB<0.7给高分（深度破净），PB<1加分，PB>1.5减分
+                if (data.roe > 0) {
+                    const roeScore = Math.max(0, Math.min(100, data.roe * 5 + 15));
+                    let pbAdj = 0;
+                    if (data.pb > 0) {
+                        if (data.pb < 0.7) pbAdj = 25;       // 深度破净，央企重估空间大
+                        else if (data.pb < 1.0) pbAdj = 15;  // 破净，有安全垫
+                        else if (data.pb > 1.5) pbAdj = -10;
+                    }
+                    scores.quality = Math.max(0, Math.min(100, roeScore + pbAdj));
+                } else if (data.pb > 0) {
+                    // 无ROE时，仅用PB评估
+                    if (data.pb < 0.7) scores.quality = 80;
+                    else if (data.pb < 1.0) scores.quality = 65;
+                    else if (data.pb < 1.5) scores.quality = 45;
+                    else scores.quality = 30;
+                } else {
+                    scores.quality = null;
+                }
+
+                // 维度D: 市场情绪（港股参考CNN Fear & Greed）
+                if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
+                    scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
+                } else {
+                    scores.sentiment = null;
+                }
+
+                return scores;
+            },
+            generate: (data, weights) => {
+                const w = weights || { valuation: 35, safety: 35, quality: 10, sentiment: 20 };
+                const scores = SIGNAL_RULES.buffett_hk_dividend.calcScores(data, w);
+
+                let totalWeight = 0, weightedSum = 0;
+                Object.keys(w).forEach(dim => {
+                    if (scores[dim] !== null && scores[dim] !== undefined) {
+                        weightedSum += scores[dim] * w[dim];
+                        totalWeight += w[dim];
+                    }
+                });
+
+                if (totalWeight === 0) return 'DATA_INCOMPLETE';
+                const total = weightedSum / totalWeight;
+
+                // 硬性极端规则
+                if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
+                if (scores.valuation !== null && scores.valuation <= 10 && scores.safety !== null && scores.safety <= 20) return 'STRONG_SELL';
 
                 if (total >= 80) return 'STRONG_BUY';
                 if (total >= 70) return 'BUY';
