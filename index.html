@@ -7,12 +7,26 @@
     <meta name="description" content="ETF择时决策辅助工具 - 多品种择时信号一站式查看">
     <title>ETF择时助手</title>
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-
-    <!-- ECharts -->
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <!-- ECharts: 多级 CDN fallback + 本地兜底 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.5.0/echarts.min.js"
+            onerror="loadFallbackECharts(1)"></script>
+    <script>
+    function loadFallbackECharts(level) {
+        var urls = [
+            'https://cdn.staticfile.net/echarts/5.5.0/echarts.min.js',
+            'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js',
+            'lib/echarts.min.js'
+        ];
+        if (level > urls.length) {
+            console.error('[ECharts] 所有CDN和本地加载均失败');
+            return;
+        }
+        var s = document.createElement('script');
+        s.src = urls[level - 1];
+        s.onerror = function() { loadFallbackECharts(level + 1); };
+        document.head.appendChild(s);
+    }
+    </script>
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css">
@@ -237,7 +251,7 @@
     <script src="js/signal.js?v=20260331"></script>
     <script src="js/storage.js?v=20260331"></script>
     <script src="js/api.js?v=20260331"></script>
-    <script src="js/charts.js?v=20260331"></script>
+    <script src="js/charts.js?v=20260401"></script>
     <script src="js/main.js?v=20260331"></script>
 </body>
 </html>

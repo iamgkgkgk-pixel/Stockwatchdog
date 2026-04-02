@@ -7,9 +7,20 @@ const ChartManager = (() => {
     let lineCharts = {};
     const THEME = { bg: 'transparent', textColor: '#a0aec0', axisLineColor: '#2d3748', splitLineColor: '#2d3748', tooltipBg: 'rgba(26,26,46,0.95)' };
 
+    /** 检查 echarts 是否可用，不可用时在容器中显示友好提示 */
+    function checkECharts(dom) {
+        if (typeof echarts !== 'undefined') return true;
+        if (dom) {
+            dom.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ffc107;font-size:13px;text-align:center;padding:12px;">' +
+                '⚠️ 图表库加载失败，请刷新页面重试<br><small style="color:#718096;">如持续失败请检查网络连接</small></div>';
+        }
+        return false;
+    }
+
     function initGauge(containerId, name, colorReverse) {
         const dom = document.getElementById(containerId);
         if (!dom) return null;
+        if (!checkECharts(dom)) return null;
         const idx = containerId.replace('chart-gauge-', '');
         if (gaugeCharts[idx]) gaugeCharts[idx].dispose();
         const chart = echarts.init(dom);
@@ -43,6 +54,7 @@ const ChartManager = (() => {
     function initLineChart(containerId, data, label, color) {
         const dom = document.getElementById(containerId);
         if (!dom) return null;
+        if (!checkECharts(dom)) return null;
         const idx = containerId.replace('chart-line-', '');
         if (lineCharts[idx]) lineCharts[idx].dispose();
         const chart = echarts.init(dom);
@@ -86,6 +98,7 @@ const ChartManager = (() => {
     function initSignalHistoryChart(containerId, signalData, etfColor) {
         const dom = document.getElementById(containerId);
         if (!dom) return null;
+        if (!checkECharts(dom)) return null;
 
         // 销毁已有图表
         let chart = echarts.getInstanceByDom(dom);
@@ -223,6 +236,7 @@ const ChartManager = (() => {
     function initDailySignalHistoryChart(containerId, signalData, etfColor) {
         const dom = document.getElementById(containerId);
         if (!dom) return null;
+        if (!checkECharts(dom)) return null;
 
         let chart = echarts.getInstanceByDom(dom);
         if (chart) chart.dispose();
