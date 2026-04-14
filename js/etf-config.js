@@ -14,11 +14,11 @@
  *   维度C: 盈利质量 — ROE、盈利趋势
  *   维度D: 市场温度 — 整体市场情绪（可选手动输入）
  * 
- * ETF分类（15只）：
+ * ETF分类（17只）：
  *   A股价值：红利低波(512890), 自由现金流(159201)
  *   A股宽基：沪深300ETF(510300)
  *   A股成长：科创创业50(588300), 创业板50(159949)
- *   A股行业：医药ETF(512010)
+ *   A股行业：医药ETF(512010), 科创半导体ETF(588170), 机器人ETF(562500)
  *   美股QDII：标普500(513650), 纳指(513110)
  *   港股QDII：恒生科技(513180), 港股通央企红利(513901)
  *   日股QDII：日经225ETF(513520), 东证ETF(513800)
@@ -429,6 +429,56 @@ const ETF_CONFIG = (() => {
             description: '跟踪日本东证股价指数(TOPIX)，覆盖东京证券交易所主板全部上市公司，比日经225更广泛。TOPIX是市值加权指数，更能反映日本股市整体表现。费率0.2%。',
             signalRules: 'buffett_jp',
             dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
+        },
+
+        // ===== 16. 科创半导体ETF =====
+        {
+            id: 'sci-semi',
+            code: '588170',
+            name: '科创半导体ETF',
+            shortName: '科创半导体',
+            fullName: '华夏上证科创板半导体材料设备主题ETF',
+            type: ETF_TYPE.A_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.588170',
+            color: '#00897b',
+            icon: '🔬',
+            trackIndex: {
+                name: '上证科创板半导体材料设备指数',
+                code: '000689',
+                danjuanCode: null,
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
+            useBondSpread: false,
+            description: '跟踪上证科创板半导体材料设备指数，聚焦中微公司/北方华创/沪硅产业等半导体设备材料龙头。科创板高弹性+国产替代主线，PE波动大（50-150倍），适合成长估值体系。',
+            signalRules: 'buffett_growth',
+            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
+        },
+
+        // ===== 17. 机器人ETF =====
+        {
+            id: 'robot',
+            code: '562500',
+            name: '机器人ETF',
+            shortName: '机器人',
+            fullName: '华夏中证机器人ETF',
+            type: ETF_TYPE.A_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.562500',
+            color: '#5c6bc0',
+            icon: '🤖',
+            trackIndex: {
+                name: '中证机器人指数',
+                code: '930009',
+                danjuanCode: null,
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
+            useBondSpread: false,
+            description: '跟踪中证机器人指数，覆盖汇川技术/埃斯顿/绿的谐波等工业机器人及人形机器人产业链龙头。受益于AI+具身智能趋势，成长性强但PE波动大。',
+            signalRules: 'buffett_growth',
+            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
         },
     ];
 
