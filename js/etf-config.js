@@ -14,14 +14,14 @@
  *   维度C: 盈利质量 — ROE、盈利趋势
  *   维度D: 市场温度 — 整体市场情绪（可选手动输入）
  * 
- * ETF分类（14只）：
+ * ETF分类（15只）：
  *   A股价值：红利低波(512890), 自由现金流(159201)
  *   A股宽基：沪深300ETF(510300)
  *   A股成长：科创创业50(588300), 创业板50(159949)
  *   A股行业：医药ETF(512010)
  *   美股QDII：标普500(513650), 纳指(513110)
  *   港股QDII：恒生科技(513180), 港股通央企红利(513901)
- *   日股QDII：日经225ETF(513520)
+ *   日股QDII：日经225ETF(513520), 东证ETF(513800)
  *   避险资产：黄金ETF(518850)
  *   固收债券：十年国债ETF(511260)
  *   商品期货：豆粕ETF(159985)
@@ -54,7 +54,7 @@ const ETF_CONFIG = (() => {
         BOND_YIELD: 'bond_yield',
     };
 
-    // ========== 所有ETF配置（14只）==========
+    // ========== 所有ETF配置（15只）==========
     const ETF_LIST = [
         // ===== 1. 红利低波ETF =====
         {
@@ -402,6 +402,31 @@ const ETF_CONFIG = (() => {
             valuationMethod: VALUATION_METHOD.MULTI_DIM_JP,
             useBondSpread: false,
             description: '跟踪日经225指数，覆盖丰田/索尼/任天堂/东京电子等日本龙头企业。日股受日元汇率和日央行政策影响大，2023年以来巴菲特增持日本商社引发全球关注。费率0.2%，规模约17亿。',
+            signalRules: 'buffett_jp',
+            dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
+        },
+
+        // ===== 15. 东证ETF =====
+        {
+            id: 'topix',
+            code: '513800',
+            name: '东证ETF',
+            shortName: '东证TOPIX',
+            fullName: '日本东证指数ETF南方(QDII)',
+            type: ETF_TYPE.JP_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.513800',
+            color: '#c62828',
+            icon: '⛩️',
+            trackIndex: {
+                name: '东证股价指数(TOPIX)',
+                code: 'TOPIX',
+                danjuanCode: null,    // 蛋卷基金暂无东证指数
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_JP,
+            useBondSpread: false,
+            description: '跟踪日本东证股价指数(TOPIX)，覆盖东京证券交易所主板全部上市公司，比日经225更广泛。TOPIX是市值加权指数，更能反映日本股市整体表现。费率0.2%。',
             signalRules: 'buffett_jp',
             dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
         },
