@@ -14,13 +14,14 @@
  *   维度C: 盈利质量 — ROE、盈利趋势
  *   维度D: 市场温度 — 整体市场情绪（可选手动输入）
  * 
- * ETF分类（13只）：
+ * ETF分类（14只）：
  *   A股价值：红利低波(512890), 自由现金流(159201)
  *   A股宽基：沪深300ETF(510300)
  *   A股成长：科创创业50(588300), 创业板50(159949)
  *   A股行业：医药ETF(512010)
  *   美股QDII：标普500(513650), 纳指(513110)
  *   港股QDII：恒生科技(513180), 港股通央企红利(513901)
+ *   日股QDII：日经225ETF(513520)
  *   避险资产：黄金ETF(518850)
  *   固收债券：十年国债ETF(511260)
  *   商品期货：豆粕ETF(159985)
@@ -47,12 +48,13 @@ const ETF_CONFIG = (() => {
         MULTI_DIM_US: 'multi_dim_us',
         MULTI_DIM_HK: 'multi_dim_hk',
         MULTI_DIM_BROAD: 'multi_dim_broad',
+        MULTI_DIM_JP: 'multi_dim_jp',
         MULTI_DIM_PHARMA: 'multi_dim_pharma',
         TREND_FOLLOW: 'trend_follow',
         BOND_YIELD: 'bond_yield',
     };
 
-    // ========== 所有ETF配置（13只）==========
+    // ========== 所有ETF配置（14只）==========
     const ETF_LIST = [
         // ===== 1. 红利低波ETF =====
         {
@@ -377,6 +379,31 @@ const ETF_CONFIG = (() => {
             description: '跟踪中证港股通央企红利指数(931233)，从港股通央企中选取股息率高、分红稳定的上市公司。PE约7.5倍、PB约0.6倍、股息率约6%，"666组合"典型代表。兼具高股息+央企+港股低估三重安全边际。',
             signalRules: 'buffett_hk_dividend',
             dimWeights: { valuation: 35, safety: 35, quality: 10, sentiment: 20 },
+        },
+
+        // ===== 14. 日经225ETF =====
+        {
+            id: 'nikkei225',
+            code: '513520',
+            name: '日经225ETF',
+            shortName: '日经225',
+            fullName: '华夏野村日经225ETF(QDII)',
+            type: ETF_TYPE.JP_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.513520',
+            color: '#e53935',
+            icon: '🇯🇵',
+            trackIndex: {
+                name: '日经225指数',
+                code: 'NKY',
+                danjuanCode: null,    // 蛋卷基金暂无日经225指数
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_JP,
+            useBondSpread: false,
+            description: '跟踪日经225指数，覆盖丰田/索尼/任天堂/东京电子等日本龙头企业。日股受日元汇率和日央行政策影响大，2023年以来巴菲特增持日本商社引发全球关注。费率0.2%，规模约17亿。',
+            signalRules: 'buffett_jp',
+            dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
         },
     ];
 
@@ -874,6 +901,90 @@ const ETF_CONFIG = (() => {
                 // 硬性极端规则
                 if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
                 if (scores.valuation !== null && scores.valuation <= 10 && scores.safety !== null && scores.safety <= 20) return 'STRONG_SELL';
+
+                if (total >= 80) return 'STRONG_BUY';
+                if (total >= 70) return 'BUY';
+                if (total >= 55) return 'HOLD_ADD';
+                if (total >= 40) return 'HOLD';
+                if (total >= 25) return 'REDUCE_WARN';
+                if (total >= 15) return 'SELL';
+                return 'STRONG_SELL';
+            }
+        },
+
+        // ========== 日股（日经225 QDII）==========
+        buffett_jp: {
+            name: '巴菲特日股估值法',
+            dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
+            dimensionNames: {
+                valuation: '📊 PE估值分位',
+                safety: '🛡️ 盈利收益率vs日债',
+                quality: '💪 盈利质量',
+                sentiment: '🌡️ 恐惧贪婪指数',
+            },
+            gauges: [
+                { id: 'composite', title: '综合投资评分', colorReverse: false },
+            ],
+            calcScores: (data, weights) => {
+                const scores = {};
+
+                // 维度A: 估值（PE分位越低=越便宜=分越高）
+                // 日股PE中枢约20-25倍，与美股类似
+                if (data.pePercentile !== null && data.pePercentile !== undefined) {
+                    const rawScore = 100 - data.pePercentile;
+                    scores.valuation = Math.max(0, Math.min(100, rawScore));
+                } else {
+                    scores.valuation = null;
+                }
+
+                // 维度B: 盈利收益率(E/P) vs 日债
+                // 日本10Y国债收益率很低（约0.5-1.5%），E/P约4-6%，利差天然大
+                if (data.pe > 0) {
+                    const earningsYield = (1 / data.pe) * 100;
+                    const bondY = data.bondYield || 1.0; // 日债默认约1.0%
+                    const gap = earningsYield - bondY;
+                    // 日股E/P-日债利差通常2-5%，比美股宽
+                    scores.safety = Math.max(0, Math.min(100, 40 + gap * 12));
+                } else {
+                    scores.safety = null;
+                }
+
+                // 维度C: 盈利质量：用E/P作为质量代理
+                if (data.pe > 0) {
+                    const earningsYieldPct = (1 / data.pe) * 100;
+                    // E/P 2%→质量30, 4%→50, 6%→70（日股E/P通常3-6%）
+                    scores.quality = Math.max(0, Math.min(100, earningsYieldPct * 10));
+                } else if (data.roe > 0) {
+                    scores.quality = Math.max(0, Math.min(100, data.roe * 4 + 20));
+                } else {
+                    scores.quality = null;
+                }
+
+                // 维度D: 市场情绪（参考CNN Fear & Greed，与美股共用）
+                if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
+                    scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
+                } else {
+                    scores.sentiment = null;
+                }
+
+                return scores;
+            },
+            generate: (data, weights) => {
+                const w = weights || { valuation: 45, safety: 15, quality: 10, sentiment: 30 };
+                const scores = SIGNAL_RULES.buffett_jp.calcScores(data, w);
+
+                let totalWeight = 0, weightedSum = 0;
+                Object.keys(w).forEach(dim => {
+                    if (scores[dim] !== null && scores[dim] !== undefined) {
+                        weightedSum += scores[dim] * w[dim];
+                        totalWeight += w[dim];
+                    }
+                });
+
+                if (totalWeight === 0) return 'DATA_INCOMPLETE';
+                const total = weightedSum / totalWeight;
+
+                if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
 
                 if (total >= 80) return 'STRONG_BUY';
                 if (total >= 70) return 'BUY';
