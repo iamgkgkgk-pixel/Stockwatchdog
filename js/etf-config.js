@@ -14,11 +14,11 @@
  *   维度C: 盈利质量 — ROE、盈利趋势
  *   维度D: 市场温度 — 整体市场情绪（可选手动输入）
  * 
- * ETF分类（17只）：
+ * ETF分类（19只）：
  *   A股价值：红利低波(512890), 自由现金流(159201)
  *   A股宽基：沪深300ETF(510300)
  *   A股成长：科创创业50(588300), 创业板50(159949)
- *   A股行业：医药ETF(512010), 科创半导体ETF(588170), 机器人ETF(562500)
+ *   A股行业：医药ETF(512010), 科创半导体ETF(588170), 机器人ETF(562500), 储能ETF(159566), PCB电子ETF(515260)
  *   美股QDII：标普500(513650), 纳指(513110)
  *   港股QDII：恒生科技(513180), 港股通央企红利(513901)
  *   日股QDII：日经225ETF(513520), 东证ETF(513800)
@@ -54,7 +54,7 @@ const ETF_CONFIG = (() => {
         BOND_YIELD: 'bond_yield',
     };
 
-    // ========== 所有ETF配置（15只）==========
+    // ========== 所有ETF配置（19只）==========
     const ETF_LIST = [
         // ===== 1. 红利低波ETF =====
         {
@@ -477,6 +477,56 @@ const ETF_CONFIG = (() => {
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
             useBondSpread: false,
             description: '跟踪中证机器人指数，覆盖汇川技术/埃斯顿/绿的谐波等工业机器人及人形机器人产业链龙头。受益于AI+具身智能趋势，成长性强但PE波动大。',
+            signalRules: 'buffett_growth',
+            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
+        },
+
+        // ===== 18. 储能电池ETF =====
+        {
+            id: 'energy-storage',
+            code: '159566',
+            name: '储能ETF',
+            shortName: '储能电池',
+            fullName: '易方达国证新能源电池ETF',
+            type: ETF_TYPE.A_SHARE_INDEX,
+            market: 'SZ',
+            secid: '0.159566',
+            color: '#43a047',
+            icon: '🔋',
+            trackIndex: {
+                name: '国证新能源电池指数',
+                code: '399296',
+                danjuanCode: null,
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
+            useBondSpread: false,
+            description: '跟踪国证新能源电池指数，覆盖宁德时代/亿纬锂能/比亚迪等储能电池产业链龙头。受益于新能源+储能大趋势，成长性强但周期波动明显。',
+            signalRules: 'buffett_growth',
+            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
+        },
+
+        // ===== 19. PCB电子ETF =====
+        {
+            id: 'pcb',
+            code: '515260',
+            name: 'PCB电子ETF',
+            shortName: 'PCB电子',
+            fullName: '华宝中证电子50ETF',
+            type: ETF_TYPE.A_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.515260',
+            color: '#f4511e',
+            icon: '🖥️',
+            trackIndex: {
+                name: '中证电子50指数',
+                code: '931087',
+                danjuanCode: null,
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
+            useBondSpread: false,
+            description: '跟踪中证电子50指数，覆盖立讯精密/胜宏科技/鹏鼎控股等PCB及消费电子龙头。AI服务器/高速通信带动PCB需求爆发，成长弹性大。',
             signalRules: 'buffett_growth',
             dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
         },
