@@ -1,0 +1,97 @@
+# ETF择时助手 - 自动月度数据更新
+# 每月1日和15日自动运行，获取最新估值数据更新JSON文件
+# 也支持手动触发
+
+name: 📊 月度数据自动更新
+
+on:
+  schedule:
+    # 每月1日和15日 北京时间10:00（UTC 02:00）运行
+    # 选在交易日开盘后，确保前一个月数据已沉淀
+    - cron: '0 2 1,15 * *'
+  
+  workflow_dispatch:
+    # 支持手动触发
+    inputs:
+      force:
+        description: '强制更新（忽略已有当月数据）'
+        required: false
+        type: boolean
+        default: false
+
+# 权限：需要写入仓库的权限来提交更新
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 🐍 设置Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: 📊 运行数据更新脚本
+        run: |
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            python3 scripts/auto_update_data.py --force
+          else
+            python3 scripts/auto_update_data.py
+          fi
+      
+      - name: 📝 检查是否有变更
+        id: check_changes
+        run: |
+          git diff --quiet data/ && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+      
+      - name: 🔄 更新index.html版本号
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          # 生成新版本号（年月日格式）
+          NEW_VERSION=$(date +%Y%m%d)
+          # 替换所有js引用的版本号
+          sed -i -E "s/\?v=[0-9]{8}[a-z]*/\?v=${NEW_VERSION}/g" index.html
+          echo "版本号已更新为: ${NEW_VERSION}"
+      
+      - name: 💾 提交并推送
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          MONTH=$(date +%Y-%m)
+          
+          # 统计更新的文件
+          CHANGED_FILES=$(git diff --name-only data/ | wc -l | tr -d ' ')
+          
+          git add data/ index.html
+          git commit -m "📊 自动更新ETF数据 ${MONTH}
+
+          - 更新 ${CHANGED_FILES} 个数据文件
+          - 数据来源: 蛋卷基金API + 东方财富API + 趋势外推
+          - 触发方式: ${{ github.event_name == 'schedule' && '定时任务' || '手动触发' }}
+          
+          [skip ci]"
+          
+          git push
+      
+      - name: 📊 输出更新摘要
+        if: always()
+        run: |
+          echo "### 📊 ETF数据更新摘要" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_changes.outputs.changed }}" = "true" ]; then
+            echo "✅ 数据已更新并推送到仓库" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "更新的文件:" >> $GITHUB_STEP_SUMMARY
+            git diff --name-only HEAD~1 data/ 2>/dev/null | while read f; do echo "- \`$f\`" >> $GITHUB_STEP_SUMMARY; done || true
+          else
+            echo "⏭️ 所有数据文件已是最新，无需更新" >> $GITHUB_STEP_SUMMARY
+          fi
