@@ -1,6 +1,6 @@
 {
   "description": "纳指100ETF历史数据",
-  "lastUpdate": "2026-03-22",
+  "lastUpdate": "2026-04-15",
   "peHistory": [
     {
       "date": "2016-01",
@@ -371,6 +371,11 @@
       "date": "2026-03",
       "value": 30.8,
       "percentile": 52.5
+    },
+    {
+      "date": "2026-04",
+      "value": 29.5,
+      "percentile": 44.1
     }
   ],
   "dividendYieldHistory": [
@@ -481,6 +486,10 @@
     {
       "date": "2026-03",
       "value": 0.85
+    },
+    {
+      "date": "2026-04",
+      "value": 0.88
     }
   ],
   "bondYieldHistory": [
@@ -591,18 +600,22 @@
     {
       "date": "2026-03",
       "value": 3.48
+    },
+    {
+      "date": "2026-04",
+      "value": 4.31
     }
   ],
   "currentData": {
-    "dividendYield": 0.85,
-    "bondYield": 3.48,
-    "pe": 30.8,
-    "pePercentile": 52.5,
-    "pb": 8.55,
-    "pbPercentile": 62.8,
+    "dividendYield": 0.88,
+    "bondYield": 4.31,
+    "pe": 29.5,
+    "pePercentile": 44.1,
+    "pb": 8.22,
+    "pbPercentile": 59.5,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-03-22",
+    "updateTime": "2026-04-15",
     "note": "纳斯达克100指数估值数据（美元10Y国债收益率）"
   }
 }

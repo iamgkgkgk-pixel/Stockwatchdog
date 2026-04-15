@@ -1,6 +1,6 @@
 {
   "description": "创业板50ETF历史数据",
-  "lastUpdate": "2026-03-22",
+  "lastUpdate": "2026-04-15",
   "peHistory": [
     {
       "date": "2021-01",
@@ -316,6 +316,11 @@
       "date": "2026-03",
       "value": 33.8,
       "percentile": 18.5
+    },
+    {
+      "date": "2026-04",
+      "value": 32.5,
+      "percentile": 16.8
     }
   ],
   "dividendYieldHistory": [
@@ -426,6 +431,10 @@
     {
       "date": "2026-03",
       "value": 0.72
+    },
+    {
+      "date": "2026-04",
+      "value": 0.75
     }
   ],
   "bondYieldHistory": [
@@ -536,18 +545,22 @@
     {
       "date": "2026-03",
       "value": 1.81
+    },
+    {
+      "date": "2026-04",
+      "value": 1.82
     }
   ],
   "currentData": {
-    "dividendYield": 0.72,
-    "bondYield": 1.81,
-    "pe": 33.8,
-    "pePercentile": 18.5,
-    "pb": 3.22,
-    "pbPercentile": 15.8,
+    "dividendYield": 0.75,
+    "bondYield": 1.82,
+    "pe": 32.5,
+    "pePercentile": 16.8,
+    "pb": 3.12,
+    "pbPercentile": 14.2,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-03-22",
+    "updateTime": "2026-04-15",
     "note": "创业板50指数估值数据"
   }
 }

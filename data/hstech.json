@@ -1,6 +1,6 @@
 {
   "description": "恒生科技指数ETF历史数据",
-  "lastUpdate": "2026-03-22",
+  "lastUpdate": "2026-04-15",
   "peHistory": [
     {
       "date": "2021-01",
@@ -316,6 +316,11 @@
       "date": "2026-03",
       "value": 25.8,
       "percentile": 55.2
+    },
+    {
+      "date": "2026-04",
+      "value": 24.8,
+      "percentile": 49.5
     }
   ],
   "dividendYieldHistory": [
@@ -426,6 +431,10 @@
     {
       "date": "2026-03",
       "value": 0.55
+    },
+    {
+      "date": "2026-04",
+      "value": 0.52
     }
   ],
   "bondYieldHistory": [
@@ -536,18 +545,22 @@
     {
       "date": "2026-03",
       "value": 1.81
+    },
+    {
+      "date": "2026-04",
+      "value": 1.82
     }
   ],
   "currentData": {
-    "dividendYield": 0.55,
-    "bondYield": 1.81,
-    "pe": 25.8,
-    "pePercentile": 55.2,
-    "pb": 3.28,
-    "pbPercentile": 42.5,
+    "dividendYield": 0.52,
+    "bondYield": 1.82,
+    "pe": 24.8,
+    "pePercentile": 49.5,
+    "pb": 3.15,
+    "pbPercentile": 40.2,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-03-22",
+    "updateTime": "2026-04-15",
     "note": "恒生科技指数估值数据"
   }
 }

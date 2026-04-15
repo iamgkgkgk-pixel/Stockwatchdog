@@ -1,6 +1,6 @@
 {
   "description": "自由现金流ETF历史数据",
-  "lastUpdate": "2026-03-22",
+  "lastUpdate": "2026-04-15",
   "spreadHistory": [
     {
       "date": "2021-01",
@@ -253,6 +253,10 @@
     {
       "date": "2026-03",
       "value": 3.15
+    },
+    {
+      "date": "2026-04",
+      "value": 3.08
     }
   ],
   "peHistory": [
@@ -570,6 +574,11 @@
       "date": "2026-03",
       "value": 10.82,
       "percentile": 82.5
+    },
+    {
+      "date": "2026-04",
+      "value": 10.55,
+      "percentile": 80.8
     }
   ],
   "dividendYieldHistory": [
@@ -680,6 +689,10 @@
     {
       "date": "2026-03",
       "value": 3.98
+    },
+    {
+      "date": "2026-04",
+      "value": 3.9
     }
   ],
   "bondYieldHistory": [
@@ -790,20 +803,24 @@
     {
       "date": "2026-03",
       "value": 1.81
+    },
+    {
+      "date": "2026-04",
+      "value": 1.82
     }
   ],
   "currentData": {
-    "dividendYield": 3.98,
-    "bondYield": 1.81,
-    "spread": 3.15,
-    "spreadPercentile": 42.5,
-    "pe": 10.82,
-    "pePercentile": 82.5,
-    "pb": 1.25,
-    "pbPercentile": 55.2,
+    "dividendYield": 3.9,
+    "bondYield": 1.82,
+    "spread": 3.08,
+    "spreadPercentile": 40.8,
+    "pe": 10.55,
+    "pePercentile": 80.8,
+    "pb": 1.22,
+    "pbPercentile": 53.5,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-03-22",
+    "updateTime": "2026-04-15",
     "note": "国证自由现金流指数估值数据"
   }
 }
