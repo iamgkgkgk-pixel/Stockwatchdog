@@ -488,13 +488,11 @@ const App = (() => {
                 };
 
                 // ========== 缓存数据合理性校验（防止旧缓存污染信号）==========
-                // 当localStorage缓存的PE/pePercentile与JSON预设数据严重偏离时，
-                // 说明缓存可能是旧ETF代码/手动输入的残留数据，应清除并使用JSON预设值
+                // 仅检查PE值偏差（PE是客观值，不受基准影响）
+                // 【方案B】移除pePercentile偏差检查：API和本地calcPercentile基准不同，差异是正常的
                 if (savedManual && fallback && fallback.pe > 0) {
                     const cachedPE = savedManual.pe || 0;
                     const presetPE = fallback.pe || 0;
-                    const cachedPePct = savedManual.pePercentile;
-                    const presetPePct = fallback.pePercentile;
 
                     let cacheStale = false;
                     // 检查PE偏差：如果缓存PE与预设PE差异>50%，判定为过期缓存
@@ -502,19 +500,25 @@ const App = (() => {
                         console.warn(`⚠️ [${etfId}] localStorage缓存PE(${cachedPE.toFixed(1)})与JSON预设PE(${presetPE.toFixed(1)})偏差过大，清除旧缓存`);
                         cacheStale = true;
                     }
-                    // 检查PE分位偏差：如果方向完全相反（一个<30一个>60），判定为过期缓存
-                    if (!cacheStale && cachedPePct !== null && cachedPePct !== undefined && presetPePct !== null && presetPePct !== undefined) {
-                        if (Math.abs(cachedPePct - presetPePct) > 30) {
-                            console.warn(`⚠️ [${etfId}] localStorage缓存pePercentile(${cachedPePct.toFixed(1)}%)与JSON预设(${presetPePct.toFixed(1)}%)偏差超过30pp，清除旧缓存`);
-                            cacheStale = true;
-                        }
-                    }
 
                     if (cacheStale) {
                         console.info(`🧹 [${etfId}] 清除过期localStorage缓存，使用JSON预设数据`);
                         DataStorage.clearETFData(etfId);
                         savedManual = null; // 不再使用旧缓存
                     }
+                }
+
+                // 【方案B】API成功获取估值时，同步更新historyData中的currentData锚点
+                // 这样即使下次API不可用，回退到JSON预设时也能用到最新值
+                if (apiData.valuation && historyData && historyData.currentData) {
+                    const v = apiData.valuation;
+                    if (v.pe > 0) historyData.currentData.pe = v.pe;
+                    if (v.pePercentile > 0) historyData.currentData.pePercentile = v.pePercentile;
+                    if (v.pb > 0) historyData.currentData.pb = v.pb;
+                    if (v.pbPercentile > 0) historyData.currentData.pbPercentile = v.pbPercentile;
+                    if (v.dividendYield > 0) historyData.currentData.dividendYield = v.dividendYield;
+                    historyData.currentData.updateTime = new Date().toISOString().slice(0, 10);
+                    console.info(`🔄 [${etfId}] API估值已同步到historyData.currentData: PE=${v.pe}, pePercentile=${v.pePercentile}%`);
                 }
 
                 if (!apiData.valuation) {
@@ -649,10 +653,28 @@ const App = (() => {
             else if (spreadValues.length > 0) spreadPercentile = SignalEngine.calcPercentile(spread, spreadValues);
         }
 
+        // 【方案B修正】PE分位计算：统一使用本地calcPercentile，与走势图同一基准
+        // 修正原因：之前实时信号用API pePercentile（十年全市场~81%），走势图用本地calcPercentile（JSON 76个PE点~28%），
+        //          导致同一天的估值分从19→72（差53分），总分从37→60（差23分），走势图和信号卡严重矛盾。
+        // 现在：信号计算统一用本地calcPercentile，API pePercentile仅作为参考显示在数据卡片上。
         let pePercentile = null;
+        let apiPePercentile = null; // API返回的分位（仅用于数据卡片展示参考，不参与信号计算）
         if (peAvailable) {
-            if (data.pePercentile !== null && data.pePercentile !== undefined && !isNaN(data.pePercentile)) pePercentile = data.pePercentile;
-            else if (peValues.length > 0) pePercentile = SignalEngine.calcPercentile(data.pe, peValues);
+            // 保存API分位（仅展示用）
+            if (data.pePercentile !== null && data.pePercentile !== undefined && !isNaN(data.pePercentile)) {
+                apiPePercentile = data.pePercentile;
+            }
+            // 信号计算统一用本地calcPercentile（与走势图同一基准）
+            if (peValues.length > 0) {
+                pePercentile = SignalEngine.calcPercentile(data.pe, peValues);
+            }
+            // 对比日志
+            if (apiPePercentile !== null && pePercentile !== null) {
+                const diff = Math.abs(apiPePercentile - pePercentile);
+                if (diff > 10) {
+                    console.info(`📊 [${etfId}] PE分位: 信号用本地=${pePercentile.toFixed(1)}% (JSON ${peValues.length}点), API参考=${apiPePercentile.toFixed(1)}% (十年全市场), 差${diff.toFixed(1)}pp`);
+                }
+            }
         }
 
         // 商品/黄金/债券类：趋势分数
@@ -665,6 +687,9 @@ const App = (() => {
         const safeNum = (v) => (v !== null && v !== undefined && !isNaN(v)) ? v : null;
         const safeNumOr0 = (v) => (v !== null && v !== undefined && !isNaN(v)) ? v : 0;
 
+        // 获取valuationAnchor（均值偏离度锚点）
+        const anchor = (historyData && historyData.valuationAnchor) || {};
+
         const signalData = {
             pePercentile: safeNum(pePercentile),
             spreadPercentile: safeNum(spreadPercentile),
@@ -675,6 +700,9 @@ const App = (() => {
             bondYield: safeNumOr0(data.bondYield),
             roe: safeNumOr0(data.roe),
             marketTemp: safeNum(data.marketTemp),
+            // 巴菲特均值回归锚点
+            peMean: safeNum(anchor.peMean),
+            peStd: safeNum(anchor.peStd),
         };
 
         // 日志：输出实际用于信号计算的关键数据（方便调试信号与预期不符的问题）
@@ -686,7 +714,7 @@ const App = (() => {
 
         // 更新UI
         updateSignalDisplay(currentSignal, total);
-        updateDataCardsValues(etfConfig, data, spread, spreadPercentile, pePercentile, peAvailable, dividendAvailable, canCalcSpread, trendScore);
+        updateDataCardsValues(etfConfig, data, spread, spreadPercentile, pePercentile, peAvailable, dividendAvailable, canCalcSpread, trendScore, apiPePercentile);
         updateGaugeValues(etfConfig, total, scores, trendScore);
         updateDimScoresDisplay(etfConfig, scores);
         updatePriceDisplay(data, etfConfig);
@@ -695,6 +723,7 @@ const App = (() => {
         if (historyData) {
             renderSignalHistoryChart(etfConfig, historyData, signalData.marketTemp);
             renderDailySignalHistoryChart(etfConfig, historyData, signalData.marketTemp);
+            renderAlgoCompareChart(etfConfig, historyData, signalData.marketTemp);
         }
 
         // 更新信号方法标签
@@ -806,7 +835,7 @@ const App = (() => {
         container.innerHTML = html;
     }
 
-    function updateDataCardsValues(etfConfig, data, spread, spreadPercentile, pePercentile, peAvailable, dividendAvailable, canCalcSpread, trendScore) {
+    function updateDataCardsValues(etfConfig, data, spread, spreadPercentile, pePercentile, peAvailable, dividendAvailable, canCalcSpread, trendScore, apiPePercentile) {
         if (document.getElementById('val-dividend-yield')) {
             setText('val-dividend-yield', dividendAvailable ? data.dividendYield.toFixed(2) + '%' : '待补充');
             if (!dividendAvailable) setTextColor('val-dividend-yield', '#ffc107');
@@ -832,7 +861,16 @@ const App = (() => {
                 setText('val-pe', data.pe.toFixed(2));
                 setTextColor('val-pe', '');
                 if (pePercentile !== null) {
-                    setText('val-pe-percentile', pePercentile.toFixed(2) + '%');
+                    // 展示本地分位（用于信号计算）+ API参考（如果有且差异大）
+                    let percentileText = pePercentile.toFixed(2) + '%';
+                    if (apiPePercentile !== null && apiPePercentile !== undefined) {
+                        const diff = Math.abs(apiPePercentile - pePercentile);
+                        if (diff > 5) {
+                            percentileText += ` <span style="font-size:10px;opacity:0.6;">(蛋卷:${apiPePercentile.toFixed(0)}%)</span>`;
+                        }
+                    }
+                    const el = document.getElementById('val-pe-percentile');
+                    if (el) el.innerHTML = percentileText;
                     updateProgressBar('progress-pe', pePercentile, 'pe');
                     updateZoneLabel('zone-pe', SignalEngine.getPEPercentileZone(pePercentile));
                 }
@@ -1137,6 +1175,9 @@ const App = (() => {
 
         // ========== 日级别综合信号历史走势图 ==========
         renderDailySignalHistoryChart(etfConfig, historyData);
+
+        // ========== 算法对比图表（混合模型 vs 纯PE分位）==========
+        renderAlgoCompareChart(etfConfig, historyData);
     }
 
     /**
@@ -1232,6 +1273,56 @@ const App = (() => {
         ChartManager.initDailySignalHistoryChart('chart-daily-signal-history', signals, etfConfig.color);
     }
 
+    /**
+     * 渲染算法对比图表：混合估值模型 vs 纯PE分位 日级别走势
+     * 追溯时间尽可能长（使用全部可用历史数据）
+     * @param {Object} etfConfig
+     * @param {Object} historyData
+     * @param {number|null} currentMarketTemp
+     */
+    function renderAlgoCompareChart(etfConfig, historyData, currentMarketTemp) {
+        const section = document.getElementById('chart-section-algo-compare');
+        const titleEl = document.getElementById('algo-compare-title');
+
+        // 商品/黄金类不支持
+        if (etfConfig.type === ETF_CONFIG.ETF_TYPE.COMMODITY || etfConfig.type === ETF_CONFIG.ETF_TYPE.GOLD) {
+            if (section) section.style.display = 'none';
+            return;
+        }
+
+        if (section) section.style.display = '';
+
+        if (!historyData) {
+            ChartManager.initAlgoCompareChart('chart-algo-compare', [], etfConfig.color);
+            return;
+        }
+
+        // 使用尽可能长的历史：365*20=20年（实际会被数据最早时间截断）
+        const days = 365 * 20;
+        const mktTemp = (currentMarketTemp !== null && currentMarketTemp !== undefined) ? currentMarketTemp : null;
+        const signals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp);
+
+        if (titleEl) {
+            const dayCount = signals.length;
+            let timeRange;
+            if (dayCount >= 365) {
+                const years = (dayCount / 365).toFixed(1);
+                timeRange = years.endsWith('.0') ? `近${parseInt(years)}年` : `近${years}年`;
+            } else if (dayCount >= 30) {
+                timeRange = `近${Math.round(dayCount / 30)}个月`;
+            } else {
+                timeRange = `近${dayCount}天`;
+            }
+            titleEl.textContent = `估值算法对比 · ${timeRange}日级别走势（${etfConfig.shortName}）`;
+        }
+
+        if (signals.length === 0) {
+            console.warn(`[renderAlgoCompareChart] ${etfConfig.id}: 算法对比数据为空`);
+        }
+
+        ChartManager.initAlgoCompareChart('chart-algo-compare', signals, etfConfig.color);
+    }
+
     // ========== 刷新 ==========
 
     async function refreshData() {
@@ -1251,6 +1342,18 @@ const App = (() => {
                 const historyData = etfDataCache[currentETFId] ? etfDataCache[currentETFId].historyData : null;
                 const fallback = historyData ? historyData.currentData : {};
                 const manualOverride = {};
+
+                // 【方案B】API成功获取估值时，同步更新historyData中的currentData锚点
+                if (apiData.valuation && historyData && historyData.currentData) {
+                    const v = apiData.valuation;
+                    if (v.pe > 0) historyData.currentData.pe = v.pe;
+                    if (v.pePercentile > 0) historyData.currentData.pePercentile = v.pePercentile;
+                    if (v.pb > 0) historyData.currentData.pb = v.pb;
+                    if (v.pbPercentile > 0) historyData.currentData.pbPercentile = v.pbPercentile;
+                    if (v.dividendYield > 0) historyData.currentData.dividendYield = v.dividendYield;
+                    historyData.currentData.updateTime = new Date().toISOString().slice(0, 10);
+                }
+
                 if (!apiData.valuation) {
                     const _pickValid2 = (...vals) => {
                         for (const v of vals) {

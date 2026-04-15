@@ -553,7 +553,7 @@ const ETF_CONFIG = (() => {
             name: '巴菲特多维估值法（价值型）',
             dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
             dimensionNames: {
-                valuation: '📊 估值分位',
+                valuation: '📊 PE均值偏离估值',
                 safety: '🛡️ 安全边际',
                 quality: '💪 盈利质量',
                 sentiment: '🌡️ A股涨跌广度',
@@ -564,12 +564,8 @@ const ETF_CONFIG = (() => {
             calcScores: (data, weights) => {
                 const scores = {};
 
-                // 维度A: 估值（PE分位越低=越便宜=分越高）
-                if (data.pePercentile !== null && data.pePercentile !== undefined) {
-                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
-                } else {
-                    scores.valuation = null;
-                }
+                // 维度A: 估值（混合模式：PE均值偏离度×0.7 + PE分位×0.3）
+                scores.valuation = SignalEngine.calcHybridValuationScore(data.pe, data.peMean, data.peStd, data.pePercentile);
 
                 // 维度B: 安全边际（股息率 - 国债收益率）
                 // 修正：引入利率环境因子，低利率时利差天然偏大，需适度压缩避免虚高
@@ -640,7 +636,7 @@ const ETF_CONFIG = (() => {
             name: '芒格成长价值法（成长型）',
             dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
             dimensionNames: {
-                valuation: '📊 PE估值分位',
+                valuation: '📊 PE均值偏离估值',
                 safety: '🛡️ 相对安全性',
                 quality: '💪 盈利成长性',
                 sentiment: '🌡️ A股涨跌广度',
@@ -651,11 +647,8 @@ const ETF_CONFIG = (() => {
             calcScores: (data, weights) => {
                 const scores = {};
 
-                if (data.pePercentile !== null && data.pePercentile !== undefined) {
-                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
-                } else {
-                    scores.valuation = null;
-                }
+                // 维度A: 估值（混合模式：PE均值偏离度×0.7 + PE分位×0.3）
+                scores.valuation = SignalEngine.calcHybridValuationScore(data.pe, data.peMean, data.peStd, data.pePercentile);
 
                 // 成长股安全性：基于PE倒数(E/P)的安全评估
                 // PE=20 → E/P=5% → 安全性高(~75); PE=40 → E/P=2.5% → 中等(~55); PE=80 → E/P=1.25% → 低(~30)
@@ -714,7 +707,7 @@ const ETF_CONFIG = (() => {
             name: '巴菲特美股估值法（宽基）',
             dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
             dimensionNames: {
-                valuation: '📊 PE估值分位',
+                valuation: '📊 PE均值偏离估值',
                 safety: '🛡️ 盈利收益率vs国债',
                 quality: '💪 盈利质量',
                 sentiment: '🌡️ 恐惧贪婪指数',
@@ -725,15 +718,8 @@ const ETF_CONFIG = (() => {
             calcScores: (data, weights) => {
                 const scores = {};
 
-                if (data.pePercentile !== null && data.pePercentile !== undefined) {
-                    // 美股PE中枢偏高是常态（长牛），用平缓衰减公式代替线性反转
-                    // PE分位50%时估值分50，分位80%时估值分约25，分位100%时估值分0
-                    // 公式设计：低分位时（便宜）得分接近100-pePercentile，高分位时适度缓冲
-                    const rawScore = 100 - data.pePercentile;
-                    scores.valuation = Math.max(0, Math.min(100, rawScore));
-                } else {
-                    scores.valuation = null;
-                }
+                // 维度A: 估值（混合模式：PE均值偏离度×0.7 + PE分位×0.3）
+                scores.valuation = SignalEngine.calcHybridValuationScore(data.pe, data.peMean, data.peStd, data.pePercentile);
 
                 // 盈利收益率(E/P) vs 美债
                 if (data.pe > 0) {
@@ -797,7 +783,7 @@ const ETF_CONFIG = (() => {
             name: '芒格美股成长法（科技）',
             dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
             dimensionNames: {
-                valuation: '📊 PE估值分位',
+                valuation: '📊 PE均值偏离估值',
                 safety: '🛡️ 盈利收益率',
                 quality: '💪 创新溢价',
                 sentiment: '🌡️ 恐惧贪婪指数',
@@ -808,11 +794,8 @@ const ETF_CONFIG = (() => {
             calcScores: (data, weights) => {
                 const scores = {};
 
-                if (data.pePercentile !== null && data.pePercentile !== undefined) {
-                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
-                } else {
-                    scores.valuation = null;
-                }
+                // 维度A: 估值（混合模式：PE均值偏离度×0.7 + PE分位×0.3）
+                scores.valuation = SignalEngine.calcHybridValuationScore(data.pe, data.peMean, data.peStd, data.pePercentile);
 
                 if (data.pe > 0) {
                     const earningsYield = (1 / data.pe) * 100;
@@ -872,7 +855,7 @@ const ETF_CONFIG = (() => {
             name: '港股多维估值法',
             dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
             dimensionNames: {
-                valuation: '📊 PE估值分位',
+                valuation: '📊 PE均值偏离估值',
                 safety: '🛡️ 绝对估值水平',
                 quality: '💪 盈利质量',
                 sentiment: '🌡️ 恐惧贪婪(参考美股)',
@@ -883,11 +866,8 @@ const ETF_CONFIG = (() => {
             calcScores: (data, weights) => {
                 const scores = {};
 
-                if (data.pePercentile !== null && data.pePercentile !== undefined) {
-                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
-                } else {
-                    scores.valuation = null;
-                }
+                // 维度A: 估值（混合模式：PE均值偏离度×0.7 + PE分位×0.3）
+                scores.valuation = SignalEngine.calcHybridValuationScore(data.pe, data.peMean, data.peStd, data.pePercentile);
 
                 if (data.pe > 0) {
                     // 港股用E/P作为安全代理，更平滑
@@ -943,7 +923,7 @@ const ETF_CONFIG = (() => {
             name: '港股高股息央企估值法',
             dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
             dimensionNames: {
-                valuation: '📊 PE估值分位',
+                valuation: '📊 PE均值偏离估值',
                 safety: '🛡️ 股息安全边际',
                 quality: '💪 PB+盈利质量',
                 sentiment: '🌡️ 恐惧贪婪(参考美股)',
@@ -954,12 +934,8 @@ const ETF_CONFIG = (() => {
             calcScores: (data, weights) => {
                 const scores = {};
 
-                // 维度A: 估值（PE分位越低=越便宜=分越高）
-                if (data.pePercentile !== null && data.pePercentile !== undefined) {
-                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
-                } else {
-                    scores.valuation = null;
-                }
+                // 维度A: 估值（混合模式：PE均值偏离度×0.7 + PE分位×0.3）
+                scores.valuation = SignalEngine.calcHybridValuationScore(data.pe, data.peMean, data.peStd, data.pePercentile);
 
                 // 维度B: 股息安全边际（高股息特色：股息率 - 国债收益率）
                 // 港股央企红利股息率通常5-7%，远高于国债，安全边际极强
@@ -1042,7 +1018,7 @@ const ETF_CONFIG = (() => {
             name: '巴菲特日股估值法',
             dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
             dimensionNames: {
-                valuation: '📊 PE估值分位',
+                valuation: '📊 PE均值偏离估值',
                 safety: '🛡️ 盈利收益率vs日债',
                 quality: '💪 盈利质量',
                 sentiment: '🌡️ 恐惧贪婪指数',
@@ -1053,14 +1029,8 @@ const ETF_CONFIG = (() => {
             calcScores: (data, weights) => {
                 const scores = {};
 
-                // 维度A: 估值（PE分位越低=越便宜=分越高）
-                // 日股PE中枢约20-25倍，与美股类似
-                if (data.pePercentile !== null && data.pePercentile !== undefined) {
-                    const rawScore = 100 - data.pePercentile;
-                    scores.valuation = Math.max(0, Math.min(100, rawScore));
-                } else {
-                    scores.valuation = null;
-                }
+                // 维度A: 估值（混合模式：PE均值偏离度×0.7 + PE分位×0.3）
+                scores.valuation = SignalEngine.calcHybridValuationScore(data.pe, data.peMean, data.peStd, data.pePercentile);
 
                 // 维度B: 盈利收益率(E/P) vs 日债
                 // 日本10Y国债收益率很低（约0.5-1.5%），E/P约4-6%，利差天然大
@@ -1126,7 +1096,7 @@ const ETF_CONFIG = (() => {
             name: '巴菲特多维估值法（宽基）',
             dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
             dimensionNames: {
-                valuation: '📊 PE估值分位',
+                valuation: '📊 PE均值偏离估值',
                 safety: '🛡️ 股债利差',
                 quality: '💪 盈利质量(ROE)',
                 sentiment: '🌡️ A股涨跌广度',
@@ -1137,12 +1107,8 @@ const ETF_CONFIG = (() => {
             calcScores: (data, weights) => {
                 const scores = {};
 
-                // 维度A: 估值（PE分位越低=越便宜=分越高）
-                if (data.pePercentile !== null && data.pePercentile !== undefined) {
-                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
-                } else {
-                    scores.valuation = null;
-                }
+                // 维度A: 估值（混合模式：PE均值偏离度×0.7 + PE分位×0.3）
+                scores.valuation = SignalEngine.calcHybridValuationScore(data.pe, data.peMean, data.peStd, data.pePercentile);
 
                 // 维度B: 股债利差（股息率 - 国债收益率）
                 // 修正：引入利率环境因子，低利率时适度压缩
@@ -1212,7 +1178,7 @@ const ETF_CONFIG = (() => {
             name: '医药行业多维估值法',
             dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
             dimensionNames: {
-                valuation: '📊 PE估值分位',
+                valuation: '📊 PE均值偏离估值',
                 safety: '🛡️ 绝对估值水平',
                 quality: '💪 盈利质量(ROE)',
                 sentiment: '🌡️ A股涨跌广度',
@@ -1223,12 +1189,8 @@ const ETF_CONFIG = (() => {
             calcScores: (data, weights) => {
                 const scores = {};
 
-                // 维度A: 估值（PE分位）
-                if (data.pePercentile !== null && data.pePercentile !== undefined) {
-                    scores.valuation = Math.max(0, Math.min(100, 100 - data.pePercentile));
-                } else {
-                    scores.valuation = null;
-                }
+                // 维度A: 估值（混合模式：PE均值偏离度×0.7 + PE分位×0.3）
+                scores.valuation = SignalEngine.calcHybridValuationScore(data.pe, data.peMean, data.peStd, data.pePercentile);
 
                 // 维度B: 绝对PE安全性（医药PE正常区间20-50）
                 // 使用E/P(盈利收益率)作为安全代理，更平滑

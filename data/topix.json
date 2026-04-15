@@ -2,155 +2,665 @@
   "description": "东证指数(TOPIX)ETF历史数据",
   "lastUpdate": "2026-04-14",
   "peHistory": [
-    {"date": "2016-01", "value": 14.2, "percentile": 22.5},
-    {"date": "2016-06", "value": 13.1, "percentile": 12.3},
-    {"date": "2016-12", "value": 15.8, "percentile": 38.6},
-    {"date": "2017-06", "value": 15.2, "percentile": 32.1},
-    {"date": "2017-12", "value": 16.5, "percentile": 45.8},
-    {"date": "2018-06", "value": 15.0, "percentile": 28.7},
-    {"date": "2018-12", "value": 12.5, "percentile": 6.8},
-    {"date": "2019-06", "value": 14.0, "percentile": 20.2},
-    {"date": "2019-12", "value": 16.2, "percentile": 42.5},
-    {"date": "2020-06", "value": 19.5, "percentile": 75.2},
-    {"date": "2020-12", "value": 22.8, "percentile": 91.5},
-    {"date": "2021-01", "value": 23.5, "percentile": 93.2},
-    {"date": "2021-02", "value": 24.2, "percentile": 95.8},
-    {"date": "2021-03", "value": 23.8, "percentile": 94.5},
-    {"date": "2021-04", "value": 22.5, "percentile": 89.3},
-    {"date": "2021-05", "value": 21.8, "percentile": 85.6},
-    {"date": "2021-06", "value": 20.5, "percentile": 78.2},
-    {"date": "2021-07", "value": 19.8, "percentile": 72.8},
-    {"date": "2021-08", "value": 20.2, "percentile": 76.5},
-    {"date": "2021-09", "value": 19.5, "percentile": 75.2},
-    {"date": "2021-10", "value": 18.8, "percentile": 68.5},
-    {"date": "2021-11", "value": 18.2, "percentile": 62.8},
-    {"date": "2021-12", "value": 17.5, "percentile": 55.3},
-    {"date": "2022-01", "value": 16.8, "percentile": 48.6},
-    {"date": "2022-02", "value": 15.8, "percentile": 38.6},
-    {"date": "2022-03", "value": 15.2, "percentile": 32.1},
-    {"date": "2022-04", "value": 14.8, "percentile": 26.5},
-    {"date": "2022-05", "value": 14.2, "percentile": 22.5},
-    {"date": "2022-06", "value": 13.8, "percentile": 17.2},
-    {"date": "2022-07", "value": 14.5, "percentile": 24.8},
-    {"date": "2022-08", "value": 15.2, "percentile": 32.1},
-    {"date": "2022-09", "value": 14.2, "percentile": 22.5},
-    {"date": "2022-10", "value": 13.5, "percentile": 14.8},
-    {"date": "2022-11", "value": 14.8, "percentile": 26.5},
-    {"date": "2022-12", "value": 14.2, "percentile": 22.5},
-    {"date": "2023-01", "value": 14.5, "percentile": 24.8},
-    {"date": "2023-02", "value": 15.5, "percentile": 35.2},
-    {"date": "2023-03", "value": 16.0, "percentile": 40.5},
-    {"date": "2023-04", "value": 16.5, "percentile": 45.8},
-    {"date": "2023-05", "value": 18.2, "percentile": 62.8},
-    {"date": "2023-06", "value": 19.5, "percentile": 75.2},
-    {"date": "2023-07", "value": 20.2, "percentile": 76.5},
-    {"date": "2023-08", "value": 19.8, "percentile": 72.8},
-    {"date": "2023-09", "value": 19.2, "percentile": 70.5},
-    {"date": "2023-10", "value": 18.5, "percentile": 65.2},
-    {"date": "2023-11", "value": 19.8, "percentile": 72.8},
-    {"date": "2023-12", "value": 20.5, "percentile": 78.2},
-    {"date": "2024-01", "value": 21.2, "percentile": 82.5},
-    {"date": "2024-02", "value": 22.5, "percentile": 89.3},
-    {"date": "2024-03", "value": 23.2, "percentile": 92.5},
-    {"date": "2024-04", "value": 21.8, "percentile": 85.6},
-    {"date": "2024-05", "value": 20.8, "percentile": 80.2},
-    {"date": "2024-06", "value": 21.5, "percentile": 83.8},
-    {"date": "2024-07", "value": 22.2, "percentile": 88.2},
-    {"date": "2024-08", "value": 18.5, "percentile": 65.2},
-    {"date": "2024-09", "value": 19.8, "percentile": 72.8},
-    {"date": "2024-10", "value": 19.2, "percentile": 70.5},
-    {"date": "2024-11", "value": 20.5, "percentile": 78.2},
-    {"date": "2024-12", "value": 19.8, "percentile": 72.8},
-    {"date": "2025-01", "value": 20.2, "percentile": 76.5},
-    {"date": "2025-02", "value": 19.5, "percentile": 75.2},
-    {"date": "2025-03", "value": 18.8, "percentile": 68.5},
-    {"date": "2025-04", "value": 18.2, "percentile": 62.8},
-    {"date": "2025-05", "value": 17.5, "percentile": 55.3},
-    {"date": "2025-06", "value": 18.8, "percentile": 68.5},
-    {"date": "2025-07", "value": 19.5, "percentile": 75.2},
-    {"date": "2025-08", "value": 18.8, "percentile": 68.5},
-    {"date": "2025-09", "value": 17.8, "percentile": 58.6},
-    {"date": "2025-10", "value": 17.2, "percentile": 52.3},
-    {"date": "2025-11", "value": 16.5, "percentile": 45.8},
-    {"date": "2025-12", "value": 17.8, "percentile": 58.6},
-    {"date": "2026-01", "value": 18.2, "percentile": 62.8},
-    {"date": "2026-02", "value": 17.5, "percentile": 55.3},
-    {"date": "2026-03", "value": 16.8, "percentile": 48.6},
-    {"date": "2026-04", "value": 16.2, "percentile": 42.5}
+    {
+      "date": "2016-01",
+      "value": 14.2,
+      "percentile": 22.5
+    },
+    {
+      "date": "2016-06",
+      "value": 13.1,
+      "percentile": 12.3
+    },
+    {
+      "date": "2016-12",
+      "value": 15.8,
+      "percentile": 38.6
+    },
+    {
+      "date": "2017-06",
+      "value": 15.2,
+      "percentile": 32.1
+    },
+    {
+      "date": "2017-12",
+      "value": 16.5,
+      "percentile": 45.8
+    },
+    {
+      "date": "2018-06",
+      "value": 15,
+      "percentile": 28.7
+    },
+    {
+      "date": "2018-12",
+      "value": 12.5,
+      "percentile": 6.8
+    },
+    {
+      "date": "2019-06",
+      "value": 14,
+      "percentile": 20.2
+    },
+    {
+      "date": "2019-12",
+      "value": 16.2,
+      "percentile": 42.5
+    },
+    {
+      "date": "2020-06",
+      "value": 19.5,
+      "percentile": 75.2
+    },
+    {
+      "date": "2020-12",
+      "value": 22.8,
+      "percentile": 91.5
+    },
+    {
+      "date": "2021-01",
+      "value": 23.5,
+      "percentile": 93.2
+    },
+    {
+      "date": "2021-02",
+      "value": 24.2,
+      "percentile": 95.8
+    },
+    {
+      "date": "2021-03",
+      "value": 23.8,
+      "percentile": 94.5
+    },
+    {
+      "date": "2021-04",
+      "value": 22.5,
+      "percentile": 89.3
+    },
+    {
+      "date": "2021-05",
+      "value": 21.8,
+      "percentile": 85.6
+    },
+    {
+      "date": "2021-06",
+      "value": 20.5,
+      "percentile": 78.2
+    },
+    {
+      "date": "2021-07",
+      "value": 19.8,
+      "percentile": 72.8
+    },
+    {
+      "date": "2021-08",
+      "value": 20.2,
+      "percentile": 76.5
+    },
+    {
+      "date": "2021-09",
+      "value": 19.5,
+      "percentile": 75.2
+    },
+    {
+      "date": "2021-10",
+      "value": 18.8,
+      "percentile": 68.5
+    },
+    {
+      "date": "2021-11",
+      "value": 18.2,
+      "percentile": 62.8
+    },
+    {
+      "date": "2021-12",
+      "value": 17.5,
+      "percentile": 55.3
+    },
+    {
+      "date": "2022-01",
+      "value": 16.8,
+      "percentile": 48.6
+    },
+    {
+      "date": "2022-02",
+      "value": 15.8,
+      "percentile": 38.6
+    },
+    {
+      "date": "2022-03",
+      "value": 15.2,
+      "percentile": 32.1
+    },
+    {
+      "date": "2022-04",
+      "value": 14.8,
+      "percentile": 26.5
+    },
+    {
+      "date": "2022-05",
+      "value": 14.2,
+      "percentile": 22.5
+    },
+    {
+      "date": "2022-06",
+      "value": 13.8,
+      "percentile": 17.2
+    },
+    {
+      "date": "2022-07",
+      "value": 14.5,
+      "percentile": 24.8
+    },
+    {
+      "date": "2022-08",
+      "value": 15.2,
+      "percentile": 32.1
+    },
+    {
+      "date": "2022-09",
+      "value": 14.2,
+      "percentile": 22.5
+    },
+    {
+      "date": "2022-10",
+      "value": 13.5,
+      "percentile": 14.8
+    },
+    {
+      "date": "2022-11",
+      "value": 14.8,
+      "percentile": 26.5
+    },
+    {
+      "date": "2022-12",
+      "value": 14.2,
+      "percentile": 22.5
+    },
+    {
+      "date": "2023-01",
+      "value": 14.5,
+      "percentile": 24.8
+    },
+    {
+      "date": "2023-02",
+      "value": 15.5,
+      "percentile": 35.2
+    },
+    {
+      "date": "2023-03",
+      "value": 16,
+      "percentile": 40.5
+    },
+    {
+      "date": "2023-04",
+      "value": 16.5,
+      "percentile": 45.8
+    },
+    {
+      "date": "2023-05",
+      "value": 18.2,
+      "percentile": 62.8
+    },
+    {
+      "date": "2023-06",
+      "value": 19.5,
+      "percentile": 75.2
+    },
+    {
+      "date": "2023-07",
+      "value": 20.2,
+      "percentile": 76.5
+    },
+    {
+      "date": "2023-08",
+      "value": 19.8,
+      "percentile": 72.8
+    },
+    {
+      "date": "2023-09",
+      "value": 19.2,
+      "percentile": 70.5
+    },
+    {
+      "date": "2023-10",
+      "value": 18.5,
+      "percentile": 65.2
+    },
+    {
+      "date": "2023-11",
+      "value": 19.8,
+      "percentile": 72.8
+    },
+    {
+      "date": "2023-12",
+      "value": 20.5,
+      "percentile": 78.2
+    },
+    {
+      "date": "2024-01",
+      "value": 21.2,
+      "percentile": 82.5
+    },
+    {
+      "date": "2024-02",
+      "value": 22.5,
+      "percentile": 89.3
+    },
+    {
+      "date": "2024-03",
+      "value": 23.2,
+      "percentile": 92.5
+    },
+    {
+      "date": "2024-04",
+      "value": 21.8,
+      "percentile": 85.6
+    },
+    {
+      "date": "2024-05",
+      "value": 20.8,
+      "percentile": 80.2
+    },
+    {
+      "date": "2024-06",
+      "value": 21.5,
+      "percentile": 83.8
+    },
+    {
+      "date": "2024-07",
+      "value": 22.2,
+      "percentile": 88.2
+    },
+    {
+      "date": "2024-08",
+      "value": 18.5,
+      "percentile": 65.2
+    },
+    {
+      "date": "2024-09",
+      "value": 19.8,
+      "percentile": 72.8
+    },
+    {
+      "date": "2024-10",
+      "value": 19.2,
+      "percentile": 70.5
+    },
+    {
+      "date": "2024-11",
+      "value": 20.5,
+      "percentile": 78.2
+    },
+    {
+      "date": "2024-12",
+      "value": 19.8,
+      "percentile": 72.8
+    },
+    {
+      "date": "2025-01",
+      "value": 20.2,
+      "percentile": 76.5
+    },
+    {
+      "date": "2025-02",
+      "value": 19.5,
+      "percentile": 75.2
+    },
+    {
+      "date": "2025-03",
+      "value": 18.8,
+      "percentile": 68.5
+    },
+    {
+      "date": "2025-04",
+      "value": 18.2,
+      "percentile": 62.8
+    },
+    {
+      "date": "2025-05",
+      "value": 17.5,
+      "percentile": 55.3
+    },
+    {
+      "date": "2025-06",
+      "value": 18.8,
+      "percentile": 68.5
+    },
+    {
+      "date": "2025-07",
+      "value": 19.5,
+      "percentile": 75.2
+    },
+    {
+      "date": "2025-08",
+      "value": 18.8,
+      "percentile": 68.5
+    },
+    {
+      "date": "2025-09",
+      "value": 17.8,
+      "percentile": 58.6
+    },
+    {
+      "date": "2025-10",
+      "value": 17.2,
+      "percentile": 52.3
+    },
+    {
+      "date": "2025-11",
+      "value": 16.5,
+      "percentile": 45.8
+    },
+    {
+      "date": "2025-12",
+      "value": 17.8,
+      "percentile": 58.6
+    },
+    {
+      "date": "2026-01",
+      "value": 18.2,
+      "percentile": 62.8
+    },
+    {
+      "date": "2026-02",
+      "value": 17.5,
+      "percentile": 55.3
+    },
+    {
+      "date": "2026-03",
+      "value": 16.8,
+      "percentile": 48.6
+    },
+    {
+      "date": "2026-04",
+      "value": 16.2,
+      "percentile": 42.5
+    }
   ],
   "dividendYieldHistory": [
-    {"date": "2021-01", "value": 1.92},
-    {"date": "2021-06", "value": 1.98},
-    {"date": "2021-12", "value": 2.08},
-    {"date": "2022-06", "value": 2.42},
-    {"date": "2022-12", "value": 2.55},
-    {"date": "2023-06", "value": 2.15},
-    {"date": "2023-12", "value": 2.02},
-    {"date": "2024-01", "value": 1.95},
-    {"date": "2024-02", "value": 1.88},
-    {"date": "2024-03", "value": 1.82},
-    {"date": "2024-04", "value": 1.88},
-    {"date": "2024-05", "value": 1.95},
-    {"date": "2024-06", "value": 1.88},
-    {"date": "2024-07", "value": 1.85},
-    {"date": "2024-08", "value": 2.08},
-    {"date": "2024-09", "value": 2.02},
-    {"date": "2024-10", "value": 2.05},
-    {"date": "2024-11", "value": 1.98},
-    {"date": "2024-12", "value": 2.02},
-    {"date": "2025-01", "value": 1.98},
-    {"date": "2025-02", "value": 2.02},
-    {"date": "2025-03", "value": 2.05},
-    {"date": "2025-04", "value": 2.08},
-    {"date": "2025-05", "value": 2.12},
-    {"date": "2025-06", "value": 2.05},
-    {"date": "2025-07", "value": 2.02},
-    {"date": "2025-08", "value": 2.05},
-    {"date": "2025-09", "value": 2.12},
-    {"date": "2025-10", "value": 2.18},
-    {"date": "2025-11", "value": 2.22},
-    {"date": "2025-12", "value": 2.12},
-    {"date": "2026-01", "value": 2.08},
-    {"date": "2026-02", "value": 2.12},
-    {"date": "2026-03", "value": 2.18},
-    {"date": "2026-04", "value": 2.22}
+    {
+      "date": "2021-01",
+      "value": 1.92
+    },
+    {
+      "date": "2021-06",
+      "value": 1.98
+    },
+    {
+      "date": "2021-12",
+      "value": 2.08
+    },
+    {
+      "date": "2022-06",
+      "value": 2.42
+    },
+    {
+      "date": "2022-12",
+      "value": 2.55
+    },
+    {
+      "date": "2023-06",
+      "value": 2.15
+    },
+    {
+      "date": "2023-12",
+      "value": 2.02
+    },
+    {
+      "date": "2024-01",
+      "value": 1.95
+    },
+    {
+      "date": "2024-02",
+      "value": 1.88
+    },
+    {
+      "date": "2024-03",
+      "value": 1.82
+    },
+    {
+      "date": "2024-04",
+      "value": 1.88
+    },
+    {
+      "date": "2024-05",
+      "value": 1.95
+    },
+    {
+      "date": "2024-06",
+      "value": 1.88
+    },
+    {
+      "date": "2024-07",
+      "value": 1.85
+    },
+    {
+      "date": "2024-08",
+      "value": 2.08
+    },
+    {
+      "date": "2024-09",
+      "value": 2.02
+    },
+    {
+      "date": "2024-10",
+      "value": 2.05
+    },
+    {
+      "date": "2024-11",
+      "value": 1.98
+    },
+    {
+      "date": "2024-12",
+      "value": 2.02
+    },
+    {
+      "date": "2025-01",
+      "value": 1.98
+    },
+    {
+      "date": "2025-02",
+      "value": 2.02
+    },
+    {
+      "date": "2025-03",
+      "value": 2.05
+    },
+    {
+      "date": "2025-04",
+      "value": 2.08
+    },
+    {
+      "date": "2025-05",
+      "value": 2.12
+    },
+    {
+      "date": "2025-06",
+      "value": 2.05
+    },
+    {
+      "date": "2025-07",
+      "value": 2.02
+    },
+    {
+      "date": "2025-08",
+      "value": 2.05
+    },
+    {
+      "date": "2025-09",
+      "value": 2.12
+    },
+    {
+      "date": "2025-10",
+      "value": 2.18
+    },
+    {
+      "date": "2025-11",
+      "value": 2.22
+    },
+    {
+      "date": "2025-12",
+      "value": 2.12
+    },
+    {
+      "date": "2026-01",
+      "value": 2.08
+    },
+    {
+      "date": "2026-02",
+      "value": 2.12
+    },
+    {
+      "date": "2026-03",
+      "value": 2.18
+    },
+    {
+      "date": "2026-04",
+      "value": 2.22
+    }
   ],
   "bondYieldHistory": [
-    {"date": "2021-01", "value": 0.05},
-    {"date": "2021-06", "value": 0.05},
-    {"date": "2021-12", "value": 0.07},
-    {"date": "2022-06", "value": 0.23},
-    {"date": "2022-12", "value": 0.42},
-    {"date": "2023-06", "value": 0.38},
-    {"date": "2023-12", "value": 0.62},
-    {"date": "2024-01", "value": 0.68},
-    {"date": "2024-02", "value": 0.72},
-    {"date": "2024-03", "value": 0.75},
-    {"date": "2024-04", "value": 0.88},
-    {"date": "2024-05", "value": 0.95},
-    {"date": "2024-06", "value": 1.02},
-    {"date": "2024-07", "value": 1.08},
-    {"date": "2024-08", "value": 0.92},
-    {"date": "2024-09", "value": 0.85},
-    {"date": "2024-10", "value": 0.95},
-    {"date": "2024-11", "value": 1.05},
-    {"date": "2024-12", "value": 1.08},
-    {"date": "2025-01", "value": 1.12},
-    {"date": "2025-02", "value": 1.18},
-    {"date": "2025-03", "value": 1.22},
-    {"date": "2025-04", "value": 1.25},
-    {"date": "2025-05", "value": 1.28},
-    {"date": "2025-06", "value": 1.22},
-    {"date": "2025-07", "value": 1.18},
-    {"date": "2025-08", "value": 1.22},
-    {"date": "2025-09", "value": 1.28},
-    {"date": "2025-10", "value": 1.32},
-    {"date": "2025-11", "value": 1.35},
-    {"date": "2025-12", "value": 1.28},
-    {"date": "2026-01", "value": 1.25},
-    {"date": "2026-02", "value": 1.22},
-    {"date": "2026-03", "value": 1.18},
-    {"date": "2026-04", "value": 1.15}
+    {
+      "date": "2021-01",
+      "value": 0.05
+    },
+    {
+      "date": "2021-06",
+      "value": 0.05
+    },
+    {
+      "date": "2021-12",
+      "value": 0.07
+    },
+    {
+      "date": "2022-06",
+      "value": 0.23
+    },
+    {
+      "date": "2022-12",
+      "value": 0.42
+    },
+    {
+      "date": "2023-06",
+      "value": 0.38
+    },
+    {
+      "date": "2023-12",
+      "value": 0.62
+    },
+    {
+      "date": "2024-01",
+      "value": 0.68
+    },
+    {
+      "date": "2024-02",
+      "value": 0.72
+    },
+    {
+      "date": "2024-03",
+      "value": 0.75
+    },
+    {
+      "date": "2024-04",
+      "value": 0.88
+    },
+    {
+      "date": "2024-05",
+      "value": 0.95
+    },
+    {
+      "date": "2024-06",
+      "value": 1.02
+    },
+    {
+      "date": "2024-07",
+      "value": 1.08
+    },
+    {
+      "date": "2024-08",
+      "value": 0.92
+    },
+    {
+      "date": "2024-09",
+      "value": 0.85
+    },
+    {
+      "date": "2024-10",
+      "value": 0.95
+    },
+    {
+      "date": "2024-11",
+      "value": 1.05
+    },
+    {
+      "date": "2024-12",
+      "value": 1.08
+    },
+    {
+      "date": "2025-01",
+      "value": 1.12
+    },
+    {
+      "date": "2025-02",
+      "value": 1.18
+    },
+    {
+      "date": "2025-03",
+      "value": 1.22
+    },
+    {
+      "date": "2025-04",
+      "value": 1.25
+    },
+    {
+      "date": "2025-05",
+      "value": 1.28
+    },
+    {
+      "date": "2025-06",
+      "value": 1.22
+    },
+    {
+      "date": "2025-07",
+      "value": 1.18
+    },
+    {
+      "date": "2025-08",
+      "value": 1.22
+    },
+    {
+      "date": "2025-09",
+      "value": 1.28
+    },
+    {
+      "date": "2025-10",
+      "value": 1.32
+    },
+    {
+      "date": "2025-11",
+      "value": 1.35
+    },
+    {
+      "date": "2025-12",
+      "value": 1.28
+    },
+    {
+      "date": "2026-01",
+      "value": 1.25
+    },
+    {
+      "date": "2026-02",
+      "value": 1.22
+    },
+    {
+      "date": "2026-03",
+      "value": 1.18
+    },
+    {
+      "date": "2026-04",
+      "value": 1.15
+    }
   ],
   "currentData": {
     "dividendYield": 2.22,
@@ -163,5 +673,13 @@
     "priceChange": 0,
     "updateTime": "2026-04-14",
     "note": "东证指数(TOPIX)估值数据（日本10Y国债收益率约1.15%，TOPIX覆盖全市场，PE中枢低于日经225）"
+  },
+  "valuationAnchor": {
+    "peMean": 14.84,
+    "peStd": 1.43,
+    "dataYears": "5Y",
+    "dataPoints": null,
+    "source": "worldperatio.com(日本市场EWJ ETF 5年均值，TOPIX与日经225共用)",
+    "updateDate": "2026-04"
   }
 }

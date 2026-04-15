@@ -158,7 +158,7 @@ const SignalEngine = (() => {
 
         // NaN防护：在输入数据层清理NaN值，转为null
         const cleanData = { ...data };
-        ['marketTemp', 'pePercentile', 'spreadPercentile', 'trendScore', 'pe', 'pb', 'dividendYield', 'bondYield', 'roe'].forEach(key => {
+        ['marketTemp', 'pePercentile', 'spreadPercentile', 'trendScore', 'pe', 'pb', 'dividendYield', 'bondYield', 'roe', 'peMean', 'peStd'].forEach(key => {
             if (typeof cleanData[key] === 'number' && isNaN(cleanData[key])) {
                 cleanData[key] = null;
                 console.warn(`信号引擎: 输入数据 ${key} 为NaN，已清理为null`);
@@ -276,6 +276,9 @@ const SignalEngine = (() => {
     /**
      * 基于历史数据回算每个月末的综合信号评分
      * 
+     * 【方案B - 统一基准】不再依赖JSON中预设的percentile字段（那是硬编码的伪历史），
+     * 改为用全量PE历史值统一计算分位，确保实时信号与历史走势图使用同一套基准。
+     * 
      * @param {Object} historyData - JSON中的历史数据 (spreadHistory, peHistory, dividendYieldHistory, bondYieldHistory)
      * @param {Object} etfConfig - ETF配置（含signalRules, dimWeights）
      * @param {number} months - 回溯月数（默认96个月，即8年；数据不足时自动回退到全部可用历史）
@@ -313,23 +316,14 @@ const SignalEngine = (() => {
 
         console.log(`[calcHistoricalSignals] ${etfConfig.id}: 找到 ${sortedDates.length} 个日期，取最近 ${recentDates.length} 个:`, recentDates[0], '...', recentDates[recentDates.length - 1]);
 
-        // 构建PE分位映射：优先使用JSON中预计算的percentile字段（基于全市场历史校准）
-        // 如果没有预计算值，则退化为本地全量PE数据计算（精度较低）
-        const pePercentileMap = {};
-        if (historyData.peHistory) {
-            historyData.peHistory.forEach(d => {
-                if (d.percentile !== null && d.percentile !== undefined) {
-                    pePercentileMap[d.date] = d.percentile;
-                }
-            });
-        }
-        const hasPrecomputedPercentile = Object.keys(pePercentileMap).length > 0;
-
-        // 退化方案：本地全量PE值
+        // 【方案B核心】统一用全量PE历史值计算分位，不再使用JSON预设的percentile
         const allPeValues = historyData.peHistory ? historyData.peHistory.map(d => d.value) : [];
 
         // 全量利差历史值数组
         const allSpreadValues = historyData.spreadHistory ? historyData.spreadHistory.map(d => d.value) : [];
+
+        // 获取valuationAnchor（均值偏离度锚点）
+        const anchor = historyData.valuationAnchor || {};
 
         const results = [];
         for (const dateStr of recentDates) {
@@ -338,12 +332,9 @@ const SignalEngine = (() => {
             const dividend = dividendMap[dateStr] || findNearestValue(dividendMap, dateStr);
             const bond = bondMap[dateStr] || findNearestValue(bondMap, dateStr);
 
-            // PE分位：优先用预计算值（与实时信号的pePercentile基准一致）
+            // 【方案B】PE分位：统一用本地全量PE值计算，与applyData中的calcPercentile基准一致
             let pePercentile = null;
-            if (hasPrecomputedPercentile && pePercentileMap[dateStr] !== undefined) {
-                pePercentile = pePercentileMap[dateStr];
-            } else if (pe !== null && pe !== undefined && allPeValues.length >= 5) {
-                // 退化：本地计算（样本有限，可能与实时信号有偏差）
+            if (pe !== null && pe !== undefined && allPeValues.length >= 5) {
                 pePercentile = calcPercentile(pe, allPeValues);
             }
 
@@ -364,6 +355,9 @@ const SignalEngine = (() => {
                 bondYield: bond || 0,
                 roe: 0, // 历史ROE不可用
                 marketTemp: marketTemp,
+                // 巴菲特均值回归锚点
+                peMean: anchor.peMean || null,
+                peStd: anchor.peStd || null,
             };
 
             // 对于使用利差的ETF，使用全量利差数据计算分位
@@ -470,25 +464,11 @@ const SignalEngine = (() => {
     }
 
     /**
-     * 从月度PE分位映射表中，为指定日期做线性插值
+     * 【方案B】为指定日期计算PE分位：先对PE值做日间插值，再用全量PE历史计算分位
+     * 不再依赖JSON中预设的percentile字段，统一使用calcPercentile保证与实时信号基准一致
      */
     function interpolatePercentile(pePercentileMap, sortedPercentileKeys, peMap, sortedPeKeys, allPeValues, targetDate) {
-        const targetMonth = targetDate.slice(0, 7);
-
-        // 优先用预计算分位插值
-        if (sortedPercentileKeys.length >= 2) {
-            let before = null, after = null;
-            for (let i = 0; i < sortedPercentileKeys.length; i++) {
-                if (sortedPercentileKeys[i] <= targetMonth) before = sortedPercentileKeys[i];
-                if (sortedPercentileKeys[i] > targetMonth && after === null) after = sortedPercentileKeys[i];
-            }
-            if (before !== null && after !== null) {
-                return interpolate(before, pePercentileMap[before], after, pePercentileMap[after], targetDate);
-            }
-            if (before !== null && pePercentileMap[before] !== undefined) return pePercentileMap[before];
-        }
-
-        // 退化：用PE值做插值后计算分位
+        // 【方案B核心】始终用PE值做插值后计算分位，确保与实时信号使用同一套calcPercentile基准
         const pe = interpolateFromMap(peMap, sortedPeKeys, targetDate);
         if (pe !== null && allPeValues.length >= 5) {
             return calcPercentile(pe, allPeValues);
@@ -516,8 +496,8 @@ const SignalEngine = (() => {
     /**
      * 基于月度历史数据，通过插值生成日级别综合信号走势
      * 
-     * 原理：月度数据点之间做线性插值，生成每日的PE/股息率/国债收益率等估计值，
-     * 再对每日数据调用同一套信号评分函数，得到日级别评分。
+     * 【方案B - 统一基准】不再依赖JSON中预设的percentile字段，
+     * 改为对PE值做日间插值后，用全量PE历史统一计算分位。
      * 
      * @param {Object} historyData - JSON中的历史数据
      * @param {Object} etfConfig - ETF配置
@@ -542,17 +522,11 @@ const SignalEngine = (() => {
         const sortedDividendKeys = Object.keys(dividendMap).sort();
         const sortedBondKeys = Object.keys(bondMap).sort();
 
-        // PE分位预计算映射
-        const pePercentileMap = {};
-        if (historyData.peHistory) {
-            historyData.peHistory.forEach(d => {
-                if (d.percentile !== null && d.percentile !== undefined) {
-                    pePercentileMap[d.date] = d.percentile;
-                }
-            });
-        }
-        const sortedPercentileKeys = Object.keys(pePercentileMap).sort();
+        // 【方案B核心】统一用全量PE值计算分位，不再读取JSON中的预设percentile
         const allPeValues = historyData.peHistory ? historyData.peHistory.map(d => d.value) : [];
+
+        // 获取PE均值偏离度锚定数据
+        const anchor = historyData.valuationAnchor || {};
 
         // 全量利差历史值
         const allSpreadValues = historyData.spreadHistory ? historyData.spreadHistory.map(d => d.value) : [];
@@ -596,14 +570,16 @@ const SignalEngine = (() => {
         const lastDate = sampledDates[sampledDates.length - 1];
 
         for (const dateStr of sampledDates) {
-            // 对每个日期做插值
+            // 对每个日期做PE值插值
             const pe = interpolateFromMap(peMap, sortedPeKeys, dateStr);
             const dividend = interpolateFromMap(dividendMap, sortedDividendKeys, dateStr);
             const bond = interpolateFromMap(bondMap, sortedBondKeys, dateStr);
-            const pePercentile = interpolatePercentile(
-                pePercentileMap, sortedPercentileKeys,
-                peMap, sortedPeKeys, allPeValues, dateStr
-            );
+            
+            // 【方案B】PE分位：用插值得到的PE值 + 全量PE历史统一计算分位
+            let pePercentile = null;
+            if (pe !== null && allPeValues.length >= 5) {
+                pePercentile = calcPercentile(pe, allPeValues);
+            }
 
             // 市场温度：所有日期统一使用50（中性），保证走势图数据一致性
             // 与月级别走势保持同一策略：走势图只反映估值+安全边际的变化趋势
@@ -619,6 +595,8 @@ const SignalEngine = (() => {
                 bondYield: bond || 0,
                 roe: 0,
                 marketTemp: marketTemp,
+                peMean: anchor.peMean || null,
+                peStd: anchor.peStd || null,
             };
 
             // 利差分位
@@ -631,6 +609,27 @@ const SignalEngine = (() => {
 
             const { signal, scores, total } = generateMultiDimSignal(signalData, etfConfig);
 
+            // === 对比线：使用旧的纯PE分位算法计算估值分 + 总分 ===
+            // 旧算法: valuation = 100 - pePercentile（不使用均值偏离度）
+            let purePercentileScore = null;
+            if (pePercentile !== null && pePercentile !== undefined) {
+                purePercentileScore = Math.max(0, Math.min(100, 100 - pePercentile));
+            }
+            // 用旧估值分替换新估值分，重新加权得到旧总分
+            let oldTotal = null;
+            if (purePercentileScore !== null) {
+                const oldScores = { ...scores, valuation: purePercentileScore };
+                const weights = etfConfig.dimWeights || {};
+                let tw = 0, ws = 0;
+                Object.keys(weights).forEach(dim => {
+                    if (oldScores[dim] !== null && oldScores[dim] !== undefined && !isNaN(oldScores[dim])) {
+                        ws += oldScores[dim] * weights[dim];
+                        tw += weights[dim];
+                    }
+                });
+                oldTotal = tw > 0 ? parseFloat((ws / tw).toFixed(1)) : null;
+            }
+
             results.push({
                 date: dateStr,
                 score: total,
@@ -642,6 +641,9 @@ const SignalEngine = (() => {
                 pePercentile: pePercentile,
                 dividend: dividend,
                 bond: bond,
+                // 对比数据（旧的纯PE分位算法）
+                oldValuationScore: purePercentileScore,
+                oldTotal: oldTotal,
             });
         }
 
@@ -875,11 +877,75 @@ const SignalEngine = (() => {
         return { items, action, note };
     }
 
+    // ========== PE偏离度估值计算（巴菲特均值回归体系）==========
+
+    /**
+     * 基于PE均值偏离度计算估值分数
+     * 
+     * 核心思想（芒格/巴菲特）：
+     *   - 估值的"锚"是该指数自身的长期PE均值（peMean）
+     *   - "离正常水平有多远"比"排在历史第几"更有意义
+     *   - 偏离度 = (当前PE - 均值PE) / 标准差
+     *   - 映射为0-100分：均值=50分，-2σ=95分（极度便宜），+2σ=5分（极度昂贵）
+     * 
+     * @param {number} currentPE - 当前PE值
+     * @param {number} peMean - PE历史均值
+     * @param {number} peStd - PE历史标准差
+     * @returns {number|null} 0-100分，分越高越便宜
+     */
+    function calcDeviationScore(currentPE, peMean, peStd) {
+        if (!currentPE || currentPE <= 0 || !peMean || peMean <= 0 || !peStd || peStd <= 0) {
+            return null;
+        }
+        // 偏离度：正值=高于均值（贵），负值=低于均值（便宜）
+        const deviation = (currentPE - peMean) / peStd;
+        // 映射到0-100：偏离度0→50分，-2σ→95分，+2σ→5分
+        // 使用线性映射：score = 50 - deviation * 22.5
+        // 这样 deviation=-2 → score=95, deviation=0 → 50, deviation=+2 → 5
+        const score = 50 - deviation * 22.5;
+        return Math.max(0, Math.min(100, score));
+    }
+
+    /**
+     * 混合估值分数：偏离度×0.7 + PE分位×0.3
+     * 
+     * 芒格"多把尺子"理论：偏离度回答"离正常水平多远"，分位回答"在历史中排第几"，
+     * 两者互补验证，结论更可靠。
+     * 
+     * @param {number} currentPE - 当前PE
+     * @param {number} peMean - PE均值
+     * @param {number} peStd - PE标准差
+     * @param {number|null} pePercentile - PE历史分位（0-100，可为null）
+     * @returns {number|null} 混合估值分（0-100），分越高越便宜
+     */
+    function calcHybridValuationScore(currentPE, peMean, peStd, pePercentile) {
+        const deviationScore = calcDeviationScore(currentPE, peMean, peStd);
+        
+        // 如果偏离度分数不可用，回退到纯分位
+        if (deviationScore === null) {
+            if (pePercentile !== null && pePercentile !== undefined) {
+                return Math.max(0, Math.min(100, 100 - pePercentile));
+            }
+            return null;
+        }
+        
+        // 如果分位数据不可用，纯用偏离度
+        if (pePercentile === null || pePercentile === undefined) {
+            return deviationScore;
+        }
+        
+        // 双维度混合：偏离度70% + 分位30%
+        const percentileScore = Math.max(0, Math.min(100, 100 - pePercentile));
+        return deviationScore * 0.7 + percentileScore * 0.3;
+    }
+
     // ========== 公开API ==========
     return {
         SIGNAL_LEVELS,
         calcSpread,
         calcPercentile,
+        calcDeviationScore,
+        calcHybridValuationScore,
         generateSignal,
         generateMultiDimSignal,
         calcHistoricalSignals,

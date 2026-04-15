@@ -2,57 +2,233 @@
   "description": "PCB电子ETF历史数据",
   "lastUpdate": "2026-04-14",
   "peHistory": [
-    {"date": "2020-07", "value": 62.5, "percentile": 72.5},
-    {"date": "2020-10", "value": 55.2, "percentile": 62.0},
-    {"date": "2021-01", "value": 68.8, "percentile": 78.5},
-    {"date": "2021-04", "value": 58.5, "percentile": 65.2},
-    {"date": "2021-07", "value": 72.5, "percentile": 85.0},
-    {"date": "2021-10", "value": 52.8, "percentile": 55.5},
-    {"date": "2022-01", "value": 48.2, "percentile": 48.0},
-    {"date": "2022-04", "value": 35.5, "percentile": 25.5},
-    {"date": "2022-07", "value": 42.2, "percentile": 38.5},
-    {"date": "2022-10", "value": 30.5, "percentile": 15.2},
-    {"date": "2023-01", "value": 35.8, "percentile": 25.8},
-    {"date": "2023-04", "value": 38.5, "percentile": 30.5},
-    {"date": "2023-07", "value": 32.5, "percentile": 18.5},
-    {"date": "2023-10", "value": 28.8, "percentile": 10.2},
-    {"date": "2024-01", "value": 32.2, "percentile": 16.5},
-    {"date": "2024-04", "value": 35.5, "percentile": 22.5},
-    {"date": "2024-07", "value": 42.8, "percentile": 40.5},
-    {"date": "2024-10", "value": 48.5, "percentile": 50.2},
-    {"date": "2025-01", "value": 55.2, "percentile": 62.5},
-    {"date": "2025-04", "value": 52.5, "percentile": 58.2},
-    {"date": "2025-07", "value": 58.8, "percentile": 68.5},
-    {"date": "2025-10", "value": 62.2, "percentile": 72.0},
-    {"date": "2026-01", "value": 55.5, "percentile": 60.5},
-    {"date": "2026-04", "value": 50.2, "percentile": 52.5}
+    {
+      "date": "2020-07",
+      "value": 62.5,
+      "percentile": 72.5
+    },
+    {
+      "date": "2020-10",
+      "value": 55.2,
+      "percentile": 62
+    },
+    {
+      "date": "2021-01",
+      "value": 68.8,
+      "percentile": 78.5
+    },
+    {
+      "date": "2021-04",
+      "value": 58.5,
+      "percentile": 65.2
+    },
+    {
+      "date": "2021-07",
+      "value": 72.5,
+      "percentile": 85
+    },
+    {
+      "date": "2021-10",
+      "value": 52.8,
+      "percentile": 55.5
+    },
+    {
+      "date": "2022-01",
+      "value": 48.2,
+      "percentile": 48
+    },
+    {
+      "date": "2022-04",
+      "value": 35.5,
+      "percentile": 25.5
+    },
+    {
+      "date": "2022-07",
+      "value": 42.2,
+      "percentile": 38.5
+    },
+    {
+      "date": "2022-10",
+      "value": 30.5,
+      "percentile": 15.2
+    },
+    {
+      "date": "2023-01",
+      "value": 35.8,
+      "percentile": 25.8
+    },
+    {
+      "date": "2023-04",
+      "value": 38.5,
+      "percentile": 30.5
+    },
+    {
+      "date": "2023-07",
+      "value": 32.5,
+      "percentile": 18.5
+    },
+    {
+      "date": "2023-10",
+      "value": 28.8,
+      "percentile": 10.2
+    },
+    {
+      "date": "2024-01",
+      "value": 32.2,
+      "percentile": 16.5
+    },
+    {
+      "date": "2024-04",
+      "value": 35.5,
+      "percentile": 22.5
+    },
+    {
+      "date": "2024-07",
+      "value": 42.8,
+      "percentile": 40.5
+    },
+    {
+      "date": "2024-10",
+      "value": 48.5,
+      "percentile": 50.2
+    },
+    {
+      "date": "2025-01",
+      "value": 55.2,
+      "percentile": 62.5
+    },
+    {
+      "date": "2025-04",
+      "value": 52.5,
+      "percentile": 58.2
+    },
+    {
+      "date": "2025-07",
+      "value": 58.8,
+      "percentile": 68.5
+    },
+    {
+      "date": "2025-10",
+      "value": 62.2,
+      "percentile": 72
+    },
+    {
+      "date": "2026-01",
+      "value": 55.5,
+      "percentile": 60.5
+    },
+    {
+      "date": "2026-04",
+      "value": 50.2,
+      "percentile": 52.5
+    }
   ],
   "dividendHistory": [
-    {"date": "2020-07", "value": 0.55},
-    {"date": "2021-01", "value": 0.48},
-    {"date": "2021-07", "value": 0.42},
-    {"date": "2022-01", "value": 0.52},
-    {"date": "2022-07", "value": 0.65},
-    {"date": "2023-01", "value": 0.72},
-    {"date": "2023-07", "value": 0.82},
-    {"date": "2024-01", "value": 0.75},
-    {"date": "2024-07", "value": 0.62},
-    {"date": "2025-01", "value": 0.55},
-    {"date": "2025-07", "value": 0.48},
-    {"date": "2026-01", "value": 0.52}
+    {
+      "date": "2020-07",
+      "value": 0.55
+    },
+    {
+      "date": "2021-01",
+      "value": 0.48
+    },
+    {
+      "date": "2021-07",
+      "value": 0.42
+    },
+    {
+      "date": "2022-01",
+      "value": 0.52
+    },
+    {
+      "date": "2022-07",
+      "value": 0.65
+    },
+    {
+      "date": "2023-01",
+      "value": 0.72
+    },
+    {
+      "date": "2023-07",
+      "value": 0.82
+    },
+    {
+      "date": "2024-01",
+      "value": 0.75
+    },
+    {
+      "date": "2024-07",
+      "value": 0.62
+    },
+    {
+      "date": "2025-01",
+      "value": 0.55
+    },
+    {
+      "date": "2025-07",
+      "value": 0.48
+    },
+    {
+      "date": "2026-01",
+      "value": 0.52
+    }
   ],
   "bondYieldHistory": [
-    {"date": "2020-07", "value": 2.95},
-    {"date": "2021-01", "value": 3.15},
-    {"date": "2021-07", "value": 2.98},
-    {"date": "2022-01", "value": 2.78},
-    {"date": "2022-07", "value": 2.82},
-    {"date": "2023-01", "value": 2.92},
-    {"date": "2023-07", "value": 2.65},
-    {"date": "2024-01", "value": 2.55},
-    {"date": "2024-07", "value": 2.22},
-    {"date": "2025-01", "value": 1.68},
-    {"date": "2025-07", "value": 1.72},
-    {"date": "2026-01", "value": 1.65}
-  ]
+    {
+      "date": "2020-07",
+      "value": 2.95
+    },
+    {
+      "date": "2021-01",
+      "value": 3.15
+    },
+    {
+      "date": "2021-07",
+      "value": 2.98
+    },
+    {
+      "date": "2022-01",
+      "value": 2.78
+    },
+    {
+      "date": "2022-07",
+      "value": 2.82
+    },
+    {
+      "date": "2023-01",
+      "value": 2.92
+    },
+    {
+      "date": "2023-07",
+      "value": 2.65
+    },
+    {
+      "date": "2024-01",
+      "value": 2.55
+    },
+    {
+      "date": "2024-07",
+      "value": 2.22
+    },
+    {
+      "date": "2025-01",
+      "value": 1.68
+    },
+    {
+      "date": "2025-07",
+      "value": 1.72
+    },
+    {
+      "date": "2026-01",
+      "value": 1.65
+    }
+  ],
+  "valuationAnchor": {
+    "peMean": 48.15,
+    "peStd": 12.34,
+    "dataYears": "2020-2026",
+    "dataPoints": 24,
+    "source": "JSON历史PE统计(中证电子50指数931087，数据点偏少)",
+    "updateDate": "2026-04"
+  }
 }

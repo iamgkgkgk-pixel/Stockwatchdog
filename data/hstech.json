@@ -562,5 +562,13 @@
     "priceChange": 0,
     "updateTime": "2026-04-15",
     "note": "恒生科技指数估值数据"
+  },
+  "valuationAnchor": {
+    "peMean": 22.85,
+    "peStd": 7.27,
+    "dataYears": "2021-2026",
+    "dataPoints": 64,
+    "source": "JSON历史PE统计(恒生科技指数HSTECH)",
+    "updateDate": "2026-04"
   }
 }

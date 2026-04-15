@@ -587,5 +587,13 @@
     "priceChange": 0,
     "updateTime": "2026-04-15",
     "note": "沪深300医药卫生指数估值数据"
+  },
+  "valuationAnchor": {
+    "peMean": 30.7,
+    "peStd": 9.03,
+    "dataYears": "2019-2026",
+    "dataPoints": 69,
+    "source": "JSON历史PE统计(沪深300医药卫生指数SH000978)",
+    "updateDate": "2026-04"
   }
 }

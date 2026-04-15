@@ -617,5 +617,13 @@
     "priceChange": 0,
     "updateTime": "2026-04-15",
     "note": "标普500指数估值数据（美元10Y国债收益率）"
+  },
+  "valuationAnchor": {
+    "peMean": 22.97,
+    "peStd": 3.19,
+    "dataYears": "5Y",
+    "dataPoints": null,
+    "source": "worldperatio.com(S&P500指数5年均值)",
+    "updateDate": "2026-04"
   }
 }

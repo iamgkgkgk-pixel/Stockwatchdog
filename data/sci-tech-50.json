@@ -562,5 +562,13 @@
     "priceChange": 0,
     "updateTime": "2026-04-15",
     "note": "科创创业50指数(931643)估值数据 - 对应招商科创创业50ETF(588300)"
+  },
+  "valuationAnchor": {
+    "peMean": 48.71,
+    "peStd": 10.28,
+    "dataYears": "2021-2026",
+    "dataPoints": 64,
+    "source": "JSON历史PE统计(科创创业50指数931643)",
+    "updateDate": "2026-04"
   }
 }

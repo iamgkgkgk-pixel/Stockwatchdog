@@ -828,5 +828,13 @@
     "priceChange": 0,
     "updateTime": "2026-04-15",
     "note": "红利低波指数(CSIH30269)估值数据，来源:蛋卷基金"
+  },
+  "valuationAnchor": {
+    "peMean": 7.69,
+    "peStd": 0.71,
+    "dataYears": "2016-2026",
+    "dataPoints": 54,
+    "source": "JSON历史PE统计(红利低波指数CSIH30269，含10年月度数据)",
+    "updateDate": "2026-04"
   }
 }

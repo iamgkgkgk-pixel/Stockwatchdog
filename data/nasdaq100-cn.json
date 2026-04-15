@@ -617,5 +617,13 @@
     "priceChange": 0,
     "updateTime": "2026-04-15",
     "note": "纳斯达克100指数估值数据（美元10Y国债收益率）"
+  },
+  "valuationAnchor": {
+    "peMean": 30.2,
+    "peStd": 2.91,
+    "dataYears": "5Y",
+    "dataPoints": null,
+    "source": "worldperatio.com(Nasdaq100指数5年均值)",
+    "updateDate": "2026-04"
   }
 }

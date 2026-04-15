@@ -182,6 +182,28 @@
             </div>
         </section>
 
+        <!-- 算法对比：混合估值 vs 纯PE分位 日级别走势 -->
+        <section class="chart-section animate-fade-in animate-delay-4" id="chart-section-algo-compare">
+            <div class="card card-full">
+                <div class="card-title">
+                    <span class="card-title-icon">🔬</span>
+                    <span id="algo-compare-title">估值算法对比（混合模型 vs 纯PE分位）</span>
+                </div>
+                <div class="signal-history-legend" id="algo-compare-legend">
+                    <span class="legend-item"><span class="legend-dot" style="background:#00bcd4"></span>🆕 混合模型（偏离度×0.7+分位×0.3）</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#ff9800"></span>🔄 旧算法（纯PE分位 100-P%）</span>
+                    <span class="legend-item" style="font-size:10px;color:#718096;">── 80/70/55/40/25 信号分界线</span>
+                </div>
+                <div class="chart-container" id="chart-algo-compare" style="height:450px;"></div>
+                <div class="signal-history-note">
+                    🔬 <strong>算法差异说明：</strong>
+                    <span style="color:#00bcd4;">■ 混合模型</span> = PE均值偏离度×0.7 + PE分位×0.3（芒格"离正常水平有多远"比"排在第几"更重要）；
+                    <span style="color:#ff9800;">■ 旧算法</span> = 100 - PE历史分位（纯百分位排名）。
+                    两条线差距越大，说明均值偏离度给出的信息与分位排名分歧越大。追溯至数据最早可用时间。
+                </div>
+            </div>
+        </section>
+
         <!-- Strategy Explanation -->
         <section class="footer">
             <div class="collapse-panel">
@@ -249,11 +271,11 @@
     </div>
 
     <!-- ==================== Scripts ==================== -->
-    <script src="js/etf-config.js?v=20260415b"></script>
-    <script src="js/signal.js?v=20260415b"></script>
-    <script src="js/storage.js?v=20260415b"></script>
-    <script src="js/api.js?v=20260415b"></script>
-    <script src="js/charts.js?v=20260415b"></script>
-    <script src="js/main.js?v=20260415b"></script>
+    <script src="js/etf-config.js?v=20260415c"></script>
+    <script src="js/signal.js?v=20260415c"></script>
+    <script src="js/storage.js?v=20260415c"></script>
+    <script src="js/api.js?v=20260415c"></script>
+    <script src="js/charts.js?v=20260415c"></script>
+    <script src="js/main.js?v=20260415c"></script>
 </body>
 </html>
