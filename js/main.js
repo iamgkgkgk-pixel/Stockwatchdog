@@ -702,6 +702,9 @@ const App = (() => {
         const methodEl = document.getElementById('signal-method');
         if (methodEl) methodEl.textContent = `📐 ${rules.name} | 综合评分: ${total.toFixed(1)}分`;
 
+        // 更新芒格式智能解读区
+        updateInterpretationDisplay(scores, etfConfig, signalData);
+
         // 缓存
         etfDataCache[etfId] = etfDataCache[etfId] || {};
         etfDataCache[etfId].currentSignal = currentSignal;
@@ -744,6 +747,63 @@ const App = (() => {
             signalPosition.style.borderColor = signal.borderColor;
         }
         if (signalIcon) signalIcon.textContent = signal.icon;
+    }
+
+    /**
+     * 渲染芒格式智能解读区
+     */
+    function updateInterpretationDisplay(scores, etfConfig, signalData) {
+        const container = document.getElementById('signal-interpretation');
+        if (!container) return;
+
+        const interp = SignalEngine.generateInterpretation(
+            scores, etfConfig.dimWeights || {}, signalData, etfConfig
+        );
+
+        // 黄金/商品等无多维度解读的品种，隐藏此区域
+        if (!interp) {
+            container.innerHTML = '';
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = '';
+
+        let html = '<div class="interp-header">🧠 芒格式维度解读</div>';
+
+        // 维度解读条目
+        html += '<div class="interp-dims">';
+        interp.items.forEach(item => {
+            const pct = Math.max(0, Math.min(100, item.score));
+            html += `<div class="interp-dim-item">
+                <div class="interp-dim-head">
+                    <span class="interp-dim-icon">${item.icon}</span>
+                    <span class="interp-dim-title">${item.title}</span>
+                    <span class="interp-dim-score" style="color:${item.color}">${item.score.toFixed(0)}分</span>
+                    <span class="interp-dim-weight">权重${item.weight}%</span>
+                </div>
+                <div class="interp-dim-bar-bg">
+                    <div class="interp-dim-bar-fill" style="width:${pct}%;background:${item.color}"></div>
+                </div>
+                <div class="interp-dim-desc">${item.desc}</div>
+            </div>`;
+        });
+        html += '</div>';
+
+        // 综合操作建议
+        if (interp.action) {
+            html += `<div class="interp-action" style="border-left-color:${interp.action.color}">
+                <span class="interp-action-icon">${interp.action.icon}</span>
+                <span class="interp-action-text">${interp.action.text}</span>
+            </div>`;
+        }
+
+        // 维度分歧提示
+        if (interp.note) {
+            html += `<div class="interp-note">${interp.note}</div>`;
+        }
+
+        container.innerHTML = html;
     }
 
     function updateDataCardsValues(etfConfig, data, spread, spreadPercentile, pePercentile, peAvailable, dividendAvailable, canCalcSpread, trendScore) {

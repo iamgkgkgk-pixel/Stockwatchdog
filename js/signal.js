@@ -648,6 +648,233 @@ const SignalEngine = (() => {
         return results;
     }
 
+    // ========== 智能解读生成 ==========
+
+    /**
+     * 基于各维度分数生成芒格式智能解读
+     * @param {Object} scores - { valuation, safety, quality, sentiment } 各维度分数
+     * @param {Object} dimWeights - { valuation: 40, safety: 30, ... } 各维度权重
+     * @param {Object} signalData - 原始信号输入数据（pe, marketTemp等）
+     * @param {Object} etfConfig - ETF配置
+     * @returns {Object} { items: [{icon, title, desc, color}], action: {text, color, icon}, note: string }
+     */
+    function generateInterpretation(scores, dimWeights, signalData, etfConfig) {
+        const items = [];
+        const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
+        const isGoldOrCommodity = etfConfig.type === 'gold' || etfConfig.type === 'commodity';
+        const isBond = etfConfig.type === 'bond';
+
+        // 如果是黄金/商品（纯趋势跟踪），不生成多维度解读
+        if (isGoldOrCommodity) {
+            return null;
+        }
+
+        // ===== 1. 估值分位解读 =====
+        const vScore = scores.valuation;
+        if (vScore !== null && vScore !== undefined) {
+            const pePercentile = signalData.pePercentile;
+            let desc, color;
+            if (vScore >= 70) {
+                desc = `PE分位 ${pePercentile !== null ? pePercentile.toFixed(0) + '%' : '--'}，处于历史低位区间，估值确实便宜`;
+                color = '#28a745';
+            } else if (vScore >= 55) {
+                desc = `PE分位 ${pePercentile !== null ? pePercentile.toFixed(0) + '%' : '--'}，估值偏低，有一定吸引力`;
+                color = '#9be3b0';
+            } else if (vScore >= 40) {
+                desc = `PE分位 ${pePercentile !== null ? pePercentile.toFixed(0) + '%' : '--'}，估值中等，不贵不便宜`;
+                color = '#ffc107';
+            } else if (vScore >= 25) {
+                desc = `PE分位 ${pePercentile !== null ? pePercentile.toFixed(0) + '%' : '--'}，估值偏高，性价比不足`;
+                color = '#fd7e14';
+            } else {
+                desc = `PE分位 ${pePercentile !== null ? pePercentile.toFixed(0) + '%' : '--'}，估值处于历史高位，需警惕`;
+                color = '#dc3545';
+            }
+            items.push({
+                icon: '📊',
+                title: '估值水平',
+                score: vScore,
+                desc,
+                color,
+                weight: dimWeights.valuation || 0,
+            });
+        }
+
+        // ===== 2. 安全边际解读 =====
+        const sScore = scores.safety;
+        if (sScore !== null && sScore !== undefined && (dimWeights.safety || 0) > 0) {
+            let desc, color;
+            if (sScore >= 70) {
+                desc = '安全边际充裕，即使判断有误也有较好的保护';
+                color = '#28a745';
+            } else if (sScore >= 55) {
+                desc = '安全边际尚可，有一定的缓冲空间';
+                color = '#9be3b0';
+            } else if (sScore >= 40) {
+                desc = '安全边际一般，缓冲空间有限';
+                color = '#ffc107';
+            } else if (sScore >= 25) {
+                desc = '安全边际薄弱，下行风险较大';
+                color = '#fd7e14';
+            } else {
+                desc = '安全边际极低，风险暴露明显';
+                color = '#dc3545';
+            }
+            items.push({
+                icon: '🛡️',
+                title: '安全边际',
+                score: sScore,
+                desc,
+                color,
+                weight: dimWeights.safety || 0,
+            });
+        }
+
+        // ===== 3. 市场情绪解读 =====
+        const sentScore = scores.sentiment;
+        if (sentScore !== null && sentScore !== undefined && (dimWeights.sentiment || 0) > 0) {
+            const marketTemp = signalData.marketTemp;
+            let tempText = '';
+            if (marketTemp !== null && marketTemp !== undefined) {
+                const tempDesc = getMarketTempDesc(marketTemp);
+                tempText = `（${tempDesc.text}，指数${marketTemp.toFixed(0)}）`;
+            }
+            
+            let desc, color;
+            if (sentScore >= 70) {
+                desc = `市场偏恐惧${tempText}`;
+                color = '#28a745';
+            } else if (sentScore >= 55) {
+                desc = `市场情绪偏冷${tempText}`;
+                color = '#9be3b0';
+            } else if (sentScore >= 40) {
+                desc = `市场情绪中性${tempText}`;
+                color = '#ffc107';
+            } else if (sentScore >= 25) {
+                desc = `市场偏乐观${tempText}`;
+                color = '#fd7e14';
+            } else {
+                desc = `市场贪婪过度${tempText}`;
+                color = '#dc3545';
+            }
+            items.push({
+                icon: '🌡️',
+                title: '市场情绪',
+                score: sentScore,
+                desc,
+                color,
+                weight: dimWeights.sentiment || 0,
+            });
+        }
+
+        // ===== 4. 综合操作建议（芒格决策矩阵）=====
+        const hasValuation = vScore !== null && vScore !== undefined;
+        const hasSafety = sScore !== null && sScore !== undefined;
+        const hasSentiment = sentScore !== null && sentScore !== undefined;
+
+        let action = null;
+        if (hasValuation) {
+            const vLevel = vScore >= 55 ? 'cheap' : (vScore >= 35 ? 'fair' : 'expensive');
+            const sLevel = hasSafety ? (sScore >= 55 ? 'thick' : (sScore >= 35 ? 'thin' : 'none')) : 'unknown';
+            const sentLevel = hasSentiment ? (sentScore >= 55 ? 'fear' : (sentScore >= 40 ? 'neutral' : 'greed')) : 'neutral';
+
+            if (vLevel === 'cheap' && (sLevel === 'thick' || sLevel === 'unknown')) {
+                if (sentLevel === 'fear') {
+                    action = {
+                        text: '估值低+安全边际厚+市场恐惧 → 芒格时刻："在别人恐惧时贪婪"，可果断分批建仓',
+                        color: '#0d7337',
+                        icon: '🟢',
+                        type: 'strong_buy'
+                    };
+                } else if (sentLevel === 'greed') {
+                    action = {
+                        text: '估值低+安全边际厚+市场偏贪 → 基本面支撑买入，但短期别急，可分批建仓',
+                        color: '#28a745',
+                        icon: '🔵',
+                        type: 'buy_patience'
+                    };
+                } else {
+                    action = {
+                        text: '估值低+安全边际厚+情绪中性 → 好价格好资产，正常节奏建仓即可',
+                        color: '#28a745',
+                        icon: '🟢',
+                        type: 'buy'
+                    };
+                }
+            } else if (vLevel === 'cheap' && sLevel === 'thin') {
+                action = {
+                    text: '估值偏低但安全边际不足 → 有机会但需谨慎，建议小仓位试探',
+                    color: '#9be3b0',
+                    icon: '🔵',
+                    type: 'small_buy'
+                };
+            } else if (vLevel === 'fair') {
+                if (sentLevel === 'fear') {
+                    action = {
+                        text: '估值中等+市场恐惧 → 不算便宜但情绪给了折扣，可小仓位试探',
+                        color: '#9be3b0',
+                        icon: '🔵',
+                        type: 'small_try'
+                    };
+                } else if (sentLevel === 'greed') {
+                    action = {
+                        text: '估值中等+市场偏贪 → 不便宜且大家都在嗨，听实时信号，观望为主',
+                        color: '#ffc107',
+                        icon: '🟡',
+                        type: 'wait'
+                    };
+                } else {
+                    action = {
+                        text: '估值中等+情绪中性 → 无明显机会，耐心持有等待更好的价格',
+                        color: '#ffc107',
+                        icon: '🟡',
+                        type: 'hold'
+                    };
+                }
+            } else {
+                // expensive
+                if (sentLevel === 'greed') {
+                    action = {
+                        text: '估值偏高+市场贪婪 → 双重警告！芒格说"在别人贪婪时恐惧"，考虑减仓',
+                        color: '#dc3545',
+                        icon: '🔴',
+                        type: 'reduce'
+                    };
+                } else if (sentLevel === 'fear') {
+                    action = {
+                        text: '估值偏高但市场恐惧 → 可能是下跌中继的反弹，不要轻易抄底',
+                        color: '#fd7e14',
+                        icon: '🟠',
+                        type: 'caution'
+                    };
+                } else {
+                    action = {
+                        text: '估值偏高+情绪中性 → 性价比不足，建议逐步减仓或观望',
+                        color: '#fd7e14',
+                        icon: '🟠',
+                        type: 'reduce_or_wait'
+                    };
+                }
+            }
+        }
+
+        // ===== 5. 找出影响总分最大的维度 =====
+        let note = '';
+        if (items.length >= 2) {
+            // 找出得分最高和最低的维度
+            const sorted = [...items].sort((a, b) => b.score - a.score);
+            const highest = sorted[0];
+            const lowest = sorted[sorted.length - 1];
+            const gap = highest.score - lowest.score;
+            
+            if (gap >= 25) {
+                note = `📌 维度分歧提示：「${highest.title}」(${highest.score.toFixed(0)}分) 与「${lowest.title}」(${lowest.score.toFixed(0)}分) 差距较大(${gap.toFixed(0)}分)，建议重点关注${lowest.title}的变化`;
+            }
+        }
+
+        return { items, action, note };
+    }
+
     // ========== 公开API ==========
     return {
         SIGNAL_LEVELS,
@@ -660,6 +887,7 @@ const SignalEngine = (() => {
         getPercentileZone,
         getPEPercentileZone,
         getCompositeScoreZone,
-        getMarketTempDesc
+        getMarketTempDesc,
+        generateInterpretation
     };
 })();
