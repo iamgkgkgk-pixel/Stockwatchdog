@@ -1315,38 +1315,16 @@ const App = (() => {
             return;
         }
 
-        // 计算分位走势序列
+        // 计算分位走势序列（全部基于统一基准 marketTemp=50）
         const percentileSeries = SignalEngine.calcScorePercentileSeries(dailySignals);
 
-        // 计算当前实时综合分的分位（如果有实时分数）
+        // 摘要和标记点使用图表同一基准的最后一个数据点
+        // 【重要】不使用 currentTotal（实时综合分），因为它含真实市场温度，
+        // 与图表中统一使用 marketTemp=50 的历史数据基准不同，混入会导致数据不可比
         let currentPercentile = null;
-        const hasRealTimeScore = currentTotal !== null && currentTotal !== undefined && currentTotal > 0;
-        if (hasRealTimeScore) {
-            currentPercentile = SignalEngine.calcScoreHistoricalPercentile(currentTotal, dailySignals);
-            // 【关键】将实时分位追加/替换到图表曲线末尾，确保图表最后一个点的位置
-            // 和摘要/标记点显示的分位值完全一致，避免视觉矛盾
-            const today = new Date().toISOString().slice(0, 10);
-            const lastSeries = percentileSeries[percentileSeries.length - 1];
-            const realtimePoint = {
-                date: today,
-                score: currentTotal,
-                percentile: currentPercentile.percentile,
-                signalText: '实时',
-                signalColor: currentPercentile.zone.color,
-                zone: SignalEngine.getScorePercentileZone(currentPercentile.percentile, false),
-            };
-            // 如果最后一个点就是今天，替换它；否则追加
-            if (lastSeries && lastSeries.date === today) {
-                percentileSeries[percentileSeries.length - 1] = realtimePoint;
-            } else {
-                percentileSeries.push(realtimePoint);
-            }
-        } else {
-            // 回退到最后一个日级别数据点
-            const lastSignal = dailySignals[dailySignals.length - 1];
-            if (lastSignal) {
-                currentPercentile = SignalEngine.calcScoreHistoricalPercentile(lastSignal.score, dailySignals);
-            }
+        const lastSignal = dailySignals[dailySignals.length - 1];
+        if (lastSignal) {
+            currentPercentile = SignalEngine.calcScoreHistoricalPercentile(lastSignal.score, dailySignals);
         }
 
         // 更新标题
@@ -1368,6 +1346,8 @@ const App = (() => {
         if (summaryEl && currentPercentile) {
             const pct = currentPercentile.percentile;
             const zone = currentPercentile.zone;
+            // 获取图表基准下最后一天的综合分（与图表一致，统一使用 marketTemp=50 中性计算）
+            const lastScore = lastSignal ? lastSignal.score.toFixed(1) : '--';
             summaryEl.innerHTML = `
                 <div class="score-pct-current">
                     <span class="score-pct-value" style="color:${zone.color}">${pct.toFixed(1)}%</span>
@@ -1377,7 +1357,7 @@ const App = (() => {
                     ${zone.icon} ${zone.text}
                 </span>
                 <span class="score-pct-desc">${zone.desc}
-                    <br/><span style="font-size:11px;color:#718096;">历史 ${currentPercentile.totalDays} 个数据点中，${currentPercentile.worseDays} 个（${pct.toFixed(0)}%）综合评分 ≤ 当前</span>
+                    <br/><span style="font-size:11px;color:#718096;">估值基准分 ${lastScore}，历史 ${currentPercentile.totalDays} 个数据点中 ${currentPercentile.worseDays} 个（${pct.toFixed(0)}%）≤ 当前</span>
                 </span>
             `;
         } else if (summaryEl) {

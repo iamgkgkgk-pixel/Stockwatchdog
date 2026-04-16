@@ -707,7 +707,7 @@ const ChartManager = (() => {
                 // 当前分位标记点（最后一个点）
                 markPoint: currentPercentile ? {
                     data: [{
-                        coord: [dates[dates.length - 1], currentPercentile.percentile],
+                        coord: [dates[dates.length - 1], percentiles[percentiles.length - 1]],
                         symbol: 'pin',
                         symbolSize: 40,
                         label: {
