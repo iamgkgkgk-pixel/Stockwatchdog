@@ -588,7 +588,167 @@ const ChartManager = (() => {
         return chart;
     }
 
-    return { initGauge, updateGauge, updateGaugePending, getGaugeChart, initLineChart, initSignalHistoryChart, initDailySignalHistoryChart, initAlgoCompareChart, resizeAll,
+    /**
+     * 初始化综合分历史分位图表
+     * 展示当前综合评分在全部历史数据中的相对位置走势
+     * 
+     * 用户直觉量化："历史上有多少时间比现在更差？越多=越安全"
+     * 
+     * @param {string} containerId - DOM容器ID
+     * @param {Array} percentileData - calcScorePercentileSeries 返回的数据
+     * @param {Object|null} currentPercentile - calcScoreHistoricalPercentile 返回的当前分位信息
+     * @param {string} etfColor - ETF主题色
+     */
+    function initScorePercentileChart(containerId, percentileData, currentPercentile, etfColor) {
+        const dom = document.getElementById(containerId);
+        if (!dom) return null;
+        if (!checkECharts(dom)) return null;
+
+        let chart = echarts.getInstanceByDom(dom);
+        if (chart) chart.dispose();
+        chart = echarts.init(dom);
+
+        if (!percentileData || percentileData.length === 0) {
+            chart.setOption({
+                title: { text: '暂无历史分位数据', left: 'center', top: 'center', textStyle: { color: '#718096', fontSize: 14 } }
+            });
+            return chart;
+        }
+
+        const dates = percentileData.map(d => d.date);
+        const percentiles = percentileData.map(d => d.percentile);
+
+        chart.setOption({
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(26,26,46,0.95)',
+                borderColor: '#4a5568',
+                borderWidth: 1,
+                textStyle: { color: '#e2e8f0', fontSize: 12 },
+                formatter: function(params) {
+                    const idx = params[0].dataIndex;
+                    const d = percentileData[idx];
+                    let html = `<strong>${d.date}</strong><br/>`;
+                    html += `<span style="color:${d.zone.color};font-weight:bold;font-size:14px;">● ${d.zone.text}</span><br/>`;
+                    html += `综合分历史分位: <strong style="color:${d.zone.color}">${d.percentile.toFixed(1)}%</strong><br/>`;
+                    html += `<span style="font-size:11px;color:#a0aec0;">含义：历史上 ${d.percentile.toFixed(0)}% 的时间，综合评分 ≤ 当时的 ${d.score.toFixed(1)}分</span><br/>`;
+                    html += `当时综合评分: ${d.score.toFixed(1)} · ${d.signalText}`;
+                    return html;
+                }
+            },
+            grid: { left: '3%', right: '4%', bottom: '18%', top: '12%', containLabel: true },
+            xAxis: {
+                type: 'category',
+                data: dates,
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: '#2d3748' } },
+                axisLabel: {
+                    color: '#a0aec0', fontSize: 10, rotate: 30,
+                    formatter: function(value) {
+                        if (value.endsWith('-01-01') || value.endsWith('-01-02') || value.endsWith('-01-03')) {
+                            return value.slice(0, 7);
+                        }
+                        if (value.endsWith('-01') || value.endsWith('-02')) {
+                            return value.slice(5, 7) + '月';
+                        }
+                        return '';
+                    },
+                    interval: 0,
+                },
+                axisTick: { show: false },
+            },
+            yAxis: {
+                type: 'value',
+                min: 0, max: 100,
+                axisLine: { show: false },
+                axisLabel: {
+                    color: '#a0aec0', fontSize: 10,
+                    formatter: '{value}%'
+                },
+                splitLine: { lineStyle: { color: '#2d3748', type: 'dashed' } },
+            },
+            // 分位区间变色：越高（越安全）越绿，越低（越危险）越红
+            visualMap: {
+                show: false,
+                pieces: [
+                    { gte: 80, color: '#0d7337' },   // 非常安全
+                    { gte: 65, lt: 80, color: '#28a745' }, // 相对安全
+                    { gte: 45, lt: 65, color: '#ffc107' }, // 中等
+                    { gte: 25, lt: 45, color: '#fd7e14' }, // 偏危险
+                    { lt: 25, color: '#dc3545' },     // 非常危险
+                ],
+                seriesIndex: 0,
+            },
+            series: [{
+                name: '综合分历史分位',
+                type: 'line',
+                data: percentiles,
+                smooth: true,
+                symbol: 'none',
+                lineStyle: { width: 2.5 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: (etfColor || '#28a745') + '35' },
+                        { offset: 1, color: (etfColor || '#28a745') + '05' }
+                    ])
+                },
+                label: { show: false },
+                markLine: {
+                    silent: true,
+                    lineStyle: { type: 'dashed', width: 1 },
+                    data: [
+                        { yAxis: 80, label: { formatter: '非常安全 80%', color: '#0d7337', fontSize: 9, position: 'end' }, lineStyle: { color: '#0d733744' } },
+                        { yAxis: 65, label: { formatter: '相对安全 65%', color: '#28a745', fontSize: 9, position: 'end' }, lineStyle: { color: '#28a74544' } },
+                        { yAxis: 50, label: { formatter: '中位线 50%', color: '#a0aec0', fontSize: 9, position: 'end' }, lineStyle: { color: '#a0aec044' } },
+                        { yAxis: 25, label: { formatter: '偏危险 25%', color: '#fd7e14', fontSize: 9, position: 'end' }, lineStyle: { color: '#fd7e1444' } },
+                    ]
+                },
+                // 当前分位标记点（最后一个点）
+                markPoint: currentPercentile ? {
+                    data: [{
+                        coord: [dates[dates.length - 1], percentiles[percentiles.length - 1]],
+                        symbol: 'pin',
+                        symbolSize: 40,
+                        label: {
+                            formatter: currentPercentile.percentile.toFixed(0) + '%',
+                            color: '#fff',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                        },
+                        itemStyle: {
+                            color: currentPercentile.zone.color,
+                            borderColor: '#fff',
+                            borderWidth: 1,
+                        }
+                    }],
+                    animation: true,
+                    animationDuration: 800,
+                } : {},
+                animationDuration: 1500,
+            }],
+            dataZoom: [
+                { type: 'inside', start: 0, end: 100 },
+                {
+                    type: 'slider', start: 0, end: 100,
+                    bottom: '3%', height: 20,
+                    borderColor: '#2d3748',
+                    backgroundColor: 'rgba(26,26,46,0.5)',
+                    fillerColor: 'rgba(100,150,200,0.15)',
+                    handleStyle: { color: '#4a5568' },
+                    textStyle: { color: '#a0aec0', fontSize: 10 },
+                    dataBackground: {
+                        lineStyle: { color: '#4a5568' },
+                        areaStyle: { color: 'rgba(100,150,200,0.1)' },
+                    },
+                },
+            ],
+        });
+
+        return chart;
+    }
+
+    return { initGauge, updateGauge, updateGaugePending, getGaugeChart, initLineChart, initSignalHistoryChart, initDailySignalHistoryChart, initAlgoCompareChart, initScorePercentileChart, resizeAll,
         // 兼容旧版接口
         initSpreadGauge: (id)=>initGauge(id,'股债利差分位',false),
         initPEGauge: (id)=>initGauge(id,'PE历史分位',true),

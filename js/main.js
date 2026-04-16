@@ -722,6 +722,7 @@ const App = (() => {
         // 刷新综合信号历史走势图（传入当前市场温度，使最新月份与实时信号一致）
         if (historyData) {
             renderSignalHistoryChart(etfConfig, historyData, signalData.marketTemp);
+            renderScorePercentileChart(etfConfig, historyData, signalData.marketTemp, total);
             renderDailySignalHistoryChart(etfConfig, historyData, signalData.marketTemp);
             renderAlgoCompareChart(etfConfig, historyData, signalData.marketTemp);
         }
@@ -1173,6 +1174,9 @@ const App = (() => {
         // ========== 综合信号历史走势图 ==========
         renderSignalHistoryChart(etfConfig, historyData);
 
+        // ========== 综合分历史分位图表（安全度量化）==========
+        renderScorePercentileChart(etfConfig, historyData);
+
         // ========== 日级别综合信号历史走势图 ==========
         renderDailySignalHistoryChart(etfConfig, historyData);
 
@@ -1271,6 +1275,98 @@ const App = (() => {
         }
 
         ChartManager.initDailySignalHistoryChart('chart-daily-signal-history', signals, etfConfig.color);
+    }
+
+    /**
+     * 渲染综合分历史分位图表（安全度量化）
+     * 用户直觉的量化版："历史上有多少时间比现在更差？越多=越安全"
+     * @param {Object} etfConfig
+     * @param {Object} historyData
+     * @param {number|null} currentMarketTemp
+     * @param {number|null} currentTotal - 当前实时综合评分（用于计算实时分位）
+     */
+    function renderScorePercentileChart(etfConfig, historyData, currentMarketTemp, currentTotal) {
+        const section = document.getElementById('chart-section-score-percentile');
+        const titleEl = document.getElementById('score-percentile-title');
+        const summaryEl = document.getElementById('score-percentile-summary');
+
+        // 商品/黄金类不支持历史信号回算
+        if (etfConfig.type === ETF_CONFIG.ETF_TYPE.COMMODITY || etfConfig.type === ETF_CONFIG.ETF_TYPE.GOLD) {
+            if (section) section.style.display = 'none';
+            return;
+        }
+
+        if (section) section.style.display = '';
+
+        if (!historyData) {
+            ChartManager.initScorePercentileChart('chart-score-percentile', [], null, etfConfig.color);
+            if (summaryEl) summaryEl.innerHTML = '';
+            return;
+        }
+
+        // 使用尽可能长的历史（与算法对比图一致，追溯全量）
+        const days = 365 * 20;
+        const mktTemp = (currentMarketTemp !== null && currentMarketTemp !== undefined) ? currentMarketTemp : null;
+        const dailySignals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp);
+
+        if (dailySignals.length === 0) {
+            ChartManager.initScorePercentileChart('chart-score-percentile', [], null, etfConfig.color);
+            if (summaryEl) summaryEl.innerHTML = '';
+            return;
+        }
+
+        // 计算分位走势序列
+        const percentileSeries = SignalEngine.calcScorePercentileSeries(dailySignals);
+
+        // 计算当前实时综合分的分位（如果有实时分数）
+        let currentPercentile = null;
+        if (currentTotal !== null && currentTotal !== undefined && currentTotal > 0) {
+            currentPercentile = SignalEngine.calcScoreHistoricalPercentile(currentTotal, dailySignals);
+        } else {
+            // 回退到最后一个日级别数据点
+            const lastSignal = dailySignals[dailySignals.length - 1];
+            if (lastSignal) {
+                currentPercentile = SignalEngine.calcScoreHistoricalPercentile(lastSignal.score, dailySignals);
+            }
+        }
+
+        // 更新标题
+        if (titleEl) {
+            const dayCount = dailySignals.length;
+            let timeRange;
+            if (dayCount >= 365) {
+                const years = (dayCount / 365).toFixed(1);
+                timeRange = years.endsWith('.0') ? `近${parseInt(years)}年` : `近${years}年`;
+            } else if (dayCount >= 30) {
+                timeRange = `近${Math.round(dayCount / 30)}个月`;
+            } else {
+                timeRange = `近${dayCount}天`;
+            }
+            titleEl.textContent = `综合分历史分位（${timeRange} · ${etfConfig.shortName}）`;
+        }
+
+        // 更新摘要区域
+        if (summaryEl && currentPercentile) {
+            const pct = currentPercentile.percentile;
+            const zone = currentPercentile.zone;
+            summaryEl.innerHTML = `
+                <div class="score-pct-current">
+                    <span class="score-pct-value" style="color:${zone.color}">${pct.toFixed(1)}%</span>
+                    <span class="score-pct-label">历史分位<br/>（越高越安全）</span>
+                </div>
+                <span class="score-pct-zone" style="color:${zone.color};border-color:${zone.color}">
+                    ${zone.icon} ${zone.text}
+                </span>
+                <span class="score-pct-desc">${zone.desc}
+                    <br/><span style="font-size:11px;color:#718096;">历史 ${currentPercentile.totalDays} 个数据点中，${currentPercentile.worseDays} 个（${pct.toFixed(0)}%）≤ 当前综合分</span>
+                </span>
+            `;
+        } else if (summaryEl) {
+            summaryEl.innerHTML = '';
+        }
+
+        // 渲染图表
+        ChartManager.initScorePercentileChart('chart-score-percentile', percentileSeries, currentPercentile, etfConfig.color);
     }
 
     /**

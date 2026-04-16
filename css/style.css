@@ -752,6 +752,67 @@ body {
 }
 
 /* ========== Signal History Chart ========== */
+/* ========== Score Percentile Summary ========== */
+.score-percentile-summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    flex-wrap: wrap;
+}
+
+.score-pct-current {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.score-pct-value {
+    font-family: var(--font-mono);
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.score-pct-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.score-pct-zone {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid;
+}
+
+.score-pct-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    max-width: 380px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+@media (max-width: 576px) {
+    .score-percentile-summary {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px 12px;
+    }
+    .score-pct-value {
+        font-size: 24px;
+    }
+}
+
 .signal-history-legend {
     display: flex;
     flex-wrap: wrap;

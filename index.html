@@ -99,6 +99,31 @@
             <p class="signal-disclaimer">⚠️ 本工具仅供投资学习参考，不构成任何投资建议</p>
         </section>
 
+        <!-- 综合分历史分位图（当前信号的安全度量化） -->
+        <section class="chart-section animate-fade-in animate-delay-1" id="chart-section-score-percentile">
+            <div class="card card-full">
+                <div class="card-title">
+                    <span class="card-title-icon">📊</span>
+                    <span id="score-percentile-title">综合分历史分位</span>
+                </div>
+                <div class="score-percentile-summary" id="score-percentile-summary">
+                    <!-- 由JS动态填充当前分位摘要 -->
+                </div>
+                <div class="signal-history-legend">
+                    <span class="legend-item"><span class="legend-dot" style="background:#0d7337"></span>非常安全(≥80%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#28a745"></span>相对安全(65-80%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#ffc107"></span>中等(45-65%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#fd7e14"></span>偏危险(25-45%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#dc3545"></span>非常危险(<25%)</span>
+                </div>
+                <div class="chart-container" id="chart-score-percentile" style="height:350px;"></div>
+                <div class="signal-history-note">
+                    💡 <strong>综合分历史分位</strong> = 历史上有多少时间比现在更差？分位越高（越靠顶部）= 越安全，表示当前处于历史较优位置。
+                    追溯至数据最早可用时间。
+                </div>
+            </div>
+        </section>
+
         <!-- Dashboard: Gauges -->
         <section class="dashboard animate-fade-in animate-delay-1" id="gauges-section">
             <!-- 仪表盘由JS动态生成 -->
@@ -271,11 +296,11 @@
     </div>
 
     <!-- ==================== Scripts ==================== -->
-    <script src="js/etf-config.js?v=20260415c"></script>
-    <script src="js/signal.js?v=20260415c"></script>
-    <script src="js/storage.js?v=20260415c"></script>
-    <script src="js/api.js?v=20260415c"></script>
-    <script src="js/charts.js?v=20260415c"></script>
-    <script src="js/main.js?v=20260415c"></script>
+    <script src="js/etf-config.js?v=20260416a"></script>
+    <script src="js/signal.js?v=20260416a"></script>
+    <script src="js/storage.js?v=20260416a"></script>
+    <script src="js/api.js?v=20260416a"></script>
+    <script src="js/charts.js?v=20260416a"></script>
+    <script src="js/main.js?v=20260416a"></script>
 </body>
 </html>

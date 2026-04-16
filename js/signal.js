@@ -939,6 +939,84 @@ const SignalEngine = (() => {
         return deviationScore * 0.7 + percentileScore * 0.3;
     }
 
+    // ========== 综合分历史分位计算 ==========
+
+    /**
+     * 计算当前综合评分在全部历史综合评分中的分位数
+     * 
+     * 用户直觉的量化版：
+     *   "历史上有多少时间比现在更差？越多 = 越安全；越少 = 越危险"
+     * 
+     * @param {number} currentScore - 当前综合评分
+     * @param {Array} dailySignals - calcDailyHistoricalSignals 返回的日级别历史信号数组
+     * @returns {{ percentile: number, betterDays: number, totalDays: number, zone: Object }}
+     */
+    function calcScoreHistoricalPercentile(currentScore, dailySignals) {
+        if (!dailySignals || dailySignals.length === 0) {
+            return { percentile: 50, betterDays: 0, totalDays: 0, zone: { text: '无数据', color: '#718096' } };
+        }
+
+        const allScores = dailySignals.map(d => d.score);
+        // 历史中 ≤ 当前分数的天数占比 = 分位数
+        // 分位越高 = 历史上更多时间比现在更差 = 越安全
+        const percentile = calcPercentile(currentScore, allScores);
+        const worseDays = allScores.filter(s => s <= currentScore).length;
+
+        // 安全等级映射（分位越高越安全）
+        let zone;
+        if (percentile >= 80) {
+            zone = { text: '非常安全', color: '#0d7337', icon: '🟢', desc: '历史上绝大多数时间比现在更差，当前处于极佳位置' };
+        } else if (percentile >= 65) {
+            zone = { text: '相对安全', color: '#28a745', icon: '🟢', desc: '历史上多数时间比现在更差，当前位置较好' };
+        } else if (percentile >= 45) {
+            zone = { text: '中等位置', color: '#ffc107', icon: '🟡', desc: '历史上约一半时间比现在更差，当前属于中间水平' };
+        } else if (percentile >= 25) {
+            zone = { text: '偏危险', color: '#fd7e14', icon: '🟠', desc: '历史上多数时间比现在更好，当前位置偏低' };
+        } else {
+            zone = { text: '非常危险', color: '#dc3545', icon: '🔴', desc: '历史上绝大多数时间比现在更好，当前处于极差位置' };
+        }
+
+        return {
+            percentile: parseFloat(percentile.toFixed(1)),
+            worseDays: worseDays,
+            totalDays: allScores.length,
+            zone: zone,
+        };
+    }
+
+    /**
+     * 基于日级别历史信号，计算每个时间点的综合分累计分位走势
+     * 用于绘制"综合分历史分位"图表 — 显示综合评分在全部历史中的相对位置变化
+     * 
+     * @param {Array} dailySignals - calcDailyHistoricalSignals 返回的日级别数据
+     * @returns {Array<{date, score, percentile, zone}>}
+     */
+    function calcScorePercentileSeries(dailySignals) {
+        if (!dailySignals || dailySignals.length === 0) return [];
+
+        // 收集全量历史分数作为参照基准
+        const allScores = dailySignals.map(d => d.score);
+
+        return dailySignals.map(d => {
+            const pct = calcPercentile(d.score, allScores);
+            let zone;
+            if (pct >= 80) zone = { text: '非常安全', color: '#0d7337' };
+            else if (pct >= 65) zone = { text: '相对安全', color: '#28a745' };
+            else if (pct >= 45) zone = { text: '中等', color: '#ffc107' };
+            else if (pct >= 25) zone = { text: '偏危险', color: '#fd7e14' };
+            else zone = { text: '非常危险', color: '#dc3545' };
+
+            return {
+                date: d.date,
+                score: d.score,
+                percentile: parseFloat(pct.toFixed(1)),
+                signalText: d.signalText,
+                signalColor: d.signalColor,
+                zone: zone,
+            };
+        });
+    }
+
     // ========== 公开API ==========
     return {
         SIGNAL_LEVELS,
@@ -950,6 +1028,8 @@ const SignalEngine = (() => {
         generateMultiDimSignal,
         calcHistoricalSignals,
         calcDailyHistoricalSignals,
+        calcScoreHistoricalPercentile,
+        calcScorePercentileSeries,
         getPercentileZone,
         getPEPercentileZone,
         getCompositeScoreZone,
