@@ -631,9 +631,9 @@ const ChartManager = (() => {
                     const d = percentileData[idx];
                     let html = `<strong>${d.date}</strong><br/>`;
                     html += `<span style="color:${d.zone.color};font-weight:bold;font-size:14px;">● ${d.zone.text}</span><br/>`;
-                    html += `综合分历史分位: <strong style="color:${d.zone.color}">${d.percentile.toFixed(1)}%</strong><br/>`;
-                    html += `<span style="font-size:11px;color:#a0aec0;">含义：历史上 ${d.percentile.toFixed(0)}% 的时间，综合评分 ≤ 当时的 ${d.score.toFixed(1)}分</span><br/>`;
-                    html += `当时综合评分: ${d.score.toFixed(1)} · ${d.signalText}`;
+                    html += `综合评分: <strong>${d.score.toFixed(1)}分</strong> · ${d.signalText}<br/>`;
+                    html += `历史分位: <strong style="color:${d.zone.color}">${d.percentile.toFixed(1)}%</strong>`;
+                    html += `<span style="font-size:11px;color:#a0aec0;">（${d.percentile.toFixed(0)}% 的历史时间 ≤ 此分数）</span>`;
                     return html;
                 }
             },

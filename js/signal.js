@@ -942,10 +942,84 @@ const SignalEngine = (() => {
     // ========== 综合分历史分位计算 ==========
 
     /**
+     * 综合安全等级判定（双维度融合）
+     * 
+     * 核心改进：纯分位排名 + 综合分绝对水平 两个维度综合判定
+     * 
+     * 问题背景：
+     *   医药ETF这类品种，历史上存在长期低PE区间（2022-2024年PE在20-24），
+     *   综合分长期在65-73分（买入区间）。当前PE=23.2综合分≈66，虽然是"持有加仓"
+     *   的安全信号，但因为历史上有更长的"更好"时期，分位只有37%。
+     *   纯看分位会得出"偏危险"结论——这与综合分本身传递的"安全"信号严重矛盾。
+     * 
+     * 解决方案：
+     *   1. 以综合分绝对水平为主，分位排名为辅
+     *   2. 当综合分处于安全区间（≥55分=持有加仓以上），zone最差不低于"中等偏安全"
+     *   3. 当综合分处于危险区间（<40分），即使分位不低也不给"安全"评价
+     *   4. 两个维度的信号一致时，给出更强的结论
+     * 
+     * @param {number} percentile - 分位数 0-100
+     * @param {number} score - 综合分绝对值 0-100
+     * @param {boolean} detailed - 是否返回详细desc字段（摘要区用true，图表tooltip用false）
+     * @returns {Object} zone对象
+     */
+    function getScorePercentileZone(percentile, score, detailed) {
+        // ===== 第一步：纯分位等级（原始信号） =====
+        let pctLevel; // 0=非常危险, 1=偏危险, 2=中等, 3=相对安全, 4=非常安全
+        if (percentile >= 80) pctLevel = 4;
+        else if (percentile >= 65) pctLevel = 3;
+        else if (percentile >= 45) pctLevel = 2;
+        else if (percentile >= 25) pctLevel = 1;
+        else pctLevel = 0;
+
+        // ===== 第二步：综合分绝对水平等级 =====
+        // 对齐信号级别：≥70买入, ≥55持有加仓, ≥40持有观望, ≥25减仓, <25卖出
+        let scoreLevel;
+        if (score >= 70) scoreLevel = 4;       // 买入以上 → 非常安全
+        else if (score >= 55) scoreLevel = 3;  // 持有加仓 → 相对安全
+        else if (score >= 40) scoreLevel = 2;  // 持有观望 → 中等
+        else if (score >= 25) scoreLevel = 1;  // 减仓区间 → 偏危险
+        else scoreLevel = 0;                   // 卖出区间 → 非常危险
+
+        // ===== 第三步：双维度融合 =====
+        // 取两者中较高的等级（偏乐观合并），但同时设置上限和下限
+        // 理由：如果综合分说"安全"但分位说"一般"，说明历史上有更好的时候但当前也不差
+        //       这种情况应该偏向"安全"而不是"危险"
+        let finalLevel = Math.max(pctLevel, scoreLevel);
+
+        // 安全上限：如果综合分本身很差（<40），分位等级不能超过综合分等级+1
+        // 防止：综合分20分（该卖出了）但恰好处于历史极端低位→分位100%→显示"非常安全"
+        if (scoreLevel <= 1) {
+            finalLevel = Math.min(finalLevel, scoreLevel + 1);
+        }
+
+        // ===== 第四步：映射为zone对象 =====
+        const zones = detailed ? [
+            { text: '非常危险', color: '#dc3545', icon: '🔴', desc: '综合评分处于历史低位，估值偏高/安全边际不足' },
+            { text: '偏危险',   color: '#fd7e14', icon: '🟠', desc: '综合评分偏低，建议保持谨慎' },
+            { text: '中等',     color: '#ffc107', icon: '🟡', desc: '综合评分处于中等水平，可关注变化趋势' },
+            { text: '相对安全', color: '#28a745', icon: '🟢', desc: '综合评分较好，估值具有吸引力' },
+            { text: '非常安全', color: '#0d7337', icon: '🟢', desc: '综合评分处于历史高位，估值极具吸引力' },
+        ] : [
+            { text: '非常危险', color: '#dc3545' },
+            { text: '偏危险',   color: '#fd7e14' },
+            { text: '中等',     color: '#ffc107' },
+            { text: '相对安全', color: '#28a745' },
+            { text: '非常安全', color: '#0d7337' },
+        ];
+
+        return zones[finalLevel];
+    }
+
+    /**
      * 计算当前综合评分在全部历史综合评分中的分位数
      * 
      * 用户直觉的量化版：
      *   "历史上有多少时间比现在更差？越多 = 越安全；越少 = 越危险"
+     * 
+     * 【重要改进】zone判定融合了综合分绝对值：
+     *   - 分位37% + 综合分66(持有加仓) → "相对安全"（而非旧版的"偏危险"）
+     *   - 分位80% + 综合分20(卖出区间) → "偏危险"（防止反向误导）
      * 
      * @param {number} currentScore - 当前综合评分
      * @param {Array} dailySignals - calcDailyHistoricalSignals 返回的日级别历史信号数组
@@ -953,7 +1027,7 @@ const SignalEngine = (() => {
      */
     function calcScoreHistoricalPercentile(currentScore, dailySignals) {
         if (!dailySignals || dailySignals.length === 0) {
-            return { percentile: 50, betterDays: 0, totalDays: 0, zone: { text: '无数据', color: '#718096' } };
+            return { percentile: 50, worseDays: 0, totalDays: 0, zone: { text: '无数据', color: '#718096' } };
         }
 
         const allScores = dailySignals.map(d => d.score);
@@ -962,19 +1036,8 @@ const SignalEngine = (() => {
         const percentile = calcPercentile(currentScore, allScores);
         const worseDays = allScores.filter(s => s <= currentScore).length;
 
-        // 安全等级映射（分位越高越安全）
-        let zone;
-        if (percentile >= 80) {
-            zone = { text: '非常安全', color: '#0d7337', icon: '🟢', desc: '历史上绝大多数时间比现在更差，当前处于极佳位置' };
-        } else if (percentile >= 65) {
-            zone = { text: '相对安全', color: '#28a745', icon: '🟢', desc: '历史上多数时间比现在更差，当前位置较好' };
-        } else if (percentile >= 45) {
-            zone = { text: '中等位置', color: '#ffc107', icon: '🟡', desc: '历史上约一半时间比现在更差，当前属于中间水平' };
-        } else if (percentile >= 25) {
-            zone = { text: '偏危险', color: '#fd7e14', icon: '🟠', desc: '历史上多数时间比现在更好，当前位置偏低' };
-        } else {
-            zone = { text: '非常危险', color: '#dc3545', icon: '🔴', desc: '历史上绝大多数时间比现在更好，当前处于极差位置' };
-        }
+        // 【改进】使用双维度融合判定，避免"综合分安全但分位说危险"的矛盾
+        const zone = getScorePercentileZone(percentile, currentScore, true);
 
         return {
             percentile: parseFloat(percentile.toFixed(1)),
@@ -999,12 +1062,8 @@ const SignalEngine = (() => {
 
         return dailySignals.map(d => {
             const pct = calcPercentile(d.score, allScores);
-            let zone;
-            if (pct >= 80) zone = { text: '非常安全', color: '#0d7337' };
-            else if (pct >= 65) zone = { text: '相对安全', color: '#28a745' };
-            else if (pct >= 45) zone = { text: '中等', color: '#ffc107' };
-            else if (pct >= 25) zone = { text: '偏危险', color: '#fd7e14' };
-            else zone = { text: '非常危险', color: '#dc3545' };
+            // 【改进】使用双维度融合判定
+            const zone = getScorePercentileZone(pct, d.score, false);
 
             return {
                 date: d.date,
@@ -1030,6 +1089,7 @@ const SignalEngine = (() => {
         calcDailyHistoricalSignals,
         calcScoreHistoricalPercentile,
         calcScorePercentileSeries,
+        getScorePercentileZone,
         getPercentileZone,
         getPEPercentileZone,
         getCompositeScoreZone,
