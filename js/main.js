@@ -1349,10 +1349,6 @@ const App = (() => {
         if (summaryEl && currentPercentile) {
             const pct = currentPercentile.percentile;
             const zone = currentPercentile.zone;
-            // 获取当前综合分（用于双维度展示）
-            const displayScore = (currentTotal !== null && currentTotal !== undefined && currentTotal > 0)
-                ? currentTotal : (dailySignals[dailySignals.length - 1] ? dailySignals[dailySignals.length - 1].score : null);
-            const scoreText = displayScore !== null ? displayScore.toFixed(1) + '分' : '--';
             summaryEl.innerHTML = `
                 <div class="score-pct-current">
                     <span class="score-pct-value" style="color:${zone.color}">${pct.toFixed(1)}%</span>
@@ -1362,7 +1358,7 @@ const App = (() => {
                     ${zone.icon} ${zone.text}
                 </span>
                 <span class="score-pct-desc">${zone.desc}
-                    <br/><span style="font-size:11px;color:#718096;">综合分 ${scoreText}，历史 ${currentPercentile.totalDays} 个数据点中 ${currentPercentile.worseDays} 个（${pct.toFixed(0)}%）≤ 当前</span>
+                    <br/><span style="font-size:11px;color:#718096;">历史 ${currentPercentile.totalDays} 个数据点中，${currentPercentile.worseDays} 个（${pct.toFixed(0)}%）综合评分 ≤ 当前</span>
                 </span>
             `;
         } else if (summaryEl) {

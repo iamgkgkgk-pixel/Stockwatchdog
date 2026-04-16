@@ -110,16 +110,16 @@
                     <!-- 由JS动态填充当前分位摘要 -->
                 </div>
                 <div class="signal-history-legend">
-                    <span class="legend-item"><span class="legend-dot" style="background:#0d7337"></span>非常安全</span>
-                    <span class="legend-item"><span class="legend-dot" style="background:#28a745"></span>相对安全</span>
-                    <span class="legend-item"><span class="legend-dot" style="background:#ffc107"></span>中等</span>
-                    <span class="legend-item"><span class="legend-dot" style="background:#fd7e14"></span>偏危险</span>
-                    <span class="legend-item"><span class="legend-dot" style="background:#dc3545"></span>非常危险</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#0d7337"></span>历史高位(≥80%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#28a745"></span>历史偏高(65-80%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#ffc107"></span>历史中位(45-65%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#fd7e14"></span>历史偏低(25-45%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#dc3545"></span>历史低位(<25%)</span>
                 </div>
                 <div class="chart-container" id="chart-score-percentile" style="height:350px;"></div>
                 <div class="signal-history-note">
-                    💡 <strong>综合分历史分位</strong> = 历史上有多少时间比现在更差？分位越高（越靠顶部）= 越安全。
-                    安全等级综合了「历史分位」和「综合分绝对水平」双维度判定——即使分位不高，只要综合评分本身处于安全区间，就不会误判为"危险"。
+                    💡 <strong>综合分历史分位</strong> = 历史上有多少时间综合评分比现在更低？分位越高（越靠顶部）= 当前在历史中排名越高。
+                    此指标仅反映当前在历史中的相对位置，不代表"安全/危险"结论（那是综合信号的职责）。追溯至数据最早可用时间。
                 </div>
             </div>
         </section>
@@ -296,11 +296,11 @@
     </div>
 
     <!-- ==================== Scripts ==================== -->
-    <script src="js/etf-config.js?v=20260416b"></script>
-    <script src="js/signal.js?v=20260416b"></script>
-    <script src="js/storage.js?v=20260416b"></script>
-    <script src="js/api.js?v=20260416b"></script>
-    <script src="js/charts.js?v=20260416b"></script>
-    <script src="js/main.js?v=20260416b"></script>
+    <script src="js/etf-config.js?v=20260416c"></script>
+    <script src="js/signal.js?v=20260416c"></script>
+    <script src="js/storage.js?v=20260416c"></script>
+    <script src="js/api.js?v=20260416c"></script>
+    <script src="js/charts.js?v=20260416c"></script>
+    <script src="js/main.js?v=20260416c"></script>
 </body>
 </html>
