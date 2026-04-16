@@ -1320,8 +1320,27 @@ const App = (() => {
 
         // 计算当前实时综合分的分位（如果有实时分数）
         let currentPercentile = null;
-        if (currentTotal !== null && currentTotal !== undefined && currentTotal > 0) {
+        const hasRealTimeScore = currentTotal !== null && currentTotal !== undefined && currentTotal > 0;
+        if (hasRealTimeScore) {
             currentPercentile = SignalEngine.calcScoreHistoricalPercentile(currentTotal, dailySignals);
+            // 【关键】将实时分位追加/替换到图表曲线末尾，确保图表最后一个点的位置
+            // 和摘要/标记点显示的分位值完全一致，避免视觉矛盾
+            const today = new Date().toISOString().slice(0, 10);
+            const lastSeries = percentileSeries[percentileSeries.length - 1];
+            const realtimePoint = {
+                date: today,
+                score: currentTotal,
+                percentile: currentPercentile.percentile,
+                signalText: '实时',
+                signalColor: currentPercentile.zone.color,
+                zone: SignalEngine.getScorePercentileZone(currentPercentile.percentile, false),
+            };
+            // 如果最后一个点就是今天，替换它；否则追加
+            if (lastSeries && lastSeries.date === today) {
+                percentileSeries[percentileSeries.length - 1] = realtimePoint;
+            } else {
+                percentileSeries.push(realtimePoint);
+            }
         } else {
             // 回退到最后一个日级别数据点
             const lastSignal = dailySignals[dailySignals.length - 1];
