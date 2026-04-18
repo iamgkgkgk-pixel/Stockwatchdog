@@ -1380,12 +1380,43 @@ const ETF_CONFIG = (() => {
         },
     };
 
+    // ========== VIX 恐惧仪表盘（特殊页面，不参与信号计算）==========
+    const VIX_DASHBOARD = {
+        id: 'vix-dashboard',
+        name: 'VIX恐惧仪表盘',
+        shortName: 'VIX恐惧',
+        icon: '😱',
+        color: '#e91e63',
+        // VIX 恐惧/贪婪区间定义
+        zones: [
+            { min: 0,  max: 12, label: '极度贪婪', color: '#0d7337', desc: '市场极度乐观，历史罕见低位，警惕随时反转', emoji: '🤑' },
+            { min: 12, max: 16, label: '贪婪',     color: '#28a745', desc: '市场乐观平静，波动率偏低，可能蕴含风险', emoji: '😊' },
+            { min: 16, max: 20, label: '偏乐观',   color: '#9be3b0', desc: '正常偏低波动，市场平稳运行', emoji: '🙂' },
+            { min: 20, max: 25, label: '中性',     color: '#ffc107', desc: '历史均值附近，市场正常波动', emoji: '😐' },
+            { min: 25, max: 30, label: '偏恐惧',   color: '#fd7e14', desc: '波动加大，市场开始紧张', emoji: '😟' },
+            { min: 30, max: 40, label: '恐惧',     color: '#dc3545', desc: '市场恐慌情绪浓厚，可能存在超跌机会', emoji: '😨' },
+            { min: 40, max: 999,label: '极度恐惧', color: '#85182a', desc: '极端恐慌（如08金融危机/20年疫情），历史级抄底窗口', emoji: '🔥' },
+        ],
+        // VIX 长期统计锚点（基于1990-2025历史数据）
+        anchor: {
+            mean: 19.5,        // 长期均值
+            median: 17.6,      // 中位数
+            std: 7.8,          // 标准差
+            pct25: 14.0,       // 25分位
+            pct75: 23.0,       // 75分位
+            pct90: 30.0,       // 90分位
+        },
+        // 插入位置：在纳指（index 5）之后
+        insertAfterETFId: 'nasdaq100-cn',
+    };
+
     // ========== 公开API ==========
     return {
         ETF_TYPE,
         VALUATION_METHOD,
         ETF_LIST,
         SIGNAL_RULES,
+        VIX_DASHBOARD,
 
         getETFById(id) {
             return ETF_LIST.find(e => e.id === id);
@@ -1401,6 +1432,27 @@ const ETF_CONFIG = (() => {
 
         getAllETFIds() {
             return ETF_LIST.map(e => e.id);
+        },
+
+        isVIXDashboard(id) {
+            return id === VIX_DASHBOARD.id;
+        },
+
+        getVIXZone(vixValue) {
+            if (!vixValue || isNaN(vixValue)) return null;
+            return VIX_DASHBOARD.zones.find(z => vixValue >= z.min && vixValue < z.max) || VIX_DASHBOARD.zones[VIX_DASHBOARD.zones.length - 1];
+        },
+
+        getVIXDeviationFromMean(vixValue) {
+            if (!vixValue || isNaN(vixValue)) return null;
+            const a = VIX_DASHBOARD.anchor;
+            const deviation = (vixValue - a.mean) / a.std;
+            const percentile = vixValue <= a.pct25 ? (vixValue / a.pct25 * 25) :
+                              vixValue <= a.median ? (25 + (vixValue - a.pct25) / (a.median - a.pct25) * 25) :
+                              vixValue <= a.pct75 ? (50 + (vixValue - a.median) / (a.pct75 - a.median) * 25) :
+                              vixValue <= a.pct90 ? (75 + (vixValue - a.pct75) / (a.pct90 - a.pct75) * 15) :
+                              Math.min(100, 90 + (vixValue - a.pct90) / 20 * 10);
+            return { deviation: deviation.toFixed(2), percentile: Math.max(0, Math.min(100, percentile)).toFixed(1) };
         }
     };
 })();

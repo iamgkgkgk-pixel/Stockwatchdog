@@ -124,24 +124,6 @@
             </div>
         </section>
 
-        <!-- Dashboard: Gauges -->
-        <section class="dashboard animate-fade-in animate-delay-1" id="gauges-section">
-            <!-- 仪表盘由JS动态生成 -->
-        </section>
-
-        <!-- Dashboard: Data Cards -->
-        <section class="dashboard animate-fade-in animate-delay-2">
-            <div class="card card-full">
-                <div class="card-title">
-                    <span class="card-title-icon">📋</span>
-                    核心数据指标
-                </div>
-                <div class="data-grid" id="data-grid">
-                    <!-- 数据卡片由JS动态生成 -->
-                </div>
-            </div>
-        </section>
-
         <!-- Charts Section -->
         <section class="chart-section animate-fade-in animate-delay-3" id="chart-section-1">
             <div class="card card-full">
@@ -229,6 +211,36 @@
             </div>
         </section>
 
+        <!-- ==================== VIX 恐惧仪表盘专属区域 ==================== -->
+        <section class="vix-dashboard-section animate-fade-in" id="vix-dashboard-section" style="display:none;">
+            <div class="vix-dashboard-content" id="vix-dashboard-content">
+                <!-- VIX仪表盘内容由JS动态渲染 -->
+                <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+                    <div style="font-size:48px;margin-bottom:16px;">📊</div>
+                    <div style="font-size:16px;font-weight:600;margin-bottom:8px;">VIX恐惧仪表盘</div>
+                    <div style="font-size:13px;">正在加载VIX数据...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard: Gauges（四维度分析） -->
+        <section class="dashboard animate-fade-in animate-delay-4" id="gauges-section">
+            <!-- 仪表盘由JS动态生成 -->
+        </section>
+
+        <!-- Dashboard: Data Cards（核心数据指标） -->
+        <section class="dashboard animate-fade-in animate-delay-4">
+            <div class="card card-full">
+                <div class="card-title">
+                    <span class="card-title-icon">📋</span>
+                    核心数据指标
+                </div>
+                <div class="data-grid" id="data-grid">
+                    <!-- 数据卡片由JS动态生成 -->
+                </div>
+            </div>
+        </section>
+
         <!-- Strategy Explanation -->
         <section class="footer">
             <div class="collapse-panel">
@@ -296,11 +308,11 @@
     </div>
 
     <!-- ==================== Scripts ==================== -->
-    <script src="js/etf-config.js?v=20260416e"></script>
-    <script src="js/signal.js?v=20260416e"></script>
-    <script src="js/storage.js?v=20260416e"></script>
-    <script src="js/api.js?v=20260416e"></script>
-    <script src="js/charts.js?v=20260416e"></script>
-    <script src="js/main.js?v=20260416e"></script>
+    <script src="js/etf-config.js?v=20260418a"></script>
+    <script src="js/signal.js?v=20260418a"></script>
+    <script src="js/storage.js?v=20260418a"></script>
+    <script src="js/api.js?v=20260418a"></script>
+    <script src="js/charts.js?v=20260418a"></script>
+    <script src="js/main.js?v=20260418a"></script>
 </body>
 </html>

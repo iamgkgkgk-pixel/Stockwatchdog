@@ -1308,6 +1308,513 @@ body {
     }
 }
 
+/* ========== VIX 恐惧仪表盘专属样式 ========== */
+.vix-dashboard-section {
+    margin: 20px 0;
+}
+
+.vix-dashboard-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* VIX Section Title */
+.vix-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 12px;
+}
+
+/* VIX Hero Card */
+.vix-hero {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 28px 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+}
+
+.vix-hero-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.vix-hero-right {
+    width: 260px;
+    height: 160px;
+    flex-shrink: 0;
+}
+
+.vix-value-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.vix-emoji {
+    font-size: 40px;
+}
+
+.vix-value {
+    font-family: var(--font-mono);
+    font-size: 56px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -2px;
+}
+
+.vix-zone-badge {
+    display: inline-block;
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    border: 1px solid;
+}
+
+.vix-change {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vix-change-up { color: #ef4444; }
+.vix-change-down { color: #28a745; }
+
+.vix-zone-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 500px;
+}
+
+.vix-gauge-container {
+    width: 100%;
+    height: 100%;
+}
+
+/* VIX 方案B: 历史分位面板 */
+.vix-percentile-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-card);
+}
+
+.vix-pct-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 18px;
+}
+
+.vix-pct-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.vix-pct-value {
+    font-family: var(--font-mono);
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.vix-pct-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.vix-pct-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.vix-pct-suggestion {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.6;
+    max-width: 600px;
+}
+
+/* 多周期分位 */
+.vix-pct-multi {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.vix-pct-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    padding: 14px 12px;
+    text-align: center;
+}
+
+.vix-pct-item-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.vix-pct-item-value {
+    font-family: var(--font-mono);
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.vix-pct-item-tag {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.vix-pct-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.vix-pct-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 分位统计数据 */
+.vix-pct-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: center;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.vix-pct-stats strong {
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+.vix-pct-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    padding: 12px 14px;
+    background: rgba(66, 153, 225, 0.06);
+    border: 1px solid rgba(66, 153, 225, 0.1);
+    border-radius: var(--radius-sm);
+}
+
+/* VIX 数据网格 */
+.vix-data-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.vix-data-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.vix-data-card:hover {
+    border-color: var(--border-light);
+    background: var(--bg-card-hover);
+}
+
+.vix-data-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.vix-data-value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.vix-data-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* VIX 区间对照表 */
+.vix-zone-table {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vix-zone-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+}
+
+.vix-zone-row:hover {
+    background: var(--bg-card-hover);
+}
+
+.vix-zone-active {
+    box-shadow: 0 0 12px rgba(233, 30, 99, 0.15);
+}
+
+.vix-zone-emoji {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.vix-zone-range {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 60px;
+    flex-shrink: 0;
+}
+
+.vix-zone-name {
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 80px;
+    flex-shrink: 0;
+}
+
+.vix-zone-desc-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    flex: 1;
+}
+
+.vix-zone-current {
+    font-size: 11px;
+    font-weight: 700;
+    color: #e91e63;
+    flex-shrink: 0;
+    animation: pulse 2s infinite;
+}
+
+/* CNN Fear & Greed 面板 */
+.vix-fg-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-card);
+}
+
+.vix-fg-current {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 14px;
+}
+
+.vix-fg-score {
+    font-family: var(--font-mono);
+    font-size: 48px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.vix-fg-label {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.vix-fg-rating {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.vix-fg-history {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.vix-fg-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 70px;
+    padding: 10px 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-sm);
+}
+
+.vix-fg-item span {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.vix-fg-item strong {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.vix-fg-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+}
+
+/* VIX K线图 */
+.vix-kline-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px;
+}
+
+.vix-kline-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 8px 0;
+    opacity: 0.7;
+}
+
+/* VIX 免责声明 */
+.vix-disclaimer {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 14px 16px;
+    background: rgba(220, 53, 69, 0.06);
+    border: 1px solid rgba(220, 53, 69, 0.12);
+    border-radius: var(--radius-sm);
+    line-height: 1.7;
+    text-align: center;
+}
+
+/* VIX 响应式 */
+@media (max-width: 768px) {
+    .vix-hero {
+        flex-direction: column;
+        padding: 20px 16px;
+    }
+
+    .vix-hero-right {
+        width: 100%;
+        height: 140px;
+    }
+
+    .vix-value {
+        font-size: 42px;
+    }
+
+    .vix-pct-value {
+        font-size: 38px;
+    }
+
+    .vix-pct-multi {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .vix-data-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .vix-fg-current {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .vix-fg-score {
+        font-size: 36px;
+    }
+
+    .vix-zone-desc-text {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .vix-pct-multi {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .vix-pct-item-value {
+        font-size: 20px;
+    }
+
+    .vix-data-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .vix-data-value {
+        font-size: 18px;
+    }
+
+    .vix-hero-left {
+        align-items: center;
+        text-align: center;
+    }
+
+    .vix-zone-desc {
+        text-align: center;
+    }
+}
+
 /* ========== Animations ========== */
 @keyframes fadeInUp {
     from {

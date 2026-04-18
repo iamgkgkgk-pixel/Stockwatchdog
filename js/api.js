@@ -1106,6 +1106,140 @@ const DataAPI = (() => {
         return `${y}-${m}-${d} ${h}:${min}:${s}`;
     }
 
+    // ========== VIX恐惧指数数据获取 ==========
+
+    // VIX 缓存（3分钟）
+    let _vixCache = { value: null, fetchTime: 0 };
+    const VIX_CACHE_TTL = 3 * 60 * 1000;
+
+    /**
+     * 获取VIX恐惧指数实时数据
+     * 数据源：东方财富美股指数 secid=100.VIX
+     * @returns {Object|null} { vix, prevClose, change, changePercent, high, low, source, fetchTime }
+     */
+    async function fetchVIXIndex() {
+        // 检查缓存
+        if (_vixCache.value !== null && (Date.now() - _vixCache.fetchTime) < VIX_CACHE_TTL) {
+            console.info('VIX: 使用缓存', _vixCache.value.vix);
+            return _vixCache.value;
+        }
+
+        try {
+            // 东方财富美股指数: secid=100.VIX （CBOE Volatility Index）
+            const data = await jsonp(API_CONFIG.EASTMONEY_QUOTE, {
+                secid: '100.VIX',
+                fields: 'f43,f44,f45,f46,f47,f48,f57,f58,f60,f170,f171',
+                invt: 2, fltt: 2,
+                ut: 'fa5fd1943c7b386f172d6893dbbd2'
+            });
+
+            if (data && data.data) {
+                const d = data.data;
+                const vixVal = _safeParseEMField(d.f43);
+
+                if (vixVal === null || vixVal <= 0) {
+                    console.warn('VIX: 返回值无效', d.f43);
+                    // 尝试使用缓存
+                    if (_vixCache.value) return _vixCache.value;
+                    return null;
+                }
+
+                const result = {
+                    vix: vixVal,
+                    prevClose: _safeParseEMField(d.f60) || 0,
+                    change: _safeParseEMField(d.f170) || 0,
+                    changePercent: _safeParseEMField(d.f171) || 0,
+                    high: _safeParseEMField(d.f44) || 0,
+                    low: _safeParseEMField(d.f45) || 0,
+                    open: _safeParseEMField(d.f46) || 0,
+                    source: '东方财富(CBOE VIX)',
+                    fetchTime: new Date().toISOString()
+                };
+
+                // 更新缓存
+                _vixCache = { value: result, fetchTime: Date.now() };
+                console.info(`VIX获取成功: ${result.vix} (${result.change >= 0 ? '+' : ''}${result.change}%)`);
+                return result;
+            }
+
+            console.warn('VIX: 数据返回为空');
+            return _vixCache.value || null;
+        } catch (e) {
+            console.warn('VIX获取失败:', e.message);
+            return _vixCache.value || null;
+        }
+    }
+
+    /**
+     * 获取VIX历史K线数据（用于恐惧仪表盘走势图）
+     * @param {number} days - 获取天数
+     * @returns {Array} [{ date, close, high, low, open, volume }]
+     */
+    async function fetchVIXKline(days = 365) {
+        try {
+            const endDate = formatDate(new Date());
+            const startDate = formatDate(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
+
+            const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
+                secid: '100.VIX',
+                fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
+                fields2: 'f51,f52,f53,f54,f55,f56,f57',
+                klt: 101,      // 日K
+                fqt: 0,
+                beg: startDate.replace(/-/g, ''),
+                end: endDate.replace(/-/g, ''),
+                lmt: days,
+                ut: 'fa5fd1943c7b386f172d6893dbbd2'
+            });
+
+            if (data && data.data && data.data.klines) {
+                return data.data.klines.map(line => {
+                    const parts = line.split(',');
+                    return {
+                        date: parts[0],
+                        open: parseFloat(parts[1]),
+                        close: parseFloat(parts[2]),
+                        high: parseFloat(parts[3]),
+                        low: parseFloat(parts[4]),
+                        volume: parseInt(parts[5]) || 0,
+                    };
+                });
+            }
+            return [];
+        } catch (e) {
+            console.warn('VIX历史K线获取失败:', e.message);
+            return [];
+        }
+    }
+
+    /**
+     * 获取VIX仪表盘的聚合数据（VIX实时 + CNN F&G + VIX K线）
+     * @returns {Object} { vix, fearGreed, kline, success }
+     */
+    async function fetchVIXDashboardData() {
+        const results = {
+            vix: null,
+            fearGreed: null,
+            kline: [],
+            success: false,
+            fetchTime: new Date().toISOString()
+        };
+
+        // 并行请求：VIX实时 + CNN F&G + VIX K线
+        const [vixResult, fgResult, klineResult] = await Promise.allSettled([
+            fetchVIXIndex(),
+            fetchFearGreedIndex(),
+            fetchVIXKline(365),
+        ]);
+
+        if (vixResult.status === 'fulfilled' && vixResult.value) results.vix = vixResult.value;
+        if (fgResult.status === 'fulfilled' && fgResult.value) results.fearGreed = fgResult.value;
+        if (klineResult.status === 'fulfilled' && klineResult.value) results.kline = klineResult.value;
+
+        results.success = !!(results.vix);
+        return results;
+    }
+
     // ========== 公开API ==========
     return {
         fetchETFQuote,
@@ -1123,6 +1257,9 @@ const DataAPI = (() => {
         fetchAllData,
         fetchAllDataForETF,
         normalizeData,
+        fetchVIXIndex,
+        fetchVIXKline,
+        fetchVIXDashboardData,
         API_CONFIG
     };
 })();

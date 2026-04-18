@@ -19,7 +19,7 @@ const App = (() => {
             renderTabBar();
             bindGlobalEvents();
             const hash = window.location.hash.replace('#', '');
-            const initialETF = ETF_CONFIG.getETFById(hash) ? hash : ETF_CONFIG.ETF_LIST[0].id;
+            const initialETF = (ETF_CONFIG.getETFById(hash) || ETF_CONFIG.isVIXDashboard(hash)) ? hash : ETF_CONFIG.ETF_LIST[0].id;
             await switchETF(initialETF);
             startAutoRefresh();
         } catch (e) {
@@ -36,15 +36,31 @@ const App = (() => {
         const tabBar = document.getElementById('tab-bar');
         if (!tabBar) return;
 
-        tabBar.innerHTML = ETF_CONFIG.ETF_LIST.map(etf => {
-            return `
+        const vix = ETF_CONFIG.VIX_DASHBOARD;
+        const insertAfterId = vix.insertAfterETFId;
+
+        let html = '';
+        ETF_CONFIG.ETF_LIST.forEach(etf => {
+            html += `
             <div class="tab-item" data-etf-id="${etf.id}" title="${etf.fullName} (${etf.code})">
                 <span class="tab-icon">${etf.icon}</span>
                 <span class="tab-name">${etf.shortName}</span>
                 <span class="tab-signal-dot" id="tab-dot-${etf.id}" style="background:transparent;"></span>
             </div>
             `;
-        }).join('');
+            // 在纳指后面插入VIX Tab
+            if (etf.id === insertAfterId) {
+                html += `
+                <div class="tab-item tab-item-vix" data-etf-id="${vix.id}" title="VIX恐惧指数仪表盘（不参与信号计算）">
+                    <span class="tab-icon">${vix.icon}</span>
+                    <span class="tab-name">${vix.shortName}</span>
+                    <span class="tab-vix-badge">仪表盘</span>
+                </div>
+                `;
+            }
+        });
+
+        tabBar.innerHTML = html;
 
         tabBar.querySelectorAll('.tab-item').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -62,6 +78,24 @@ const App = (() => {
     // ========== ETF切换 ==========
 
     async function switchETF(etfId) {
+        // VIX 恐惧仪表盘特殊处理
+        if (ETF_CONFIG.isVIXDashboard(etfId)) {
+            currentETFId = etfId;
+            window.location.hash = etfId;
+
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.etfId === etfId);
+            });
+
+            // 切换到VIX仪表盘模式
+            showVIXDashboard();
+            await loadVIXDashboardData();
+            return;
+        }
+
+        // 如果从VIX切换回ETF，恢复正常视图
+        hideVIXDashboard();
+
         const etfConfig = ETF_CONFIG.getETFById(etfId);
         if (!etfConfig) return;
 
@@ -1422,6 +1456,14 @@ const App = (() => {
 
     async function refreshData() {
         if (!currentETFId) return;
+
+        // VIX仪表盘刷新
+        if (ETF_CONFIG.isVIXDashboard(currentETFId)) {
+            showToast('正在刷新VIX数据...', 'info');
+            await loadVIXDashboardData();
+            return;
+        }
+
         const etfConfig = ETF_CONFIG.getETFById(currentETFId);
         if (!etfConfig) return;
 
@@ -1548,7 +1590,7 @@ const App = (() => {
 
         window.addEventListener('hashchange', () => {
             const hash = window.location.hash.replace('#', '');
-            if (hash && hash !== currentETFId && ETF_CONFIG.getETFById(hash)) switchETF(hash);
+            if (hash && hash !== currentETFId && (ETF_CONFIG.getETFById(hash) || ETF_CONFIG.isVIXDashboard(hash))) switchETF(hash);
         });
     }
 
@@ -1844,6 +1886,613 @@ const App = (() => {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, 2500);
+    }
+
+    // ========== VIX 恐惧仪表盘 ==========
+
+    let _vixDashboardData = null; // VIX仪表盘缓存
+
+    /**
+     * 显示VIX仪表盘模式（隐藏常规ETF内容，显示VIX专属区域）
+     */
+    function showVIXDashboard() {
+        const vixConfig = ETF_CONFIG.VIX_DASHBOARD;
+        document.documentElement.style.setProperty('--accent-color', vixConfig.color);
+
+        // 隐藏常规ETF内容区域
+        const hideIds = [
+            'hero-section', 'chart-section-score-percentile', 'chart-section-1', 'chart-section-2',
+            'chart-section-signal-history', 'chart-section-daily-signal-history',
+            'chart-section-algo-compare', 'gauges-section'
+        ];
+        hideIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        // 隐藏核心数据指标的父section（data-grid的外层dashboard）
+        const dataGrid = document.getElementById('data-grid');
+        if (dataGrid && dataGrid.closest('.dashboard')) {
+            dataGrid.closest('.dashboard').style.display = 'none';
+        }
+
+        // 显示VIX专属区域
+        const vixSection = document.getElementById('vix-dashboard-section');
+        if (vixSection) vixSection.style.display = '';
+
+        // 更新Header
+        const logoIcon = document.getElementById('header-logo-icon');
+        const title = document.getElementById('header-title');
+        const subtitle = document.getElementById('header-subtitle');
+        if (logoIcon) {
+            logoIcon.textContent = vixConfig.icon;
+            logoIcon.style.background = `linear-gradient(135deg, ${vixConfig.color}, ${adjustColor(vixConfig.color, -40)})`;
+        }
+        if (title) title.textContent = vixConfig.name;
+        if (subtitle) subtitle.textContent = 'CBOE Volatility Index · 不参与信号计算';
+
+        // 隐藏补充数据按钮（VIX不需要手动输入）
+        const inputBtn = document.getElementById('btn-input-data');
+        if (inputBtn) inputBtn.style.display = 'none';
+
+        // 更新数据来源状态
+        const statusEl = document.getElementById('data-source-status');
+        if (statusEl) statusEl.innerHTML = '<span class="status-dot status-loading"></span> 正在获取VIX恐惧指数数据...';
+    }
+
+    /**
+     * 隐藏VIX仪表盘模式（恢复常规ETF内容）
+     */
+    function hideVIXDashboard() {
+        const vixSection = document.getElementById('vix-dashboard-section');
+        if (vixSection) vixSection.style.display = 'none';
+
+        // 恢复常规ETF内容区域
+        const showIds = [
+            'hero-section', 'chart-section-score-percentile', 'chart-section-1',
+            'chart-section-signal-history', 'chart-section-daily-signal-history',
+            'chart-section-algo-compare', 'gauges-section'
+        ];
+        showIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = '';
+        });
+        const dataGrid = document.getElementById('data-grid');
+        if (dataGrid && dataGrid.closest('.dashboard')) {
+            dataGrid.closest('.dashboard').style.display = '';
+        }
+
+        // 恢复补充数据按钮
+        const inputBtn = document.getElementById('btn-input-data');
+        if (inputBtn) inputBtn.style.display = '';
+    }
+
+    /**
+     * 加载VIX仪表盘数据
+     */
+    async function loadVIXDashboardData() {
+        showLoading(true);
+        try {
+            const data = await DataAPI.fetchVIXDashboardData();
+            _vixDashboardData = data;
+
+            if (data.success) {
+                renderVIXDashboard(data);
+                // 更新数据来源状态
+                const statusEl = document.getElementById('data-source-status');
+                if (statusEl) {
+                    let sources = [`VIX实时✅(${data.vix.vix.toFixed(2)})`];
+                    if (data.fearGreed) sources.push(`CNN F&G✅(${data.fearGreed.score.toFixed(0)})`);
+                    else sources.push('CNN F&G❌');
+                    sources.push(`K线✅(${data.kline.length}天)`);
+                    statusEl.innerHTML = '<span class="status-dot status-ok"></span> ' + sources.join(' | ');
+                }
+                showToast(`VIX恐惧指数: ${data.vix.vix.toFixed(2)}`, 'success');
+            } else {
+                showToast('VIX数据获取失败', 'error');
+                const statusEl = document.getElementById('data-source-status');
+                if (statusEl) statusEl.innerHTML = '<span class="status-dot status-err"></span> VIX数据获取失败';
+            }
+
+            // 更新价格栏
+            if (data.vix) {
+                const priceEl = document.getElementById('val-price');
+                const changeEl = document.getElementById('val-price-change');
+                if (priceEl) priceEl.textContent = data.vix.vix.toFixed(2);
+                if (changeEl) {
+                    const ch = data.vix.change;
+                    changeEl.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+                    changeEl.className = 'price-change ' + (ch >= 0 ? 'up' : 'down');
+                }
+            }
+
+            updateTimestamp(currentETFId);
+        } catch (e) {
+            console.error('VIX仪表盘加载失败:', e);
+            showToast('VIX仪表盘加载异常: ' + e.message, 'error');
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    /**
+     * 计算VIX历史分位数（方案B核心）
+     * @param {number} currentVIX - 当前VIX值
+     * @param {Array} kline - VIX历史K线数据
+     * @param {number} lookbackDays - 回看天数（默认全部）
+     * @returns {Object} { percentile, daysBelow, totalDays, label, color, suggestion }
+     */
+    function calcVIXHistoricalPercentile(currentVIX, kline, lookbackDays) {
+        if (!kline || kline.length === 0 || !currentVIX) return null;
+
+        // 筛选回看区间
+        let data = kline;
+        if (lookbackDays && lookbackDays < kline.length) {
+            data = kline.slice(-lookbackDays);
+        }
+
+        const closes = data.map(d => d.close).filter(v => v > 0);
+        if (closes.length < 10) return null;
+
+        // 当前VIX在历史中的百分位：有多少天VIX比当前低？
+        const daysBelow = closes.filter(v => v <= currentVIX).length;
+        const percentile = (daysBelow / closes.length) * 100;
+
+        // 分位解读
+        let label, color, suggestion;
+        if (percentile >= 90) {
+            label = '历史极高位';
+            color = '#85182a';
+            suggestion = '当前VIX处于历史90%+分位，极端恐慌，极少数时间比这更高 → 历史级抄底窗口';
+        } else if (percentile >= 75) {
+            label = '历史高位';
+            color = '#dc3545';
+            suggestion = '当前VIX高于历史75%的时间，恐慌情绪浓厚 → 关注超跌反弹机会';
+        } else if (percentile >= 60) {
+            label = '历史偏高';
+            color = '#fd7e14';
+            suggestion = '当前VIX高于历史60%的时间，市场紧张 → 保持警惕，可分批布局';
+        } else if (percentile >= 40) {
+            label = '历史中位';
+            color = '#ffc107';
+            suggestion = '当前VIX处于历史中间位置，市场正常波动 → 维持正常仓位';
+        } else if (percentile >= 25) {
+            label = '历史偏低';
+            color = '#9be3b0';
+            suggestion = '当前VIX低于历史60%的时间，市场偏乐观 → 注意风险积累';
+        } else if (percentile >= 10) {
+            label = '历史低位';
+            color = '#28a745';
+            suggestion = '当前VIX低于历史75%的时间，极度平静 → 历史表明暴风雨前的宁静';
+        } else {
+            label = '历史极低位';
+            color = '#0d7337';
+            suggestion = '当前VIX处于历史底部10%，极罕见的低波动 → 强烈警惕反转风险';
+        }
+
+        return {
+            percentile: percentile.toFixed(1),
+            daysBelow,
+            totalDays: closes.length,
+            label,
+            color,
+            suggestion,
+            mean: (closes.reduce((a, b) => a + b, 0) / closes.length).toFixed(2),
+            median: closes.sort((a, b) => a - b)[Math.floor(closes.length / 2)].toFixed(2),
+            min: Math.min(...closes).toFixed(2),
+            max: Math.max(...closes).toFixed(2),
+        };
+    }
+
+    /**
+     * 渲染VIX恐惧仪表盘全部内容
+     * @param {Object} data - fetchVIXDashboardData 返回的数据
+     */
+    function renderVIXDashboard(data) {
+        const container = document.getElementById('vix-dashboard-content');
+        if (!container) return;
+
+        const vixConfig = ETF_CONFIG.VIX_DASHBOARD;
+        const vix = data.vix;
+        const fg = data.fearGreed;
+        const kline = data.kline || [];
+
+        if (!vix) {
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">VIX数据获取失败，请稍后重试</div>';
+            return;
+        }
+
+        const zone = ETF_CONFIG.getVIXZone(vix.vix);
+        const deviation = ETF_CONFIG.getVIXDeviationFromMean(vix.vix);
+
+        // 计算多周期历史分位（方案B核心）
+        const pctAll = calcVIXHistoricalPercentile(vix.vix, kline);
+        const pct1y = calcVIXHistoricalPercentile(vix.vix, kline, 252);
+        const pct6m = calcVIXHistoricalPercentile(vix.vix, kline, 126);
+        const pct3m = calcVIXHistoricalPercentile(vix.vix, kline, 63);
+
+        let html = '';
+
+        // ======== 1. VIX 核心卡片（大号仪表盘 + 关键数据）========
+        html += `
+        <div class="vix-hero">
+            <div class="vix-hero-left">
+                <div class="vix-value-container">
+                    <span class="vix-emoji">${zone ? zone.emoji : '😐'}</span>
+                    <span class="vix-value" style="color:${zone ? zone.color : '#ffc107'}">${vix.vix.toFixed(2)}</span>
+                </div>
+                <div class="vix-zone-badge" style="background:${zone ? zone.color : '#ffc107'}22;color:${zone ? zone.color : '#ffc107'};border-color:${zone ? zone.color : '#ffc107'}">
+                    ${zone ? zone.label : '未知'}
+                </div>
+                <div class="vix-change ${vix.change >= 0 ? 'vix-change-up' : 'vix-change-down'}">
+                    ${vix.change >= 0 ? '▲' : '▼'} ${Math.abs(vix.change).toFixed(2)}%
+                    <span style="opacity:0.7;">较前收 ${vix.prevClose.toFixed(2)}</span>
+                </div>
+                <div class="vix-zone-desc">${zone ? zone.desc : ''}</div>
+            </div>
+            <div class="vix-hero-right">
+                <div class="vix-gauge-container" id="vix-gauge-chart"></div>
+            </div>
+        </div>`;
+
+        // ======== 2. 方案B：历史分位决策面板（核心新增！）========
+        if (pctAll) {
+            html += `
+            <div class="vix-section-title">📊 方案B：VIX历史分位数决策</div>
+            <div class="vix-percentile-panel">
+                <div class="vix-pct-hero">
+                    <div class="vix-pct-main">
+                        <span class="vix-pct-value" style="color:${pctAll.color}">${pctAll.percentile}%</span>
+                        <span class="vix-pct-label">历史总分位</span>
+                    </div>
+                    <div class="vix-pct-badge" style="color:${pctAll.color};border-color:${pctAll.color}">
+                        ${pctAll.label}
+                    </div>
+                    <div class="vix-pct-suggestion">${pctAll.suggestion}</div>
+                </div>
+
+                <div class="vix-pct-multi">
+                    <div class="vix-pct-item">
+                        <div class="vix-pct-item-label">近3月分位</div>
+                        <div class="vix-pct-item-value" style="color:${pct3m ? pct3m.color : '#718096'}">${pct3m ? pct3m.percentile + '%' : '--'}</div>
+                        <div class="vix-pct-item-tag">${pct3m ? pct3m.label : ''}</div>
+                        <div class="vix-pct-bar"><div class="vix-pct-bar-fill" style="width:${pct3m ? pct3m.percentile : 0}%;background:${pct3m ? pct3m.color : '#718096'}"></div></div>
+                    </div>
+                    <div class="vix-pct-item">
+                        <div class="vix-pct-item-label">近6月分位</div>
+                        <div class="vix-pct-item-value" style="color:${pct6m ? pct6m.color : '#718096'}">${pct6m ? pct6m.percentile + '%' : '--'}</div>
+                        <div class="vix-pct-item-tag">${pct6m ? pct6m.label : ''}</div>
+                        <div class="vix-pct-bar"><div class="vix-pct-bar-fill" style="width:${pct6m ? pct6m.percentile : 0}%;background:${pct6m ? pct6m.color : '#718096'}"></div></div>
+                    </div>
+                    <div class="vix-pct-item">
+                        <div class="vix-pct-item-label">近1年分位</div>
+                        <div class="vix-pct-item-value" style="color:${pct1y ? pct1y.color : '#718096'}">${pct1y ? pct1y.percentile + '%' : '--'}</div>
+                        <div class="vix-pct-item-tag">${pct1y ? pct1y.label : ''}</div>
+                        <div class="vix-pct-bar"><div class="vix-pct-bar-fill" style="width:${pct1y ? pct1y.percentile : 0}%;background:${pct1y ? pct1y.color : '#718096'}"></div></div>
+                    </div>
+                    <div class="vix-pct-item">
+                        <div class="vix-pct-item-label">总历史分位</div>
+                        <div class="vix-pct-item-value" style="color:${pctAll.color}">${pctAll.percentile}%</div>
+                        <div class="vix-pct-item-tag">${pctAll.label}</div>
+                        <div class="vix-pct-bar"><div class="vix-pct-bar-fill" style="width:${pctAll.percentile}%;background:${pctAll.color}"></div></div>
+                    </div>
+                </div>
+
+                <div class="vix-pct-stats">
+                    <span>📈 历史均值: <strong>${pctAll.mean}</strong></span>
+                    <span>📊 历史中位: <strong>${pctAll.median}</strong></span>
+                    <span>⬇️ 历史最低: <strong>${pctAll.min}</strong></span>
+                    <span>⬆️ 历史最高: <strong>${pctAll.max}</strong></span>
+                    <span>📅 数据量: <strong>${pctAll.totalDays}天</strong></span>
+                </div>
+
+                <div class="vix-pct-note">
+                    💡 <strong>方案B决策逻辑：</strong>VIX分位越高 = 当前恐慌在历史中越罕见 = 超跌可能性越大 = 抄底机会越好。
+                    相比固定阈值（如VIX>30=恐惧），历史分位能自适应不同市场环境（如2020年VIX均值比2019年高得多）。
+                    <br/><strong>建议结合方案A（绝对值区间）+ 方案B（历史分位）双重确认。</strong>
+                </div>
+            </div>`;
+        }
+
+        // ======== 3. 方案A：绝对值区间 + 均值偏离度 ========
+        html += `
+        <div class="vix-section-title">📐 方案A：VIX绝对值区间 + 均值偏离度</div>
+        <div class="vix-data-grid">
+            <div class="vix-data-card">
+                <div class="vix-data-label">日内高</div>
+                <div class="vix-data-value">${vix.high > 0 ? vix.high.toFixed(2) : '--'}</div>
+            </div>
+            <div class="vix-data-card">
+                <div class="vix-data-label">日内低</div>
+                <div class="vix-data-value">${vix.low > 0 ? vix.low.toFixed(2) : '--'}</div>
+            </div>
+            <div class="vix-data-card">
+                <div class="vix-data-label">前收盘</div>
+                <div class="vix-data-value">${vix.prevClose > 0 ? vix.prevClose.toFixed(2) : '--'}</div>
+            </div>
+            <div class="vix-data-card">
+                <div class="vix-data-label">开盘价</div>
+                <div class="vix-data-value">${vix.open > 0 ? vix.open.toFixed(2) : '--'}</div>
+            </div>
+            <div class="vix-data-card">
+                <div class="vix-data-label">📏 均值偏离</div>
+                <div class="vix-data-value" style="color:${zone ? zone.color : '#ffc107'}">${deviation ? deviation.deviation + 'σ' : '--'}</div>
+                <div class="vix-data-sub">长期均值 ${vixConfig.anchor.mean}</div>
+            </div>
+            <div class="vix-data-card">
+                <div class="vix-data-label">📊 锚点分位</div>
+                <div class="vix-data-value" style="color:${zone ? zone.color : '#ffc107'}">${deviation ? deviation.percentile + '%' : '--'}</div>
+                <div class="vix-data-sub">基于1990-2025统计</div>
+            </div>
+        </div>`;
+
+        // ======== 4. VIX恐惧/贪婪区间表 ========
+        html += `
+        <div class="vix-section-title">🎚️ VIX恐惧/贪婪区间对照表</div>
+        <div class="vix-zone-table">`;
+        vixConfig.zones.forEach(z => {
+            const isActive = zone && z.label === zone.label;
+            html += `
+            <div class="vix-zone-row ${isActive ? 'vix-zone-active' : ''}" style="${isActive ? 'border-color:' + z.color + ';background:' + z.color + '15;' : ''}">
+                <span class="vix-zone-emoji">${z.emoji}</span>
+                <span class="vix-zone-range" style="color:${z.color}">${z.min}-${z.max === 999 ? '∞' : z.max}</span>
+                <span class="vix-zone-name" style="color:${z.color};font-weight:${isActive ? 700 : 500}">${z.label}</span>
+                <span class="vix-zone-desc-text">${z.desc}</span>
+                ${isActive ? '<span class="vix-zone-current">← 当前</span>' : ''}
+            </div>`;
+        });
+        html += '</div>';
+
+        // ======== 5. CNN Fear & Greed 联动对比 ========
+        if (fg) {
+            const fgZone = fg.score <= 25 ? '极度恐惧' : fg.score <= 40 ? '恐惧' : fg.score <= 55 ? '中性' : fg.score <= 75 ? '贪婪' : '极度贪婪';
+            const fgColor = fg.score <= 25 ? '#dc3545' : fg.score <= 40 ? '#fd7e14' : fg.score <= 55 ? '#ffc107' : fg.score <= 75 ? '#28a745' : '#0d7337';
+            html += `
+            <div class="vix-section-title">🌡️ CNN Fear & Greed 联动对比</div>
+            <div class="vix-fg-panel">
+                <div class="vix-fg-current">
+                    <div class="vix-fg-score" style="color:${fgColor}">${fg.score.toFixed(0)}</div>
+                    <div class="vix-fg-label">${fgZone}</div>
+                    <div class="vix-fg-rating">${fg.rating || ''}</div>
+                </div>
+                <div class="vix-fg-history">
+                    ${fg.previous ? `<div class="vix-fg-item"><span>昨日</span><strong>${fg.previous.toFixed(0)}</strong></div>` : ''}
+                    ${fg.oneWeekAgo ? `<div class="vix-fg-item"><span>一周前</span><strong>${fg.oneWeekAgo.toFixed(0)}</strong></div>` : ''}
+                    ${fg.oneMonthAgo ? `<div class="vix-fg-item"><span>一月前</span><strong>${fg.oneMonthAgo.toFixed(0)}</strong></div>` : ''}
+                    ${fg.oneYearAgo ? `<div class="vix-fg-item"><span>一年前</span><strong>${fg.oneYearAgo.toFixed(0)}</strong></div>` : ''}
+                </div>
+                <div class="vix-fg-note">
+                    💡 VIX和CNN F&G通常负相关：VIX高→F&G低(恐惧)，VIX低→F&G高(贪婪)。两者同时极端时信号更强。
+                </div>
+            </div>`;
+        }
+
+        // ======== 6. VIX 历史走势（区间着色）========
+        html += `
+        <div class="vix-section-title">📈 VIX历史走势（恐惧区间着色）</div>
+        <div class="vix-kline-container" id="vix-kline-chart" style="height:400px;"></div>
+        <div class="vix-kline-note">
+            数据来源: 东方财富(CBOE VIX) · 近${kline.length}个交易日 · 背景色=恐惧/贪婪区间
+        </div>`;
+
+        // ======== 7. 使用说明 ========
+        html += `
+        <div class="vix-disclaimer">
+            <strong>⚠️ VIX恐惧仪表盘说明：</strong>本页面独立于信号计算系统，仅作为市场情绪参考。
+            VIX指数反映未来30天标普500隐含波动率预期。数据来源：东方财富(CBOE VIX) + CNN Fear & Greed Index。
+            <br/>VIX升高≠股市必跌，仅代表市场预期波动加大。投资决策请综合多维度判断。
+        </div>`;
+
+        container.innerHTML = html;
+
+        // 渲染ECharts图表（需要DOM已存在）
+        setTimeout(() => {
+            renderVIXGauge(vix.vix, zone);
+            if (kline.length > 0) renderVIXKlineChart(kline, vix.vix);
+        }, 50);
+    }
+
+    /**
+     * 渲染VIX半圆仪表盘
+     */
+    function renderVIXGauge(vixValue, zone) {
+        const dom = document.getElementById('vix-gauge-chart');
+        if (!dom) return;
+
+        let chart = echarts.getInstanceByDom(dom);
+        if (!chart) chart = echarts.init(dom);
+
+        const vixConfig = ETF_CONFIG.VIX_DASHBOARD;
+        // 构建渐变色段
+        const colorStops = vixConfig.zones.map(z => {
+            const normalized = Math.min(1, z.min / 50);
+            return [normalized, z.color];
+        });
+        // 确保最后到1.0
+        colorStops.push([1, '#85182a']);
+
+        chart.setOption({
+            backgroundColor: 'transparent',
+            series: [{
+                type: 'gauge',
+                min: 0,
+                max: 50,
+                startAngle: 180,
+                endAngle: 0,
+                center: ['50%', '78%'],
+                radius: '100%',
+                itemStyle: { color: zone ? zone.color : '#ffc107' },
+                progress: {
+                    show: true,
+                    width: 16,
+                    roundCap: true,
+                    itemStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0, y: 0, x2: 1, y2: 0,
+                            colorStops: [
+                                { offset: 0, color: '#0d7337' },
+                                { offset: 0.3, color: '#28a745' },
+                                { offset: 0.5, color: '#ffc107' },
+                                { offset: 0.7, color: '#fd7e14' },
+                                { offset: 0.85, color: '#dc3545' },
+                                { offset: 1, color: '#85182a' },
+                            ]
+                        }
+                    }
+                },
+                pointer: {
+                    icon: 'triangle',
+                    length: '55%',
+                    width: 8,
+                    offsetCenter: [0, '-10%'],
+                    itemStyle: { color: '#e2e8f0' }
+                },
+                axisLine: {
+                    lineStyle: {
+                        width: 16,
+                        color: [[1, 'rgba(255,255,255,0.08)']]
+                    }
+                },
+                axisTick: { show: false },
+                splitLine: {
+                    distance: -18,
+                    length: 8,
+                    lineStyle: { width: 1, color: '#4a5568' }
+                },
+                axisLabel: {
+                    distance: -32,
+                    color: '#718096',
+                    fontSize: 10,
+                    formatter: function(v) {
+                        if (v === 0) return '贪婪';
+                        if (v === 20) return '20';
+                        if (v === 30) return '30';
+                        if (v === 50) return '恐惧';
+                        return '';
+                    }
+                },
+                title: {
+                    offsetCenter: [0, '10%'],
+                    fontSize: 12,
+                    color: '#a0aec0',
+                    fontWeight: 400,
+                },
+                detail: {
+                    valueAnimation: true,
+                    offsetCenter: [0, '-30%'],
+                    fontSize: 28,
+                    fontWeight: 800,
+                    fontFamily: 'Roboto Mono, monospace',
+                    color: zone ? zone.color : '#ffc107',
+                    formatter: '{value}'
+                },
+                data: [{
+                    value: Math.min(50, vixValue).toFixed(2),
+                    name: zone ? zone.label : 'VIX'
+                }],
+                animationDuration: 1200,
+                animationEasingUpdate: 'cubicOut',
+            }]
+        });
+    }
+
+    /**
+     * 渲染VIX历史走势图（带恐惧区间着色）
+     */
+    function renderVIXKlineChart(kline, currentVIX) {
+        const dom = document.getElementById('vix-kline-chart');
+        if (!dom) return;
+
+        let chart = echarts.getInstanceByDom(dom);
+        if (!chart) chart = echarts.init(dom);
+
+        const dates = kline.map(d => d.date);
+        const closes = kline.map(d => d.close);
+
+        const vixConfig = ETF_CONFIG.VIX_DASHBOARD;
+
+        // 构建区间着色 markArea
+        const markAreas = vixConfig.zones.map(z => [{
+            yAxis: z.min,
+            itemStyle: { color: z.color + '12' }
+        }, {
+            yAxis: Math.min(z.max, Math.max(...closes) + 5)
+        }]);
+
+        chart.setOption({
+            backgroundColor: 'transparent',
+            grid: { left: 50, right: 30, top: 20, bottom: 70 },
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: '#1e293b',
+                borderColor: '#4a5568',
+                textStyle: { color: '#e2e8f0', fontSize: 12 },
+                formatter: function(params) {
+                    const d = params[0];
+                    const v = d.value;
+                    const z = ETF_CONFIG.getVIXZone(v);
+                    return `<strong>${d.axisValue}</strong><br/>VIX: <span style="color:${z ? z.color : '#ffc107'};font-weight:700;">${v.toFixed(2)}</span><br/>区间: ${z ? z.emoji + ' ' + z.label : '--'}`;
+                }
+            },
+            xAxis: {
+                type: 'category',
+                data: dates,
+                axisLine: { lineStyle: { color: '#2d3748' } },
+                axisLabel: { color: '#718096', fontSize: 10 },
+                axisTick: { show: false },
+            },
+            yAxis: {
+                type: 'value',
+                min: function(val) { return Math.max(0, Math.floor(val.min - 2)); },
+                axisLine: { lineStyle: { color: '#2d3748' } },
+                axisLabel: { color: '#718096', fontSize: 10 },
+                splitLine: { lineStyle: { color: '#2d3748', type: 'dashed' } },
+            },
+            dataZoom: [{
+                type: 'slider',
+                start: Math.max(0, 100 - (252 / kline.length) * 100),
+                end: 100,
+                height: 24,
+                bottom: 10,
+                borderColor: '#2d3748',
+                fillerColor: 'rgba(233, 30, 99, 0.15)',
+                handleStyle: { color: '#e91e63', borderColor: '#e91e63' },
+                textStyle: { color: '#718096', fontSize: 10 },
+                dataBackground: {
+                    lineStyle: { color: '#e91e63', opacity: 0.3 },
+                    areaStyle: { color: '#e91e63', opacity: 0.1 },
+                }
+            }],
+            series: [{
+                type: 'line',
+                data: closes,
+                smooth: 0.3,
+                symbol: 'none',
+                lineStyle: { color: '#e91e63', width: 1.5 },
+                areaStyle: {
+                    color: {
+                        type: 'linear',
+                        x: 0, y: 0, x2: 0, y2: 1,
+                        colorStops: [
+                            { offset: 0, color: 'rgba(233, 30, 99, 0.3)' },
+                            { offset: 1, color: 'rgba(233, 30, 99, 0.02)' },
+                        ]
+                    }
+                },
+                markLine: {
+                    silent: true,
+                    symbol: 'none',
+                    lineStyle: { type: 'dashed', width: 1 },
+                    data: [
+                        { yAxis: vixConfig.anchor.mean, label: { formatter: '均值 ' + vixConfig.anchor.mean, color: '#a0aec0', fontSize: 10 }, lineStyle: { color: '#4a5568' } },
+                        { yAxis: currentVIX, label: { formatter: '当前 ' + currentVIX.toFixed(1), color: '#e91e63', fontSize: 10 }, lineStyle: { color: '#e91e63' } },
+                        { yAxis: 20, label: { show: false }, lineStyle: { color: '#ffc10733' } },
+                        { yAxis: 30, label: { show: false }, lineStyle: { color: '#dc354533' } },
+                    ]
+                },
+                markArea: { silent: true, data: markAreas },
+            }]
+        });
     }
 
     // ========== 启动 ==========
