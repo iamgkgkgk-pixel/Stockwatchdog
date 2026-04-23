@@ -279,13 +279,17 @@ const SignalEngine = (() => {
      * 【方案B - 统一基准】不再依赖JSON中预设的percentile字段（那是硬编码的伪历史），
      * 改为用全量PE历史值统一计算分位，确保实时信号与历史走势图使用同一套基准。
      * 
+     * 【方案B增强 - 实时PE注入】当API获取到实时PE时，更新当月的PE值，
+     * 让月级别走势图的最后一个数据点也能反映最新估值变化。
+     * 
      * @param {Object} historyData - JSON中的历史数据 (spreadHistory, peHistory, dividendYieldHistory, bondYieldHistory)
      * @param {Object} etfConfig - ETF配置（含signalRules, dimWeights）
      * @param {number} months - 回溯月数（默认96个月，即8年；数据不足时自动回退到全部可用历史）
      * @param {number|null} currentMarketTemp - 已弃用，保留参数兼容性。走势图统一使用marketTemp=50（中性）保证数据一致性
+     * @param {Object|null} realtimeData - 实时数据 { pe, dividendYield, bondYield }，API获取成功时传入
      * @returns {Array<{date, score, signal, signalText, signalColor}>}
      */
-    function calcHistoricalSignals(historyData, etfConfig, months = 96, currentMarketTemp = null) {
+    function calcHistoricalSignals(historyData, etfConfig, months = 96, currentMarketTemp = null, realtimeData = null) {
         if (!historyData || !etfConfig) return [];
 
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
@@ -297,6 +301,16 @@ const SignalEngine = (() => {
         const dividendMap = buildDateMap(historyData.dividendYieldHistory);
         const bondMap = buildDateMap(historyData.bondYieldHistory);
 
+        // 【方案B增强】将实时PE注入当月映射表，更新最后一个月的PE值
+        const today = new Date();
+        const currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
+        if (realtimeData && realtimeData.pe > 0) {
+            peMap[currentMonth] = realtimeData.pe;
+            console.info(`📈 [calcHistoricalSignals] 实时PE注入当月: ${currentMonth}=${realtimeData.pe}`);
+            if (realtimeData.dividendYield > 0) dividendMap[currentMonth] = realtimeData.dividendYield;
+            if (realtimeData.bondYield > 0) bondMap[currentMonth] = realtimeData.bondYield;
+        }
+
         // 获取所有可用的月末日期（取所有历史数据的并集）
         const allDates = new Set();
         if (historyData.peHistory) historyData.peHistory.forEach(d => allDates.add(d.date));
@@ -304,6 +318,8 @@ const SignalEngine = (() => {
         if (historyData.bondYieldHistory) historyData.bondYieldHistory.forEach(d => allDates.add(d.date));
         if (historyData.dividendYieldHistory) historyData.dividendYieldHistory.forEach(d => allDates.add(d.date));
         if (historyData.priceHistory) historyData.priceHistory.forEach(d => allDates.add(d.date));
+        // 确保当月也在日期集合中（即使JSON没有当月数据，实时注入后也应该包含）
+        if (realtimeData && realtimeData.pe > 0) allDates.add(currentMonth);
 
         // 按时间排序，取最近N个月
         const sortedDates = Array.from(allDates).sort();
@@ -318,6 +334,10 @@ const SignalEngine = (() => {
 
         // 【方案B核心】统一用全量PE历史值计算分位，不再使用JSON预设的percentile
         const allPeValues = historyData.peHistory ? historyData.peHistory.map(d => d.value) : [];
+        // 如果有实时PE，也加入分位计算的参考集合
+        if (realtimeData && realtimeData.pe > 0 && !allPeValues.includes(realtimeData.pe)) {
+            allPeValues.push(realtimeData.pe);
+        }
 
         // 全量利差历史值数组
         const allSpreadValues = historyData.spreadHistory ? historyData.spreadHistory.map(d => d.value) : [];
@@ -499,13 +519,17 @@ const SignalEngine = (() => {
      * 【方案B - 统一基准】不再依赖JSON中预设的percentile字段，
      * 改为对PE值做日间插值后，用全量PE历史统一计算分位。
      * 
+     * 【方案B增强 - 实时PE注入】当API获取到实时PE时，将其作为"当前时刻"的锚点，
+     * 让JSON最后一个月到今天的日级别数据能体现PE的实际变化，而非停留在JSON的静态值。
+     * 
      * @param {Object} historyData - JSON中的历史数据
      * @param {Object} etfConfig - ETF配置
      * @param {number} days - 回溯天数（默认365天，即1年）
      * @param {number|null} currentMarketTemp - 已弃用，保留参数兼容性。走势图统一使用marketTemp=50（中性）保证数据一致性
+     * @param {Object|null} realtimeData - 实时数据 { pe, dividendYield, bondYield }，API获取成功时传入
      * @returns {Array<{date, score, signal, signalText, signalColor, scores}>}
      */
-    function calcDailyHistoricalSignals(historyData, etfConfig, days = 365, currentMarketTemp = null) {
+    function calcDailyHistoricalSignals(historyData, etfConfig, days = 365, currentMarketTemp = null, realtimeData = null) {
         if (!historyData || !etfConfig) return [];
 
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
@@ -517,13 +541,40 @@ const SignalEngine = (() => {
         const dividendMap = buildDateMap(historyData.dividendYieldHistory);
         const bondMap = buildDateMap(historyData.bondYieldHistory);
 
+        // 【方案B增强】注入实时PE：在月度映射表中添加"当前月份+1"的虚拟锚点
+        // 这样 interpolateFromMap 在处理JSON最后一个月时就能从"JSON PE"插值到"实时PE"
+        // 而不是整个月都返回同一个静态值
+        const today = new Date();
+        const todayStr = today.toISOString().slice(0, 10);
+        const currentMonth = todayStr.slice(0, 7); // YYYY-MM
+        if (realtimeData && realtimeData.pe > 0) {
+            // 计算下个月的YYYY-MM作为插值终点
+            const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+            const nextMonth = nextMonthDate.toISOString().slice(0, 7);
+            // 将实时PE设为"下个月"的值，这样当月内的日期就能在JSON最后值和实时值之间插值
+            peMap[nextMonth] = realtimeData.pe;
+            console.info(`📈 [calcDailyHistoricalSignals] 实时PE注入: ${nextMonth}=${realtimeData.pe} (API实时值，作为插值终点)`);
+
+            // 同步注入实时股息率和国债收益率（如果有的话）
+            if (realtimeData.dividendYield > 0) {
+                dividendMap[nextMonth] = realtimeData.dividendYield;
+            }
+            if (realtimeData.bondYield > 0) {
+                bondMap[nextMonth] = realtimeData.bondYield;
+            }
+        }
+
         const sortedPeKeys = Object.keys(peMap).sort();
         const sortedSpreadKeys = Object.keys(spreadMap).sort();
         const sortedDividendKeys = Object.keys(dividendMap).sort();
         const sortedBondKeys = Object.keys(bondMap).sort();
 
         // 【方案B核心】统一用全量PE值计算分位，不再读取JSON中的预设percentile
+        // 如果有实时PE，也加入分位计算的参考集合（让分位计算包含最新值）
         const allPeValues = historyData.peHistory ? historyData.peHistory.map(d => d.value) : [];
+        if (realtimeData && realtimeData.pe > 0 && !allPeValues.includes(realtimeData.pe)) {
+            allPeValues.push(realtimeData.pe);
+        }
 
         // 获取PE均值偏离度锚定数据
         const anchor = historyData.valuationAnchor || {};

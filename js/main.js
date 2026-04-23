@@ -754,11 +754,17 @@ const App = (() => {
         updatePriceDisplay(data, etfConfig);
 
         // 刷新综合信号历史走势图（传入当前市场温度，使最新月份与实时信号一致）
+        // 【方案B增强】同时传入实时PE等估值数据，让走势图的当月数据能反映最新PE变化
+        const realtimeValuation = (data.pe && data.pe > 0) ? {
+            pe: data.pe,
+            dividendYield: data.dividendYield || 0,
+            bondYield: data.bondYield || 0,
+        } : null;
         if (historyData) {
-            renderSignalHistoryChart(etfConfig, historyData, signalData.marketTemp);
-            renderScorePercentileChart(etfConfig, historyData, signalData.marketTemp, total);
-            renderDailySignalHistoryChart(etfConfig, historyData, signalData.marketTemp);
-            renderAlgoCompareChart(etfConfig, historyData, signalData.marketTemp);
+            renderSignalHistoryChart(etfConfig, historyData, signalData.marketTemp, realtimeValuation);
+            renderScorePercentileChart(etfConfig, historyData, signalData.marketTemp, total, realtimeValuation);
+            renderDailySignalHistoryChart(etfConfig, historyData, signalData.marketTemp, realtimeValuation);
+            renderAlgoCompareChart(etfConfig, historyData, signalData.marketTemp, realtimeValuation);
         }
 
         // 更新信号方法标签
@@ -1225,8 +1231,9 @@ const App = (() => {
      * @param {Object} etfConfig
      * @param {Object} historyData
      * @param {number|null} currentMarketTemp - 当前市场温度（使最新月份与实时信号一致）
+     * @param {Object|null} realtimeData - 实时估值数据 { pe, dividendYield, bondYield }
      */
-    function renderSignalHistoryChart(etfConfig, historyData, currentMarketTemp) {
+    function renderSignalHistoryChart(etfConfig, historyData, currentMarketTemp, realtimeData) {
         const section = document.getElementById('chart-section-signal-history');
         const titleEl = document.getElementById('signal-history-title');
 
@@ -1246,8 +1253,9 @@ const App = (() => {
 
         // 计算96个月（8年）的历史信号，传入当前市场温度（用于最近一个月）
         // 数据不足8年的ETF会自动回退到全部可用历史
+        // 【方案B增强】传入实时PE，让当月信号反映最新估值变化
         const mktTemp = (currentMarketTemp !== null && currentMarketTemp !== undefined) ? currentMarketTemp : null;
-        const signals = SignalEngine.calcHistoricalSignals(historyData, etfConfig, 96, mktTemp);
+        const signals = SignalEngine.calcHistoricalSignals(historyData, etfConfig, 96, mktTemp, realtimeData);
 
         if (titleEl) {
             const monthCount = signals.length;
@@ -1267,8 +1275,9 @@ const App = (() => {
      * @param {Object} etfConfig
      * @param {Object} historyData
      * @param {number|null} currentMarketTemp
+     * @param {Object|null} realtimeData - 实时估值数据 { pe, dividendYield, bondYield }
      */
-    function renderDailySignalHistoryChart(etfConfig, historyData, currentMarketTemp) {
+    function renderDailySignalHistoryChart(etfConfig, historyData, currentMarketTemp, realtimeData) {
         const section = document.getElementById('chart-section-daily-signal-history');
         const titleEl = document.getElementById('daily-signal-history-title');
 
@@ -1288,7 +1297,8 @@ const App = (() => {
         // 默认显示近1年（365天），用户可通过dataZoom slider缩放
         const days = 365 * 3; // 3年日级别数据
         const mktTemp = (currentMarketTemp !== null && currentMarketTemp !== undefined) ? currentMarketTemp : null;
-        const signals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp);
+        // 【方案B增强】传入实时PE，让当月内每天的信号跟随实时PE变化
+        const signals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp, realtimeData);
 
         if (titleEl) {
             const dayCount = signals.length;
@@ -1318,8 +1328,9 @@ const App = (() => {
      * @param {Object} historyData
      * @param {number|null} currentMarketTemp
      * @param {number|null} currentTotal - 当前实时综合评分（用于计算实时分位）
+     * @param {Object|null} realtimeData - 实时估值数据 { pe, dividendYield, bondYield }
      */
-    function renderScorePercentileChart(etfConfig, historyData, currentMarketTemp, currentTotal) {
+    function renderScorePercentileChart(etfConfig, historyData, currentMarketTemp, currentTotal, realtimeData) {
         const section = document.getElementById('chart-section-score-percentile');
         const titleEl = document.getElementById('score-percentile-title');
         const summaryEl = document.getElementById('score-percentile-summary');
@@ -1341,7 +1352,8 @@ const App = (() => {
         // 使用尽可能长的历史（与算法对比图一致，追溯全量）
         const days = 365 * 20;
         const mktTemp = (currentMarketTemp !== null && currentMarketTemp !== undefined) ? currentMarketTemp : null;
-        const dailySignals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp);
+        // 【方案B增强】传入实时PE
+        const dailySignals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp, realtimeData);
 
         if (dailySignals.length === 0) {
             ChartManager.initScorePercentileChart('chart-score-percentile', [], null, etfConfig.color);
@@ -1408,8 +1420,9 @@ const App = (() => {
      * @param {Object} etfConfig
      * @param {Object} historyData
      * @param {number|null} currentMarketTemp
+     * @param {Object|null} realtimeData - 实时估值数据 { pe, dividendYield, bondYield }
      */
-    function renderAlgoCompareChart(etfConfig, historyData, currentMarketTemp) {
+    function renderAlgoCompareChart(etfConfig, historyData, currentMarketTemp, realtimeData) {
         const section = document.getElementById('chart-section-algo-compare');
         const titleEl = document.getElementById('algo-compare-title');
 
@@ -1429,7 +1442,8 @@ const App = (() => {
         // 使用尽可能长的历史：365*20=20年（实际会被数据最早时间截断）
         const days = 365 * 20;
         const mktTemp = (currentMarketTemp !== null && currentMarketTemp !== undefined) ? currentMarketTemp : null;
-        const signals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp);
+        // 【方案B增强】传入实时PE
+        const signals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp, realtimeData);
 
         if (titleEl) {
             const dayCount = signals.length;
