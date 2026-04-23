@@ -755,7 +755,10 @@ const App = (() => {
 
         // 刷新综合信号历史走势图（传入当前市场温度，使最新月份与实时信号一致）
         // 【方案B增强】同时传入实时PE等估值数据，让走势图的当月数据能反映最新PE变化
-        const realtimeValuation = (data.pe && data.pe > 0) ? {
+        // 关键判断：只有当PE确实来自API实时获取（data.valuationSource存在）时才注入
+        // 如果API失败、PE来自JSON预设值，注入后与JSON最后一个月PE相同，插值无差异，反而可能引起混淆
+        const hasRealtimePE = data.pe && data.pe > 0 && data.valuationSource;
+        const realtimeValuation = hasRealtimePE ? {
             pe: data.pe,
             dividendYield: data.dividendYield || 0,
             bondYield: data.bondYield || 0,
