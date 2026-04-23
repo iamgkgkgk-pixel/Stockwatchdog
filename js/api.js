@@ -798,6 +798,41 @@ const DataAPI = (() => {
             promiseLabels.push('aShareBreadth');
         }
 
+        // 5. 短期K线（仅对需要行情反推PE的ETF：蛋卷代理指数 或 无蛋卷覆盖）
+        //    用于计算从JSON更新日到今天的累计涨跌幅（比单日涨跌幅更准确反映趋势）
+        const needPeProxy = etfConfig.trackIndex && etfConfig.trackIndex.danjuanPeRatio;
+        const noDanjuan = !etfConfig.trackIndex || (!etfConfig.trackIndex.danjuanCode && !etfConfig.trackIndex.danjuanName);
+        if (etfConfig.secid && (needPeProxy || noDanjuan)) {
+            const klinePromise = (async () => {
+                try {
+                    const endDate = formatDate(new Date());
+                    const startDate = formatDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+                    const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
+                        secid: etfConfig.secid,
+                        fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
+                        fields2: 'f51,f52,f53,f54,f55,f56,f57',
+                        klt: 101, fqt: 0,
+                        beg: startDate.replace(/-/g, ''),
+                        end: endDate.replace(/-/g, ''),
+                        lmt: 30,
+                        ut: 'fa5fd1943c7b386f172d6893dbbd2'
+                    });
+                    if (data && data.data && data.data.klines) {
+                        return data.data.klines.map(line => {
+                            const parts = line.split(',');
+                            return { date: parts[0], close: parseFloat(parts[2]) };
+                        });
+                    }
+                    return null;
+                } catch (e) {
+                    console.warn('短期K线获取失败:', e.message);
+                    return null;
+                }
+            })();
+            promises.push(klinePromise);
+            promiseLabels.push('kline');
+        }
+
         const settled = await Promise.allSettled(promises);
 
         settled.forEach((result, i) => {
@@ -809,18 +844,45 @@ const DataAPI = (() => {
             }
         });
 
-        // ========== 蛋卷代理指数PE修正 ==========
+        // ========== 蛋卷代理指数标记 ==========
         // 场景：蛋卷API没有"创业板50"(399673)和"科创创业50"(931643)，
-        //       但有"创业板"(399006)可以做代理。配置中的 danjuanPeRatio 表示修正系数。
-        //       原理：代理指数与目标指数成分股高度重叠，PE走势高度相关，
-        //             用固定比例系数将代理指数PE换算回目标指数PE。
+        //       但有"创业板指"(399006)可做代理，获取 pePercentile/pb/dividendYield/roe 等。
+        //       PE绝对值不可用（代理指数PE ≠ 目标指数PE），需在normalizeData中用行情反推。
+        //       标记 isProxyIndex=true，让normalizeData跳过蛋卷PE、使用行情反推PE。
         if (results.valuation && etfConfig.trackIndex && etfConfig.trackIndex.danjuanPeRatio) {
-            const ratio = etfConfig.trackIndex.danjuanPeRatio;
-            const rawPE = results.valuation.pe;
-            if (rawPE > 0) {
-                results.valuation.pe = parseFloat((rawPE * ratio).toFixed(2));
-                results.valuation.source = (results.valuation.source || '') + `(代理×${ratio})`;
-                console.info(`🔄 [代理指数PE修正] ${etfConfig.shortName}: 蛋卷原始PE=${rawPE.toFixed(2)} × ${ratio} = ${results.valuation.pe} (代理:${etfConfig.trackIndex.danjuanCode})`);
+            results.valuation.isProxyIndex = true;
+            results.valuation.rawProxyPE = results.valuation.pe;  // 保存原始代理PE用于日志
+            console.info(`🔄 [代理指数] ${etfConfig.shortName}: 蛋卷返回代理指数PE=${results.valuation.pe}(不直接使用), pePercentile=${results.valuation.pePercentile}%, pb=${results.valuation.pb}`);
+        }
+
+        // ========== K线累计涨跌幅计算 ==========
+        // 当有K线数据时，计算从"当月初"到"今天"的累计涨跌幅
+        // 比单日涨跌幅更准确反映趋势（用户说"连续大涨2周"，当日涨跌幅只有2%，但累计可能10%+）
+        if (results.kline && results.kline.length > 0 && results.etf && results.etf.price > 0) {
+            const today = new Date();
+            const currentMonthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+            
+            // 找当月第一个交易日的收盘价（K线日期≥月初的第一条）
+            let baseClose = null;
+            for (const k of results.kline) {
+                if (k.date >= currentMonthStart) {
+                    baseClose = k.close;
+                    console.info(`📊 [K线基准] 当月首个交易日: ${k.date}, 收盘价=${k.close}`);
+                    break;
+                }
+            }
+            // 如果当月没有交易日（如月初还没开市），取最后一个交易日
+            if (!baseClose && results.kline.length > 0) {
+                const last = results.kline[results.kline.length - 1];
+                baseClose = last.close;
+                console.info(`📊 [K线基准] 回退到最后一个交易日: ${last.date}, 收盘价=${last.close}`);
+            }
+            
+            if (baseClose > 0) {
+                const currentPrice = results.etf.price;
+                const cumulativeChange = ((currentPrice - baseClose) / baseClose) * 100;
+                results.etf.cumulativeChangeFromMonthStart = parseFloat(cumulativeChange.toFixed(4));
+                console.info(`📊 [累计涨跌幅] 月初价=${baseClose} → 当前价=${currentPrice}, 累计涨跌幅=${cumulativeChange.toFixed(2)}%`);
             }
         }
 
@@ -1021,15 +1083,25 @@ const DataAPI = (() => {
         // 填入估值数据（如果API成功获取到）
         // 安全检查：如果API获取的PE与本地预设PE差异过大（>100%），说明可能指数错配，忽略API估值
         if (apiData.valuation) {
+            const isProxy = apiData.valuation.isProxyIndex;  // 蛋卷代理指数标记
             const apiPE = apiData.valuation.pe || 0;
             const localPE = manualData.pe || 0;
             const peDeviation = (localPE > 0 && apiPE > 0) ? Math.abs(apiPE - localPE) / localPE : 0;
 
-            if (peDeviation > 1.0) {
+            if (!isProxy && peDeviation > 1.0) {
                 // PE偏差超过100%，很可能是指数错配（如科创50 vs 科创创业50）
                 console.warn(`⚠️ API估值PE(${apiPE.toFixed(1)})与本地预设PE(${localPE.toFixed(1)})偏差${(peDeviation * 100).toFixed(0)}%，疑似指数错配，忽略API估值数据`);
                 console.warn(`  API来源: ${apiData.valuation.source || '未知'}`);
                 data.dataSource.push('估值数据:忽略(偏差过大⚠️)');
+            } else if (isProxy) {
+                // 代理指数：PE不可用（代理指数PE ≠ 目标指数PE），但其他数据有参考价值
+                // pePercentile/pb/dividendYield 虽然也是代理指数的，但趋势上有一定参考性
+                if (apiData.valuation.pb) data.pb = apiData.valuation.pb;
+                if (apiData.valuation.dividendYield) data.dividendYield = apiData.valuation.dividendYield;
+                if (apiData.valuation.pbPercentile) data.pbPercentile = apiData.valuation.pbPercentile;
+                // PE不从蛋卷取——留给后面的行情反推来算
+                data.dataSource.push(`估值数据:代理指数(${apiData.valuation.source || ''},PE需行情反推)`);
+                console.info(`📊 [代理指数] 采用蛋卷非PE数据: pb=${data.pb}, pbPct=${data.pbPercentile}, dy=${data.dividendYield}, 蛋卷PE=${apiPE}(不采用)`);
             } else {
                 if (apiData.valuation.pe) data.pe = apiData.valuation.pe;
                 if (apiData.valuation.pb) data.pb = apiData.valuation.pb;
@@ -1041,25 +1113,37 @@ const DataAPI = (() => {
             }
         }
 
-        // ========== 行情反推实时PE（蛋卷API无覆盖的ETF兜底方案） ==========
-        // 场景：创业板50(danjuanCode='SZ399673')、科创创业50(danjuanCode=null) 等ETF
-        //       蛋卷基金API匹配不到 → apiData.valuation=null → data.valuationSource 不存在
-        //       → realtimeValuation=null → 日级别图表没有实时PE注入 → 最近20天数据平线
-        //
-        // 解决：如果东方财富行情获取成功（有今日涨跌幅），用 JSON预设PE × (1 + 涨跌幅%) 反推当日PE
-        //       这样即使没有蛋卷API，也能获得有意义的日级别PE变化
-        //       涨跌幅反映了市场对该ETF的最新定价，PE与价格同向变动（EPS短期不变）
-        if (!apiData.valuation && apiData.etf && apiData.etf.priceChange !== null && apiData.etf.priceChange !== undefined) {
+        // ========== 行情反推实时PE ==========
+        // 场景1：蛋卷API完全无数据（apiData.valuation=null）
+        // 场景2：蛋卷代理指数（isProxyIndex=true，PE不可用，需要用行情反推）
+        // 解决：用 JSON预设PE × (1 + 累计涨跌幅%) 反推当日PE
+        //       优先使用K线累计涨跌幅（从月初到今天），回退到当日涨跌幅
+        //       原理：EPS短期不变，PE与ETF价格同比例变动
+        const needPeEstimate = !apiData.valuation || (apiData.valuation && apiData.valuation.isProxyIndex);
+        if (needPeEstimate && apiData.etf) {
             const basePE = manualData.pe || data.pe;  // JSON预设PE作为基准
             if (basePE > 0) {
-                const changeRatio = apiData.etf.priceChange / 100;  // 涨跌幅转小数（如 -0.42% → -0.0042）
-                const estimatedPE = basePE * (1 + changeRatio);
-                // 安全检查：反推PE不应偏离基准太远（涨跌停板±20%）
-                if (estimatedPE > 0 && Math.abs(changeRatio) <= 0.22) {
-                    data.pe = parseFloat(estimatedPE.toFixed(2));
-                    data.valuationSource = '东财行情反推';
-                    data.dataSource.push(`估值数据:行情反推(PE=${data.pe}, 基准${basePE}×(1${changeRatio >= 0 ? '+' : ''}${(changeRatio * 100).toFixed(2)}%))`);
-                    console.info(`📈 [行情反推PE] 基准PE=${basePE}, 涨跌幅=${apiData.etf.priceChange}%, 反推PE=${data.pe}`);
+                // 优先使用K线累计涨跌幅（从月初到今天，能反映连续多天的趋势）
+                // 回退到当日涨跌幅（如果K线数据不可用）
+                let changeRatio = null;
+                let changeSource = '';
+                if (apiData.etf.cumulativeChangeFromMonthStart !== null && apiData.etf.cumulativeChangeFromMonthStart !== undefined) {
+                    changeRatio = apiData.etf.cumulativeChangeFromMonthStart / 100;
+                    changeSource = '月初累计';
+                } else if (apiData.etf.priceChange !== null && apiData.etf.priceChange !== undefined) {
+                    changeRatio = apiData.etf.priceChange / 100;
+                    changeSource = '当日';
+                }
+                
+                if (changeRatio !== null) {
+                    const estimatedPE = basePE * (1 + changeRatio);
+                    // 安全检查：反推PE不应偏离基准太远（月内涨跌幅±30%）
+                    if (estimatedPE > 0 && Math.abs(changeRatio) <= 0.30) {
+                        data.pe = parseFloat(estimatedPE.toFixed(2));
+                        data.valuationSource = apiData.valuation ? '蛋卷代理+行情反推' : '东财行情反推';
+                        data.dataSource.push(`估值数据:行情反推(PE=${data.pe}, 基准${basePE}×(1${changeRatio >= 0 ? '+' : ''}${(changeRatio * 100).toFixed(2)}%), ${changeSource}涨跌幅)`);
+                        console.info(`📈 [行情反推PE] 基准PE=${basePE}, ${changeSource}涨跌幅=${(changeRatio * 100).toFixed(2)}%, 反推PE=${data.pe}`);
+                    }
                 }
             }
         }
