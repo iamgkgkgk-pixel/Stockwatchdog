@@ -590,8 +590,7 @@ const SignalEngine = (() => {
         const sortedMonths = Array.from(allMonths).sort();
         if (sortedMonths.length < 2) return []; // 至少需要2个月才能插值
 
-        // 结束日期：今天
-        const today = new Date();
+        // 结束日期：今天（复用前面已声明的 today 变量）
         const endDate = today.toISOString().slice(0, 10);
 
         // 起始日期：往前推 days 天
