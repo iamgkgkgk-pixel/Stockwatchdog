@@ -1026,6 +1026,29 @@ const DataAPI = (() => {
             }
         }
 
+        // ========== 行情反推实时PE（蛋卷API无覆盖的ETF兜底方案） ==========
+        // 场景：创业板50(danjuanCode='SZ399673')、科创创业50(danjuanCode=null) 等ETF
+        //       蛋卷基金API匹配不到 → apiData.valuation=null → data.valuationSource 不存在
+        //       → realtimeValuation=null → 日级别图表没有实时PE注入 → 最近20天数据平线
+        //
+        // 解决：如果东方财富行情获取成功（有今日涨跌幅），用 JSON预设PE × (1 + 涨跌幅%) 反推当日PE
+        //       这样即使没有蛋卷API，也能获得有意义的日级别PE变化
+        //       涨跌幅反映了市场对该ETF的最新定价，PE与价格同向变动（EPS短期不变）
+        if (!apiData.valuation && apiData.etf && apiData.etf.priceChange !== null && apiData.etf.priceChange !== undefined) {
+            const basePE = manualData.pe || data.pe;  // JSON预设PE作为基准
+            if (basePE > 0) {
+                const changeRatio = apiData.etf.priceChange / 100;  // 涨跌幅转小数（如 -0.42% → -0.0042）
+                const estimatedPE = basePE * (1 + changeRatio);
+                // 安全检查：反推PE不应偏离基准太远（涨跌停板±20%）
+                if (estimatedPE > 0 && Math.abs(changeRatio) <= 0.22) {
+                    data.pe = parseFloat(estimatedPE.toFixed(2));
+                    data.valuationSource = '东财行情反推';
+                    data.dataSource.push(`估值数据:行情反推(PE=${data.pe}, 基准${basePE}×(1${changeRatio >= 0 ? '+' : ''}${(changeRatio * 100).toFixed(2)}%))`);
+                    console.info(`📈 [行情反推PE] 基准PE=${basePE}, 涨跌幅=${apiData.etf.priceChange}%, 反推PE=${data.pe}`);
+                }
+            }
+        }
+
         // 填入恐惧贪婪指数 → 自动转换为市场温度（美股/港股使用）
         if (apiData.fearGreed) {
             const tempVal = fearGreedToMarketTemp(apiData.fearGreed.score);
