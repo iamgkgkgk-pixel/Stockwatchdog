@@ -465,7 +465,23 @@ const SignalEngine = (() => {
                 const nextMonth = sortedKeys[idx + 1];
                 return interpolate(targetMonth, dateMap[targetMonth], nextMonth, dateMap[nextMonth], targetDate);
             }
-            return dateMap[targetMonth]; // 最后一个月，直接返回
+            // 最后一个月：用前两个月的趋势做线性外推，避免整月数据是一条平线
+            // 例如 2026-03=33.8, 2026-04=32.5，则4月内的每一天会从32.5继续向下延伸
+            // 这样即使没有实时PE注入，日级别图表也能体现月内的估值变化趋势
+            if (idx >= 1) {
+                const prevMonth = sortedKeys[idx - 1];
+                const prevVal = dateMap[prevMonth];
+                const currVal = dateMap[targetMonth];
+                // 用前一个月到当月的斜率，虚拟构造"下一个月"的值进行插值
+                // 虚拟下月 = 当月 + (当月 - 上月)，即等速外推
+                const virtualNextVal = currVal + (currVal - prevVal);
+                // 构造虚拟下个月的YYYY-MM
+                const currDate = new Date(targetMonth + '-01');
+                const nextMonthDate = new Date(currDate.getFullYear(), currDate.getMonth() + 1, 1);
+                const virtualNextMonth = nextMonthDate.toISOString().slice(0, 7);
+                return interpolate(targetMonth, currVal, virtualNextMonth, virtualNextVal, targetDate);
+            }
+            return dateMap[targetMonth]; // 只有1个月数据，无法外推，直接返回
         }
 
         // 在两个月之间

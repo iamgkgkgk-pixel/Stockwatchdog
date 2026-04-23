@@ -921,7 +921,14 @@ const DataAPI = (() => {
                 target = items.find(item => item.name === indexName); // 精确名称匹配
             }
             if (!target && indexCode) {
-                target = items.find(item => item.index_code && item.index_code.includes(indexCode)); // 模糊代码
+                // 双向模糊代码匹配：兼容 danjuanCode='SZ399673' vs API返回 index_code='399673' 的情况
+                // 原来只检查 item.index_code.includes(indexCode)，对于 '399673'.includes('SZ399673') 会失败
+                // 现在也检查 indexCode.includes(item.index_code)，覆盖带市场前缀的情况
+                // 安全：反向匹配要求 API 返回的 index_code 长度≥4，防止短代码误匹配
+                target = items.find(item => item.index_code && (
+                    item.index_code.includes(indexCode) ||
+                    (item.index_code.length >= 4 && indexCode.includes(item.index_code))
+                ));
             }
             if (!target && indexName) {
                 target = items.find(item => item.name && item.name.includes(indexName)); // 模糊名称（兜底）
