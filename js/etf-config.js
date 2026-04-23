@@ -96,8 +96,9 @@ const ETF_CONFIG = (() => {
             trackIndex: {
                 name: '科创创业50指数',
                 code: '931643',
-                danjuanCode: null,   // 蛋卷基金无此指数！SH000688是科创50(PE~164)，与科创创业50(PE~40)完全不同
-                danjuanName: null,
+                danjuanCode: 'SZ399006',   // 蛋卷无科创创业50(931643)，用创业板指(399006)做代理
+                danjuanName: '创业板',      // 科创创业50=科创25+创业板25，与创业板指走势高相关
+                danjuanPeRatio: 0.89,      // 修正系数：科创创业50 PE ≈ 创业板指 PE × 0.89
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
             useBondSpread: false,
@@ -121,8 +122,9 @@ const ETF_CONFIG = (() => {
             trackIndex: {
                 name: '创业板50指数',
                 code: '399673',
-                danjuanCode: 'SZ399673',    // 修正：应为创业板50(399673)，非创业板指(399006)
-                danjuanName: '创业板50',    // 蛋卷基金中名称可能为"创业板50"
+                danjuanCode: 'SZ399006',    // 蛋卷无创业板50(399673)，用创业板指(399006)做代理
+                danjuanName: '创业板',      // 创业板50是创业板指的子集(前50只)，走势高度相关
+                danjuanPeRatio: 0.73,       // 修正系数：创业板50 PE ≈ 创业板指 PE × 0.73
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
             useBondSpread: false,

@@ -809,6 +809,21 @@ const DataAPI = (() => {
             }
         });
 
+        // ========== 蛋卷代理指数PE修正 ==========
+        // 场景：蛋卷API没有"创业板50"(399673)和"科创创业50"(931643)，
+        //       但有"创业板"(399006)可以做代理。配置中的 danjuanPeRatio 表示修正系数。
+        //       原理：代理指数与目标指数成分股高度重叠，PE走势高度相关，
+        //             用固定比例系数将代理指数PE换算回目标指数PE。
+        if (results.valuation && etfConfig.trackIndex && etfConfig.trackIndex.danjuanPeRatio) {
+            const ratio = etfConfig.trackIndex.danjuanPeRatio;
+            const rawPE = results.valuation.pe;
+            if (rawPE > 0) {
+                results.valuation.pe = parseFloat((rawPE * ratio).toFixed(2));
+                results.valuation.source = (results.valuation.source || '') + `(代理×${ratio})`;
+                console.info(`🔄 [代理指数PE修正] ${etfConfig.shortName}: 蛋卷原始PE=${rawPE.toFixed(2)} × ${ratio} = ${results.valuation.pe} (代理:${etfConfig.trackIndex.danjuanCode})`);
+            }
+        }
+
         // ========== A股市场温度兜底：当A股广度获取失败时，用CNN Fear & Greed替代 ==========
         // 逻辑：A股非交易时段（夜间/周末/节假日）涨跌家数为0且无缓存 → aShareBreadth为null
         //       此时尝试获取CNN Fear & Greed作为兜底（美股交易时段更长、数据更稳定）
