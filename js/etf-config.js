@@ -98,7 +98,7 @@ const ETF_CONFIG = (() => {
                 code: '931643',
                 danjuanCode: 'SZ399006',   // 蛋卷无科创创业50(931643)，用创业板指(399006)做代理
                 danjuanName: '创业板',      // 科创创业50=科创25+创业板25，与创业板指走势高相关
-                danjuanPeRatio: 0.89,      // 修正系数：科创创业50 PE ≈ 创业板指 PE × 0.89
+                // 直接使用蛋卷创业板指的全部估值数据（PE/PB/股息率/分位），数据源统一
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
             useBondSpread: false,
@@ -124,7 +124,7 @@ const ETF_CONFIG = (() => {
                 code: '399673',
                 danjuanCode: 'SZ399006',    // 蛋卷无创业板50(399673)，用创业板指(399006)做代理
                 danjuanName: '创业板',      // 创业板50是创业板指的子集(前50只)，走势高度相关
-                danjuanPeRatio: 0.73,       // 修正系数：创业板50 PE ≈ 创业板指 PE × 0.73
+                // 直接使用蛋卷创业板指的全部估值数据（PE/PB/股息率/分位），数据源统一
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
             useBondSpread: false,

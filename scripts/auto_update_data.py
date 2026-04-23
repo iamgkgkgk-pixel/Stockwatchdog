@@ -100,7 +100,7 @@ ETF_CONFIGS = [
         "id": "sci-tech-50",
         "file": "sci-tech-50.json",
         "type": "a_growth",
-        "danjuanCode": None,
+        "danjuanCode": "SZ399006",  # 蛋卷无科创创业50(931643)，用创业板指做代理
         "secid": "1.588300",
         "useBondSpread": False,
         "bondType": "cn",
@@ -109,7 +109,7 @@ ETF_CONFIGS = [
         "id": "gem-50",
         "file": "gem-50.json",
         "type": "a_growth",
-        "danjuanCode": "SZ399673",
+        "danjuanCode": "SZ399006",  # 蛋卷无创业板50(399673)，用创业板指做代理
         "secid": "0.159949",
         "useBondSpread": False,
         "bondType": "cn",
