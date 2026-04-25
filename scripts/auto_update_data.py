@@ -178,6 +178,26 @@ ETF_CONFIGS = [
         "useBondSpread": False,
         "bondType": "us",
     },
+    # A股价值型 - 中证红利
+    {
+        "id": "csi-dividend",
+        "file": "csi-dividend.json",
+        "type": "a_value",
+        "danjuanCode": "SH000922",
+        "secid": "1.515080",
+        "useBondSpread": True,
+        "bondType": "cn",
+    },
+    # 港股 - 港股通红利
+    {
+        "id": "hk-dividend",
+        "file": "hk-dividend.json",
+        "type": "hk_dividend",
+        "danjuanCode": None,  # 蛋卷无港股通高股息指数(930914)
+        "secid": "1.513820",
+        "useBondSpread": True,
+        "bondType": "cn",
+    },
     # 港股
     {
         "id": "hstech",

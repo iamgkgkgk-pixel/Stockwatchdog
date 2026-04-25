@@ -14,13 +14,13 @@
  *   维度C: 盈利质量 — ROE、盈利趋势
  *   维度D: 市场温度 — 整体市场情绪（可选手动输入）
  * 
- * ETF分类（19只）：
- *   A股价值：红利低波(512890), 自由现金流(159201)
+ * ETF分类（21只）：
+ *   A股价值：红利低波(512890), 中证红利(515080), 自由现金流(159201)
  *   A股宽基：沪深300ETF(510300)
  *   A股成长：科创创业50(588300), 创业板50(159949)
  *   A股行业：医药ETF(512010), 科创半导体ETF(588170), 机器人ETF(562500), 储能ETF(159566), PCB电子ETF(515260)
  *   美股QDII：标普500(513650), 纳指(513110)
- *   港股QDII：恒生科技(513180), 港股通央企红利(513901)
+ *   港股QDII：恒生科技(513180), 港股通红利(513820), 港股通央企红利(513901)
  *   日股QDII：日经225ETF(513520), 东证ETF(513800)
  *   避险资产：黄金ETF(518850)
  *   固收债券：十年国债ETF(511260)
@@ -54,7 +54,7 @@ const ETF_CONFIG = (() => {
         BOND_YIELD: 'bond_yield',
     };
 
-    // ========== 所有ETF配置（19只）==========
+    // ========== 所有ETF配置（21只）==========
     const ETF_LIST = [
         // ===== 1. 红利低波ETF =====
         {
@@ -208,7 +208,57 @@ const ETF_CONFIG = (() => {
             dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
         },
 
-        // ===== 7. 恒生科技指数ETF =====
+        // ===== 7. 中证红利ETF =====
+        {
+            id: 'csi-dividend',
+            code: '515080',
+            name: '中证红利ETF',
+            shortName: '中证红利',
+            fullName: '招商中证红利ETF',
+            type: ETF_TYPE.SMART_BETA,
+            market: 'SH',
+            secid: '1.515080',
+            color: '#e65100',
+            icon: '🔴',
+            trackIndex: {
+                name: '中证红利指数',
+                code: '000922',
+                danjuanCode: 'SH000922',
+                danjuanName: '中证红利',
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_VALUE,
+            useBondSpread: true,
+            description: '跟踪中证红利指数(000922)，选取100只现金股息率高、分红稳定的上市公司。A股最经典的红利策略指数，连续15次分红，与红利低波互补。',
+            signalRules: 'buffett_value',
+            dimWeights: { valuation: 40, safety: 30, quality: 10, sentiment: 20 },
+        },
+
+        // ===== 8. 港股通红利ETF =====
+        {
+            id: 'hk-dividend',
+            code: '513820',
+            name: '港股通红利ETF',
+            shortName: '港股通红利',
+            fullName: '汇添富中证港股通高股息投资ETF',
+            type: ETF_TYPE.HK_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.513820',
+            color: '#ad1457',
+            icon: '🔶',
+            trackIndex: {
+                name: '中证港股通高股息投资指数',
+                code: '930914',
+                danjuanCode: null,    // 蛋卷基金暂无此指数
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_HK,
+            useBondSpread: true,
+            description: '跟踪中证港股通高股息投资指数(930914)，选取30只港股通高股息股票，股息率加权。PE约8倍、PB约0.65倍、股息率约5.5%，兼具高股息+港股低估双重安全边际。',
+            signalRules: 'buffett_hk_dividend',
+            dimWeights: { valuation: 35, safety: 35, quality: 10, sentiment: 20 },
+        },
+
+        // ===== 9. 恒生科技指数ETF（原7）=====
         {
             id: 'hstech',
             code: '513180',
