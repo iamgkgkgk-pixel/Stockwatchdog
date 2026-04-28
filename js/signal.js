@@ -408,6 +408,8 @@ const SignalEngine = (() => {
 
     /**
      * 构建 {date: value} 映射表
+     * 支持混合日期格式：YYYY-MM（月度）和 YYYY-MM-DD（日级别）
+     * 日级别数据和月度数据共存，interpolateFromMap 会优先使用日级别精确命中
      */
     function buildDateMap(arr) {
         const map = {};
@@ -429,7 +431,7 @@ const SignalEngine = (() => {
     }
 
     /**
-     * 在两个日期之间线性插值数值
+     * 在两个日期之间线性插值数值（月级别：startDate/endDate 为 YYYY-MM）
      * @param {string} startDate - 起始日期 YYYY-MM
      * @param {number} startVal - 起始值
      * @param {string} endDate - 结束日期 YYYY-MM
@@ -447,14 +449,68 @@ const SignalEngine = (() => {
     }
 
     /**
-     * 从月度映射表中，为指定日期做线性插值取值
-     * @param {Object} dateMap - {YYYY-MM: value}
-     * @param {string[]} sortedKeys - dateMap的键，已排序
+     * 在两个日级别日期之间线性插值（startDate/endDate 为 YYYY-MM-DD）
+     * @param {string} startDate - 起始日期 YYYY-MM-DD
+     * @param {number} startVal - 起始值
+     * @param {string} endDate - 结束日期 YYYY-MM-DD
+     * @param {number} endVal - 结束值
+     * @param {string} targetDate - 目标日期 YYYY-MM-DD
+     * @returns {number} 插值结果
+     */
+    function interpolateDaily(startDate, startVal, endDate, endVal, targetDate) {
+        const s = new Date(startDate).getTime();
+        const e = new Date(endDate).getTime();
+        const t = new Date(targetDate).getTime();
+        if (e === s) return startVal;
+        const ratio = Math.max(0, Math.min(1, (t - s) / (e - s)));
+        return startVal + (endVal - startVal) * ratio;
+    }
+
+    /**
+     * 从映射表中，为指定日期取值（支持日级别精确命中 + 月级别插值混合）
+     * 
+     * 数据查找优先级：
+     * 1. 精确命中 YYYY-MM-DD 日级别数据 → 直接返回（最优，真实采样值）
+     * 2. 日级别数据间插值 → 在两个相邻日级别点之间线性插值
+     * 3. 月级别数据插值 → 回退到原有的月间插值逻辑
+     * 
+     * @param {Object} dateMap - {YYYY-MM: value} 或 {YYYY-MM-DD: value} 混合
+     * @param {string[]} sortedKeys - dateMap的键，已排序（混合了YYYY-MM和YYYY-MM-DD）
      * @param {string} targetDate - YYYY-MM-DD
      * @returns {number|null}
      */
     function interpolateFromMap(dateMap, sortedKeys, targetDate) {
         if (!sortedKeys || sortedKeys.length === 0) return null;
+
+        // === 优先级1: 精确命中日级别 YYYY-MM-DD ===
+        if (dateMap[targetDate] !== undefined) {
+            return dateMap[targetDate];
+        }
+
+        // === 优先级2: 在日级别数据点之间插值 ===
+        // 查找targetDate前后最近的日级别数据点
+        let dailyBefore = null, dailyAfter = null;
+        for (let i = 0; i < sortedKeys.length; i++) {
+            const key = sortedKeys[i];
+            if (key.length !== 10) continue; // 跳过月级别 YYYY-MM（长度7）
+            if (key <= targetDate) dailyBefore = key;
+            if (key > targetDate && dailyAfter === null) dailyAfter = key;
+        }
+        
+        // 如果前后都有日级别数据点 → 在它们之间线性插值
+        if (dailyBefore && dailyAfter) {
+            return interpolateDaily(dailyBefore, dateMap[dailyBefore], dailyAfter, dateMap[dailyAfter], targetDate);
+        }
+        
+        // 如果只有前面有日级别数据点，且距离很近（7天内）→ 直接用它的值
+        if (dailyBefore && !dailyAfter) {
+            const daysDiff = (new Date(targetDate) - new Date(dailyBefore)) / 86400000;
+            if (daysDiff <= 7) {
+                return dateMap[dailyBefore];
+            }
+        }
+
+        // === 优先级3: 回退到月级别插值 ===
         const targetMonth = targetDate.slice(0, 7); // YYYY-MM
 
         // 精确命中月份
@@ -462,37 +518,41 @@ const SignalEngine = (() => {
             // 找下一个月来插值
             const idx = sortedKeys.indexOf(targetMonth);
             if (idx >= 0 && idx < sortedKeys.length - 1) {
-                const nextMonth = sortedKeys[idx + 1];
-                return interpolate(targetMonth, dateMap[targetMonth], nextMonth, dateMap[nextMonth], targetDate);
+                const nextKey = sortedKeys[idx + 1];
+                // 如果下一个key是日级别(YYYY-MM-DD)，用interpolateDaily
+                if (nextKey.length === 10) {
+                    return interpolateDaily(targetMonth + '-01', dateMap[targetMonth], nextKey, dateMap[nextKey], targetDate);
+                }
+                return interpolate(targetMonth, dateMap[targetMonth], nextKey, dateMap[nextKey], targetDate);
             }
             // 最后一个月：用前两个月的趋势做线性外推，避免整月数据是一条平线
-            // 例如 2026-03=33.8, 2026-04=32.5，则4月内的每一天会从32.5继续向下延伸
-            // 这样即使没有实时PE注入，日级别图表也能体现月内的估值变化趋势
             if (idx >= 1) {
-                const prevMonth = sortedKeys[idx - 1];
-                const prevVal = dateMap[prevMonth];
+                const prevKey = sortedKeys[idx - 1];
+                const prevVal = dateMap[prevKey];
                 const currVal = dateMap[targetMonth];
-                // 用前一个月到当月的斜率，虚拟构造"下一个月"的值进行插值
-                // 虚拟下月 = 当月 + (当月 - 上月)，即等速外推
                 const virtualNextVal = currVal + (currVal - prevVal);
-                // 构造虚拟下个月的YYYY-MM
                 const currDate = new Date(targetMonth + '-01');
                 const nextMonthDate = new Date(currDate.getFullYear(), currDate.getMonth() + 1, 1);
                 const virtualNextMonth = nextMonthDate.toISOString().slice(0, 7);
                 return interpolate(targetMonth, currVal, virtualNextMonth, virtualNextVal, targetDate);
             }
-            return dateMap[targetMonth]; // 只有1个月数据，无法外推，直接返回
+            return dateMap[targetMonth];
         }
 
-        // 在两个月之间
+        // 在两个键之间
         let before = null, after = null;
         for (let i = 0; i < sortedKeys.length; i++) {
-            if (sortedKeys[i] <= targetMonth) before = sortedKeys[i];
-            if (sortedKeys[i] > targetMonth && after === null) after = sortedKeys[i];
+            const key = sortedKeys[i];
+            const compareKey = key.length === 10 ? key : key + '-01'; // 月份转为月初日期比较
+            const compareTarget = targetDate;
+            if (compareKey <= compareTarget) before = key;
+            if (compareKey > compareTarget && after === null) after = key;
         }
 
         if (before !== null && after !== null) {
-            return interpolate(before, dateMap[before], after, dateMap[after], targetDate);
+            const beforeDate = before.length === 10 ? before : before + '-01';
+            const afterDate = after.length === 10 ? after : after + '-01';
+            return interpolateDaily(beforeDate, dateMap[before], afterDate, dateMap[after], targetDate);
         }
         if (before !== null) return dateMap[before];
         if (after !== null) return dateMap[after];

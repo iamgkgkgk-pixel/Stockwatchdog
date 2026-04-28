@@ -634,6 +634,11 @@
       "date": "2026-04",
       "value": 11.53,
       "percentile": 80.4
+    },
+    {
+      "date": "2026-04-28",
+      "value": 11.53,
+      "percentile": 80.4
     }
   ],
   "dividendYieldHistory": [
@@ -747,6 +752,10 @@
     },
     {
       "date": "2026-04",
+      "value": 3.22
+    },
+    {
+      "date": "2026-04-28",
       "value": 3.22
     }
   ],

@@ -1,6 +1,6 @@
 {
   "description": "科创创业50ETF历史数据",
-  "lastUpdate": "2026-04-15",
+  "lastUpdate": "2026-04-28",
   "peHistory": [
     {
       "date": "2021-01",
@@ -321,6 +321,11 @@
       "date": "2026-04",
       "value": 39.5,
       "percentile": 23.2
+    },
+    {
+      "date": "2026-04-28",
+      "value": 42.65,
+      "percentile": 50.5
     }
   ],
   "dividendYieldHistory": [
@@ -435,6 +440,10 @@
     {
       "date": "2026-04",
       "value": 0.54
+    },
+    {
+      "date": "2026-04-28",
+      "value": 0.95
     }
   ],
   "bondYieldHistory": [

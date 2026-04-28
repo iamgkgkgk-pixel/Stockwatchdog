@@ -1,6 +1,6 @@
 {
   "description": "标普500ETF历史数据",
-  "lastUpdate": "2026-04-15",
+  "lastUpdate": "2026-04-28",
   "peHistory": [
     {
       "date": "2016-01",
@@ -376,6 +376,11 @@
       "date": "2026-04",
       "value": 22.8,
       "percentile": 45.7
+    },
+    {
+      "date": "2026-04-28",
+      "value": 29.62,
+      "percentile": 89.6
     }
   ],
   "dividendYieldHistory": [
@@ -490,6 +495,10 @@
     {
       "date": "2026-04",
       "value": 1.62
+    },
+    {
+      "date": "2026-04-28",
+      "value": 1.05
     }
   ],
   "bondYieldHistory": [

@@ -1,6 +1,6 @@
 {
   "description": "恒生科技指数ETF历史数据",
-  "lastUpdate": "2026-04-15",
+  "lastUpdate": "2026-04-28",
   "peHistory": [
     {
       "date": "2021-01",
@@ -321,6 +321,11 @@
       "date": "2026-04",
       "value": 24.8,
       "percentile": 49.5
+    },
+    {
+      "date": "2026-04-28",
+      "value": 22.59,
+      "percentile": 28.7
     }
   ],
   "dividendYieldHistory": [
@@ -435,6 +440,10 @@
     {
       "date": "2026-04",
       "value": 0.52
+    },
+    {
+      "date": "2026-04-28",
+      "value": 1.14
     }
   ],
   "bondYieldHistory": [
