@@ -531,9 +531,12 @@ const SignalEngine = (() => {
                 const prevVal = dateMap[prevKey];
                 const currVal = dateMap[targetMonth];
                 const virtualNextVal = currVal + (currVal - prevVal);
-                const currDate = new Date(targetMonth + '-01');
-                const nextMonthDate = new Date(currDate.getFullYear(), currDate.getMonth() + 1, 1);
-                const virtualNextMonth = nextMonthDate.toISOString().slice(0, 7);
+                // 安全构造下个月的YYYY-MM（避免toISOString时区问题）
+                const tmYear = parseInt(targetMonth.slice(0, 4));
+                const tmMon = parseInt(targetMonth.slice(5, 7)); // 1-indexed
+                const vnYear = tmMon === 12 ? tmYear + 1 : tmYear;
+                const vnMon = tmMon === 12 ? 1 : tmMon + 1;
+                const virtualNextMonth = vnYear + '-' + String(vnMon).padStart(2, '0');
                 return interpolate(targetMonth, currVal, virtualNextMonth, virtualNextVal, targetDate);
             }
             return dateMap[targetMonth];
@@ -617,7 +620,7 @@ const SignalEngine = (() => {
         const dividendMap = buildDateMap(historyData.dividendYieldHistory);
         const bondMap = buildDateMap(historyData.bondYieldHistory);
 
-        // 【方案B增强】注入实时PE：在月度映射表中添加"当前月份+1"的虚拟锚点
+        // 【方案B增强】注入实时PE：在月度映射表中添加"下个月"的虚拟锚点
         // 这样 interpolateFromMap 在处理JSON最后一个月时就能从"JSON PE"插值到"实时PE"
         // 而不是整个月都返回同一个静态值
         const today = new Date();
@@ -625,8 +628,13 @@ const SignalEngine = (() => {
         const currentMonth = todayStr.slice(0, 7); // YYYY-MM
         if (realtimeData && realtimeData.pe > 0) {
             // 计算下个月的YYYY-MM作为插值终点
-            const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-            const nextMonth = nextMonthDate.toISOString().slice(0, 7);
+            // 注意：不能用 new Date(year, month+1, 1).toISOString()，因为 toISOString 输出UTC时间
+            // 在UTC+8时区，5月1日0点在UTC中是4月30日，导致 slice(0,7) 返回上个月！
+            const curYear = today.getFullYear();
+            const curMonth = today.getMonth(); // 0-indexed
+            const nextYear = curMonth === 11 ? curYear + 1 : curYear;
+            const nextMon = curMonth === 11 ? 1 : curMonth + 2; // 1-indexed for display
+            const nextMonth = nextYear + '-' + String(nextMon).padStart(2, '0');
             // 将实时PE设为"下个月"的值，这样当月内的日期就能在JSON最后值和实时值之间插值
             peMap[nextMonth] = realtimeData.pe;
             console.info(`📈 [calcDailyHistoricalSignals] 实时PE注入: ${nextMonth}=${realtimeData.pe} (API实时值，作为插值终点)`);
