@@ -16,6 +16,18 @@ const App = (() => {
     async function init() {
         showLoading(true);
         try {
+            // 等待ECharts加载完成（多级CDN fallback + 本地兜底，最多~10秒）
+            // 即使最终失败也不阻塞，让checkECharts显示友好提示
+            if (window.__echartsReady) {
+                try {
+                    await Promise.race([
+                        window.__echartsReady,
+                        new Promise(function(resolve) { setTimeout(resolve, 10000); })
+                    ]);
+                } catch (e) {
+                    console.warn('[init] ECharts加载超时或失败，继续初始化', e);
+                }
+            }
             renderTabBar();
             bindGlobalEvents();
             const hash = window.location.hash.replace('#', '');
@@ -1570,6 +1582,17 @@ const App = (() => {
     // ========== 事件 ==========
 
     function bindGlobalEvents() {
+        // ECharts 延迟加载完成后自动重新渲染当前ETF（避免显示"加载中"卡住）
+        let echartsReadyHandled = false;
+        window.addEventListener('echarts:ready', function() {
+            if (echartsReadyHandled) return;
+            echartsReadyHandled = true;
+            console.info('[ECharts] 加载完成，自动重新渲染当前ETF');
+            if (currentETFId) {
+                switchETF(currentETFId).catch(function(e) { console.error('ECharts就绪后重渲染失败:', e); });
+            }
+        });
+
         let refreshCooldown = false;
         const refreshBtn = document.getElementById('btn-refresh');
         if (refreshBtn) {

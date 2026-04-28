@@ -11,8 +11,24 @@ const ChartManager = (() => {
     function checkECharts(dom) {
         if (typeof echarts !== 'undefined') return true;
         if (dom) {
-            dom.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ffc107;font-size:13px;text-align:center;padding:12px;">' +
-                '⚠️ 图表库加载失败，请刷新页面重试<br><small style="color:#718096;">如持续失败请检查网络连接</small></div>';
+            // 如果 ECharts 还在加载中（Promise 未resolve），显示"加载中"
+            if (window.__echartsReady) {
+                dom.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#a0aec0;font-size:13px;text-align:center;padding:12px;">' +
+                    '⏳ 图表库加载中...</div>';
+                // ECharts 加载完成后自动重试初始化
+                window.__echartsReady.then(function() {
+                    if (typeof echarts !== 'undefined') {
+                        // 触发刷新事件，让上层重新初始化所有图表
+                        window.dispatchEvent(new CustomEvent('echarts:ready'));
+                    }
+                }).catch(function() {
+                    dom.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ffc107;font-size:13px;text-align:center;padding:12px;">' +
+                        '⚠️ 图表库加载失败，请刷新页面重试<br><small style="color:#718096;">如持续失败请检查网络连接</small></div>';
+                });
+            } else {
+                dom.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ffc107;font-size:13px;text-align:center;padding:12px;">' +
+                    '⚠️ 图表库加载失败，请刷新页面重试<br><small style="color:#718096;">如持续失败请检查网络连接</small></div>';
+            }
         }
         return false;
     }

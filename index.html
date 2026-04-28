@@ -7,25 +7,48 @@
     <meta name="description" content="ETF择时决策辅助工具 - 多品种择时信号一站式查看">
     <title>ETF择时助手</title>
 
-    <!-- ECharts: 多级 CDN fallback + 本地兜底 -->
-    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.5.0/echarts.min.js"
-            onerror="loadFallbackECharts(1)"></script>
+    <!-- ECharts: 多级 CDN fallback + 本地兜底（串行尝试，确保加载完成才放行） -->
     <script>
-    function loadFallbackECharts(level) {
+    (function() {
         var urls = [
+            'https://cdn.bootcdn.net/ajax/libs/echarts/5.5.0/echarts.min.js',
             'https://cdn.staticfile.net/echarts/5.5.0/echarts.min.js',
             'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js',
+            'https://lib.baomitu.com/echarts/5.5.0/echarts.min.js',
             'lib/echarts.min.js'
         ];
-        if (level > urls.length) {
-            console.error('[ECharts] 所有CDN和本地加载均失败');
-            return;
-        }
-        var s = document.createElement('script');
-        s.src = urls[level - 1];
-        s.onerror = function() { loadFallbackECharts(level + 1); };
-        document.head.appendChild(s);
-    }
+        var idx = 0;
+        // 全局Promise，main.js在初始化图表前可await
+        window.__echartsReady = new Promise(function(resolve, reject) {
+            function tryLoad() {
+                if (idx >= urls.length) {
+                    console.error('[ECharts] 所有CDN和本地加载均失败');
+                    reject(new Error('ECharts加载失败'));
+                    return;
+                }
+                var s = document.createElement('script');
+                s.src = urls[idx];
+                s.onload = function() {
+                    if (typeof echarts !== 'undefined') {
+                        console.info('[ECharts] 加载成功:', urls[idx]);
+                        resolve(echarts);
+                    } else {
+                        idx++;
+                        tryLoad();
+                    }
+                };
+                s.onerror = function() {
+                    console.warn('[ECharts] 加载失败，尝试下一个:', urls[idx]);
+                    idx++;
+                    tryLoad();
+                };
+                document.head.appendChild(s);
+            }
+            tryLoad();
+        });
+        // 失败时静默处理，避免unhandledrejection报错
+        window.__echartsReady.catch(function() {});
+    })();
     </script>
 
     <!-- Styles -->
@@ -308,11 +331,11 @@
     </div>
 
     <!-- ==================== Scripts ==================== -->
-    <script src="js/etf-config.js?v=20260418a"></script>
-    <script src="js/signal.js?v=20260418a"></script>
-    <script src="js/storage.js?v=20260418a"></script>
-    <script src="js/api.js?v=20260418a"></script>
-    <script src="js/charts.js?v=20260418a"></script>
-    <script src="js/main.js?v=20260418a"></script>
+    <script src="js/etf-config.js?v=20260428b"></script>
+    <script src="js/signal.js?v=20260428b"></script>
+    <script src="js/storage.js?v=20260428b"></script>
+    <script src="js/api.js?v=20260428b"></script>
+    <script src="js/charts.js?v=20260428b"></script>
+    <script src="js/main.js?v=20260428b"></script>
 </body>
 </html>
