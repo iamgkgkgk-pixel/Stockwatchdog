@@ -95,6 +95,16 @@ ETF_CONFIGS = [
         "useBondSpread": True,
         "bondType": "cn",
     },
+    # A股宽基 - 上证50
+    {
+        "id": "sse50",
+        "file": "sse50.json",
+        "type": "a_broad",
+        "danjuanCode": "SH000016",
+        "secid": "1.510050",
+        "useBondSpread": True,
+        "bondType": "cn",
+    },
     # A股成长型
     {
         "id": "sci-tech-50",

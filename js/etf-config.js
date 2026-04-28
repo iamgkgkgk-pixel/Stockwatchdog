@@ -14,9 +14,9 @@
  *   维度C: 盈利质量 — ROE、盈利趋势
  *   维度D: 市场温度 — 整体市场情绪（可选手动输入）
  * 
- * ETF分类（21只）：
+ * ETF分类（22只）：
  *   A股价值：红利低波(512890), 中证红利(515080), 自由现金流(159201)
- *   A股宽基：沪深300ETF(510300)
+ *   A股宽基：沪深300ETF(510300), 上证50ETF(510050)
  *   A股成长：科创创业50(588300), 创业板50(159949)
  *   A股行业：医药ETF(512010), 科创半导体ETF(588170), 机器人ETF(562500), 储能ETF(159566), PCB电子ETF(515260)
  *   美股QDII：标普500(513650), 纳指(513110)
@@ -54,7 +54,7 @@ const ETF_CONFIG = (() => {
         BOND_YIELD: 'bond_yield',
     };
 
-    // ========== 所有ETF配置（21只）==========
+    // ========== 所有ETF配置（22只）==========
     const ETF_LIST = [
         // ===== 1. 红利低波ETF =====
         {
@@ -308,7 +308,32 @@ const ETF_CONFIG = (() => {
             dimWeights: { valuation: 40, safety: 30, quality: 10, sentiment: 20 },
         },
 
-        // ===== 9. 医药ETF =====
+        // ===== 9. 上证50ETF =====
+        {
+            id: 'sse50',
+            code: '510050',
+            name: '上证50ETF',
+            shortName: '上证50',
+            fullName: '华夏上证50ETF',
+            type: ETF_TYPE.A_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.510050',
+            color: '#1565c0',
+            icon: '🏆',
+            trackIndex: {
+                name: '上证50指数',
+                code: '000016',
+                danjuanCode: 'SH000016',
+                danjuanName: '上证50',
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_BROAD,
+            useBondSpread: true,
+            description: '跟踪上证50指数(000016)，由沪市规模最大、流动性最好的50只蓝筹股组成。A股大盘核心资产的代表，与沪深300高度相关但更集中于金融+消费龙头。规模870+亿，中国最早的ETF。',
+            signalRules: 'buffett_broad',
+            dimWeights: { valuation: 40, safety: 30, quality: 10, sentiment: 20 },
+        },
+
+        // ===== 10. 医药ETF =====
         {
             id: 'pharma',
             code: '512010',

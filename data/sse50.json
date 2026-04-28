@@ -1,0 +1,889 @@
+{
+  "description": "上证50ETF历史数据",
+  "lastUpdate": "2026-04-28",
+  "spreadHistory": [
+    {
+      "date": "2021-01",
+      "value": 0.52
+    },
+    {
+      "date": "2021-02",
+      "value": 0.38
+    },
+    {
+      "date": "2021-03",
+      "value": 0.55
+    },
+    {
+      "date": "2021-04",
+      "value": 0.68
+    },
+    {
+      "date": "2021-05",
+      "value": 0.82
+    },
+    {
+      "date": "2021-06",
+      "value": 0.95
+    },
+    {
+      "date": "2021-07",
+      "value": 1.08
+    },
+    {
+      "date": "2021-08",
+      "value": 1.02
+    },
+    {
+      "date": "2021-09",
+      "value": 0.88
+    },
+    {
+      "date": "2021-10",
+      "value": 0.75
+    },
+    {
+      "date": "2021-11",
+      "value": 0.62
+    },
+    {
+      "date": "2021-12",
+      "value": 0.78
+    },
+    {
+      "date": "2022-01",
+      "value": 0.88
+    },
+    {
+      "date": "2022-02",
+      "value": 1.02
+    },
+    {
+      "date": "2022-03",
+      "value": 1.18
+    },
+    {
+      "date": "2022-04",
+      "value": 1.35
+    },
+    {
+      "date": "2022-05",
+      "value": 1.42
+    },
+    {
+      "date": "2022-06",
+      "value": 1.22
+    },
+    {
+      "date": "2022-07",
+      "value": 1.05
+    },
+    {
+      "date": "2022-08",
+      "value": 0.92
+    },
+    {
+      "date": "2022-09",
+      "value": 1.08
+    },
+    {
+      "date": "2022-10",
+      "value": 1.28
+    },
+    {
+      "date": "2022-11",
+      "value": 1.52
+    },
+    {
+      "date": "2022-12",
+      "value": 1.38
+    },
+    {
+      "date": "2023-01",
+      "value": 1.22
+    },
+    {
+      "date": "2023-02",
+      "value": 1.05
+    },
+    {
+      "date": "2023-03",
+      "value": 0.92
+    },
+    {
+      "date": "2023-04",
+      "value": 0.78
+    },
+    {
+      "date": "2023-05",
+      "value": 0.88
+    },
+    {
+      "date": "2023-06",
+      "value": 1.02
+    },
+    {
+      "date": "2023-07",
+      "value": 1.18
+    },
+    {
+      "date": "2023-08",
+      "value": 1.32
+    },
+    {
+      "date": "2023-09",
+      "value": 1.48
+    },
+    {
+      "date": "2023-10",
+      "value": 1.65
+    },
+    {
+      "date": "2023-11",
+      "value": 1.52
+    },
+    {
+      "date": "2023-12",
+      "value": 1.42
+    },
+    {
+      "date": "2024-01",
+      "value": 1.58
+    },
+    {
+      "date": "2024-02",
+      "value": 1.68
+    },
+    {
+      "date": "2024-03",
+      "value": 1.72
+    },
+    {
+      "date": "2024-04",
+      "value": 1.58
+    },
+    {
+      "date": "2024-05",
+      "value": 1.45
+    },
+    {
+      "date": "2024-06",
+      "value": 1.32
+    },
+    {
+      "date": "2024-07",
+      "value": 1.18
+    },
+    {
+      "date": "2024-08",
+      "value": 1.05
+    },
+    {
+      "date": "2024-09",
+      "value": 0.98
+    },
+    {
+      "date": "2024-10",
+      "value": 0.92
+    },
+    {
+      "date": "2024-11",
+      "value": 1.02
+    },
+    {
+      "date": "2024-12",
+      "value": 1.18
+    },
+    {
+      "date": "2025-01",
+      "value": 1.28
+    },
+    {
+      "date": "2025-02",
+      "value": 1.32
+    },
+    {
+      "date": "2025-03",
+      "value": 1.18
+    },
+    {
+      "date": "2025-04",
+      "value": 1.05
+    },
+    {
+      "date": "2025-05",
+      "value": 0.92
+    },
+    {
+      "date": "2025-06",
+      "value": 0.85
+    },
+    {
+      "date": "2025-07",
+      "value": 0.98
+    },
+    {
+      "date": "2025-08",
+      "value": 1.12
+    },
+    {
+      "date": "2025-09",
+      "value": 1.28
+    },
+    {
+      "date": "2025-10",
+      "value": 1.22
+    },
+    {
+      "date": "2025-11",
+      "value": 1.08
+    },
+    {
+      "date": "2025-12",
+      "value": 1.18
+    },
+    {
+      "date": "2026-01",
+      "value": 1.25
+    },
+    {
+      "date": "2026-02",
+      "value": 1.18
+    },
+    {
+      "date": "2026-03",
+      "value": 0.92
+    },
+    {
+      "date": "2026-04",
+      "value": 1.4
+    }
+  ],
+  "peHistory": [
+    {
+      "date": "2016-01",
+      "value": 9.58,
+      "percentile": 18.5
+    },
+    {
+      "date": "2016-06",
+      "value": 9.92,
+      "percentile": 28.2
+    },
+    {
+      "date": "2016-12",
+      "value": 10.35,
+      "percentile": 38.6
+    },
+    {
+      "date": "2017-06",
+      "value": 10.88,
+      "percentile": 55.2
+    },
+    {
+      "date": "2017-12",
+      "value": 11.82,
+      "percentile": 78.5
+    },
+    {
+      "date": "2018-06",
+      "value": 10.55,
+      "percentile": 42.8
+    },
+    {
+      "date": "2018-12",
+      "value": 8.88,
+      "percentile": 4.5
+    },
+    {
+      "date": "2019-06",
+      "value": 10.72,
+      "percentile": 48.5
+    },
+    {
+      "date": "2019-12",
+      "value": 11.15,
+      "percentile": 62.8
+    },
+    {
+      "date": "2020-06",
+      "value": 10.88,
+      "percentile": 55.2
+    },
+    {
+      "date": "2020-12",
+      "value": 13.52,
+      "percentile": 92.5
+    },
+    {
+      "date": "2021-01",
+      "value": 14.08,
+      "percentile": 95.2
+    },
+    {
+      "date": "2021-02",
+      "value": 13.55,
+      "percentile": 93.1
+    },
+    {
+      "date": "2021-03",
+      "value": 12.45,
+      "percentile": 85.8
+    },
+    {
+      "date": "2021-04",
+      "value": 12.02,
+      "percentile": 80.2
+    },
+    {
+      "date": "2021-05",
+      "value": 12.28,
+      "percentile": 83.5
+    },
+    {
+      "date": "2021-06",
+      "value": 12.55,
+      "percentile": 86.8
+    },
+    {
+      "date": "2021-07",
+      "value": 12.08,
+      "percentile": 81.2
+    },
+    {
+      "date": "2021-08",
+      "value": 11.72,
+      "percentile": 75.5
+    },
+    {
+      "date": "2021-09",
+      "value": 11.35,
+      "percentile": 68.2
+    },
+    {
+      "date": "2021-10",
+      "value": 11.55,
+      "percentile": 72.5
+    },
+    {
+      "date": "2021-11",
+      "value": 11.82,
+      "percentile": 78.5
+    },
+    {
+      "date": "2021-12",
+      "value": 11.95,
+      "percentile": 79.8
+    },
+    {
+      "date": "2022-01",
+      "value": 11.12,
+      "percentile": 62.2
+    },
+    {
+      "date": "2022-02",
+      "value": 10.72,
+      "percentile": 48.5
+    },
+    {
+      "date": "2022-03",
+      "value": 9.98,
+      "percentile": 30.5
+    },
+    {
+      "date": "2022-04",
+      "value": 9.28,
+      "percentile": 10.8
+    },
+    {
+      "date": "2022-05",
+      "value": 9.65,
+      "percentile": 22.5
+    },
+    {
+      "date": "2022-06",
+      "value": 10.82,
+      "percentile": 52.8
+    },
+    {
+      "date": "2022-07",
+      "value": 10.45,
+      "percentile": 40.2
+    },
+    {
+      "date": "2022-08",
+      "value": 10.12,
+      "percentile": 32.8
+    },
+    {
+      "date": "2022-09",
+      "value": 9.72,
+      "percentile": 25.5
+    },
+    {
+      "date": "2022-10",
+      "value": 9.08,
+      "percentile": 6.2
+    },
+    {
+      "date": "2022-11",
+      "value": 9.52,
+      "percentile": 16.8
+    },
+    {
+      "date": "2022-12",
+      "value": 10.15,
+      "percentile": 33.5
+    },
+    {
+      "date": "2023-01",
+      "value": 10.82,
+      "percentile": 52.8
+    },
+    {
+      "date": "2023-02",
+      "value": 11.05,
+      "percentile": 60.2
+    },
+    {
+      "date": "2023-03",
+      "value": 10.68,
+      "percentile": 46.8
+    },
+    {
+      "date": "2023-04",
+      "value": 10.35,
+      "percentile": 38.6
+    },
+    {
+      "date": "2023-05",
+      "value": 9.92,
+      "percentile": 28.2
+    },
+    {
+      "date": "2023-06",
+      "value": 9.65,
+      "percentile": 22.5
+    },
+    {
+      "date": "2023-07",
+      "value": 10.18,
+      "percentile": 35.2
+    },
+    {
+      "date": "2023-08",
+      "value": 9.88,
+      "percentile": 27.5
+    },
+    {
+      "date": "2023-09",
+      "value": 9.52,
+      "percentile": 16.8
+    },
+    {
+      "date": "2023-10",
+      "value": 9.22,
+      "percentile": 8.5
+    },
+    {
+      "date": "2023-11",
+      "value": 9.38,
+      "percentile": 12.8
+    },
+    {
+      "date": "2023-12",
+      "value": 9.52,
+      "percentile": 16.8
+    },
+    {
+      "date": "2024-01",
+      "value": 9.12,
+      "percentile": 5.5
+    },
+    {
+      "date": "2024-02",
+      "value": 8.85,
+      "percentile": 3.8
+    },
+    {
+      "date": "2024-03",
+      "value": 9.35,
+      "percentile": 12.2
+    },
+    {
+      "date": "2024-04",
+      "value": 9.68,
+      "percentile": 23.5
+    },
+    {
+      "date": "2024-05",
+      "value": 9.95,
+      "percentile": 29.2
+    },
+    {
+      "date": "2024-06",
+      "value": 10.22,
+      "percentile": 36.5
+    },
+    {
+      "date": "2024-07",
+      "value": 9.92,
+      "percentile": 28.2
+    },
+    {
+      "date": "2024-08",
+      "value": 9.65,
+      "percentile": 22.5
+    },
+    {
+      "date": "2024-09",
+      "value": 10.42,
+      "percentile": 39.8
+    },
+    {
+      "date": "2024-10",
+      "value": 11.55,
+      "percentile": 72.5
+    },
+    {
+      "date": "2024-11",
+      "value": 11.82,
+      "percentile": 78.5
+    },
+    {
+      "date": "2024-12",
+      "value": 11.15,
+      "percentile": 62.8
+    },
+    {
+      "date": "2025-01",
+      "value": 10.82,
+      "percentile": 52.8
+    },
+    {
+      "date": "2025-02",
+      "value": 11.18,
+      "percentile": 63.5
+    },
+    {
+      "date": "2025-03",
+      "value": 11.52,
+      "percentile": 71.8
+    },
+    {
+      "date": "2025-04",
+      "value": 11.78,
+      "percentile": 77.5
+    },
+    {
+      "date": "2025-05",
+      "value": 11.35,
+      "percentile": 68.2
+    },
+    {
+      "date": "2025-06",
+      "value": 11.02,
+      "percentile": 58.5
+    },
+    {
+      "date": "2025-07",
+      "value": 10.75,
+      "percentile": 50.2
+    },
+    {
+      "date": "2025-08",
+      "value": 11.08,
+      "percentile": 60.8
+    },
+    {
+      "date": "2025-09",
+      "value": 11.42,
+      "percentile": 70.5
+    },
+    {
+      "date": "2025-10",
+      "value": 11.22,
+      "percentile": 65.2
+    },
+    {
+      "date": "2025-11",
+      "value": 10.85,
+      "percentile": 53.8
+    },
+    {
+      "date": "2025-12",
+      "value": 11.05,
+      "percentile": 60.2
+    },
+    {
+      "date": "2026-01",
+      "value": 11.25,
+      "percentile": 66.5
+    },
+    {
+      "date": "2026-02",
+      "value": 11.02,
+      "percentile": 58.5
+    },
+    {
+      "date": "2026-03",
+      "value": 10.78,
+      "percentile": 51.2
+    },
+    {
+      "date": "2026-04",
+      "value": 11.53,
+      "percentile": 80.4
+    }
+  ],
+  "dividendYieldHistory": [
+    {
+      "date": "2024-01",
+      "value": 3.15
+    },
+    {
+      "date": "2024-02",
+      "value": 3.22
+    },
+    {
+      "date": "2024-03",
+      "value": 3.18
+    },
+    {
+      "date": "2024-04",
+      "value": 3.08
+    },
+    {
+      "date": "2024-05",
+      "value": 3.02
+    },
+    {
+      "date": "2024-06",
+      "value": 2.95
+    },
+    {
+      "date": "2024-07",
+      "value": 3.02
+    },
+    {
+      "date": "2024-08",
+      "value": 3.08
+    },
+    {
+      "date": "2024-09",
+      "value": 2.92
+    },
+    {
+      "date": "2024-10",
+      "value": 2.68
+    },
+    {
+      "date": "2024-11",
+      "value": 2.62
+    },
+    {
+      "date": "2024-12",
+      "value": 2.75
+    },
+    {
+      "date": "2025-01",
+      "value": 2.82
+    },
+    {
+      "date": "2025-02",
+      "value": 2.75
+    },
+    {
+      "date": "2025-03",
+      "value": 2.68
+    },
+    {
+      "date": "2025-04",
+      "value": 2.62
+    },
+    {
+      "date": "2025-05",
+      "value": 2.72
+    },
+    {
+      "date": "2025-06",
+      "value": 2.78
+    },
+    {
+      "date": "2025-07",
+      "value": 2.85
+    },
+    {
+      "date": "2025-08",
+      "value": 2.78
+    },
+    {
+      "date": "2025-09",
+      "value": 2.72
+    },
+    {
+      "date": "2025-10",
+      "value": 2.75
+    },
+    {
+      "date": "2025-11",
+      "value": 2.82
+    },
+    {
+      "date": "2025-12",
+      "value": 2.78
+    },
+    {
+      "date": "2026-01",
+      "value": 2.75
+    },
+    {
+      "date": "2026-02",
+      "value": 2.78
+    },
+    {
+      "date": "2026-03",
+      "value": 2.92
+    },
+    {
+      "date": "2026-04",
+      "value": 3.22
+    }
+  ],
+  "bondYieldHistory": [
+    {
+      "date": "2024-01",
+      "value": 2.52
+    },
+    {
+      "date": "2024-02",
+      "value": 2.48
+    },
+    {
+      "date": "2024-03",
+      "value": 2.42
+    },
+    {
+      "date": "2024-04",
+      "value": 2.35
+    },
+    {
+      "date": "2024-05",
+      "value": 2.32
+    },
+    {
+      "date": "2024-06",
+      "value": 2.25
+    },
+    {
+      "date": "2024-07",
+      "value": 2.2
+    },
+    {
+      "date": "2024-08",
+      "value": 2.18
+    },
+    {
+      "date": "2024-09",
+      "value": 2.15
+    },
+    {
+      "date": "2024-10",
+      "value": 2.12
+    },
+    {
+      "date": "2024-11",
+      "value": 2.08
+    },
+    {
+      "date": "2024-12",
+      "value": 2.05
+    },
+    {
+      "date": "2025-01",
+      "value": 2.02
+    },
+    {
+      "date": "2025-02",
+      "value": 2.0
+    },
+    {
+      "date": "2025-03",
+      "value": 1.98
+    },
+    {
+      "date": "2025-04",
+      "value": 1.96
+    },
+    {
+      "date": "2025-05",
+      "value": 1.95
+    },
+    {
+      "date": "2025-06",
+      "value": 1.95
+    },
+    {
+      "date": "2025-07",
+      "value": 1.92
+    },
+    {
+      "date": "2025-08",
+      "value": 1.9
+    },
+    {
+      "date": "2025-09",
+      "value": 1.88
+    },
+    {
+      "date": "2025-10",
+      "value": 1.87
+    },
+    {
+      "date": "2025-11",
+      "value": 1.86
+    },
+    {
+      "date": "2025-12",
+      "value": 1.85
+    },
+    {
+      "date": "2026-01",
+      "value": 1.83
+    },
+    {
+      "date": "2026-02",
+      "value": 1.82
+    },
+    {
+      "date": "2026-03",
+      "value": 1.81
+    },
+    {
+      "date": "2026-04",
+      "value": 1.82
+    }
+  ],
+  "currentData": {
+    "dividendYield": 3.22,
+    "bondYield": 1.82,
+    "spread": 1.4,
+    "spreadPercentile": 45.8,
+    "pe": 11.53,
+    "pePercentile": 80.4,
+    "pb": 1.23,
+    "pbPercentile": 50.08,
+    "price": 0,
+    "priceChange": 0,
+    "updateTime": "2026-04-28",
+    "note": "上证50指数估值数据"
+  },
+  "valuationAnchor": {
+    "peMean": 10.68,
+    "peStd": 1.08,
+    "dataYears": "2016-2026",
+    "dataPoints": 75,
+    "source": "JSON历史PE统计(上证50指数SH000016，含10年月度数据)",
+    "updateDate": "2026-04"
+  }
+}
