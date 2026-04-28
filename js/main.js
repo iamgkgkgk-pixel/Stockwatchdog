@@ -1042,6 +1042,7 @@ const App = (() => {
     function renderRadarChart(etfConfig, scores) {
         const dom = document.getElementById('chart-radar');
         if (!dom) return;
+        if (!ChartManager.checkECharts(dom)) return;
 
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
         const names = rules.dimensionNames || {};
@@ -2337,6 +2338,7 @@ const App = (() => {
     function renderVIXGauge(vixValue, zone) {
         const dom = document.getElementById('vix-gauge-chart');
         if (!dom) return;
+        if (!ChartManager.checkECharts(dom)) return;
 
         let chart = echarts.getInstanceByDom(dom);
         if (!chart) chart = echarts.init(dom);
@@ -2442,6 +2444,7 @@ const App = (() => {
     function renderVIXKlineChart(kline, currentVIX) {
         const dom = document.getElementById('vix-kline-chart');
         if (!dom) return;
+        if (!ChartManager.checkECharts(dom)) return;
 
         let chart = echarts.getInstanceByDom(dom);
         if (!chart) chart = echarts.init(dom);

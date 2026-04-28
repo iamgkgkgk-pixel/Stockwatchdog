@@ -764,7 +764,7 @@ const ChartManager = (() => {
         return chart;
     }
 
-    return { initGauge, updateGauge, updateGaugePending, getGaugeChart, initLineChart, initSignalHistoryChart, initDailySignalHistoryChart, initAlgoCompareChart, initScorePercentileChart, resizeAll,
+    return { initGauge, updateGauge, updateGaugePending, getGaugeChart, initLineChart, initSignalHistoryChart, initDailySignalHistoryChart, initAlgoCompareChart, initScorePercentileChart, resizeAll, checkECharts,
         // 兼容旧版接口
         initSpreadGauge: (id)=>initGauge(id,'股债利差分位',false),
         initPEGauge: (id)=>initGauge(id,'PE历史分位',true),
