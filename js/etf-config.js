@@ -208,6 +208,31 @@ const ETF_CONFIG = (() => {
             dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
         },
 
+        // ===== 6.5 道琼斯ETF =====
+        {
+            id: 'dow-jones',
+            code: '513400',
+            name: '道琼斯ETF',
+            shortName: '道琼斯',
+            fullName: '道琼斯ETF鹏华(QDII)',
+            type: ETF_TYPE.US_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.513400',
+            color: '#0288d1',
+            icon: '🏦',
+            trackIndex: {
+                name: 'Dow Jones Industrial Average',
+                code: 'DJIA',
+                danjuanCode: 'DJIA',
+                danjuanName: '道琼斯指数',
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_US,
+            useBondSpread: false,
+            description: '跟踪道琼斯工业平均指数(DJIA)，由美国30家最具代表性的蓝筹工业/金融/消费龙头组成。最古老的美股指数(1896年)，相比标普500和纳指更偏价值/工业，与科技股相关性较低，是美股成熟蓝筹的代表。',
+            signalRules: 'buffett_us',
+            dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
+        },
+
         // ===== 7. 中证红利ETF =====
         {
             id: 'csi-dividend',

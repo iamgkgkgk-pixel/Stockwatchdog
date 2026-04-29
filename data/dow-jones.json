@@ -1,0 +1,433 @@
+{
+  "description": "道琼斯ETF历史数据（513400 道琼斯ETF鹏华，跟踪DJIA道琼斯工业平均指数）",
+  "lastUpdate": "2026-04-29",
+  "peHistory": [
+    {
+      "date": "2016-01",
+      "value": 15.8,
+      "percentile": 2.9
+    },
+    {
+      "date": "2016-06",
+      "value": 16.5,
+      "percentile": 5.7
+    },
+    {
+      "date": "2016-12",
+      "value": 18.2,
+      "percentile": 11.4
+    },
+    {
+      "date": "2017-06",
+      "value": 19.1,
+      "percentile": 20.0
+    },
+    {
+      "date": "2017-12",
+      "value": 22.5,
+      "percentile": 34.3
+    },
+    {
+      "date": "2018-06",
+      "value": 19.8,
+      "percentile": 25.7
+    },
+    {
+      "date": "2018-12",
+      "value": 17.2,
+      "percentile": 8.6
+    },
+    {
+      "date": "2019-06",
+      "value": 18.5,
+      "percentile": 17.1
+    },
+    {
+      "date": "2019-12",
+      "value": 22.1,
+      "percentile": 31.4
+    },
+    {
+      "date": "2020-06",
+      "value": 25.8,
+      "percentile": 51.4
+    },
+    {
+      "date": "2020-12",
+      "value": 28.5,
+      "percentile": 97.1
+    },
+    {
+      "date": "2021-06",
+      "value": 24.2,
+      "percentile": 42.9
+    },
+    {
+      "date": "2021-12",
+      "value": 22.8,
+      "percentile": 37.1
+    },
+    {
+      "date": "2022-06",
+      "value": 18.5,
+      "percentile": 17.1
+    },
+    {
+      "date": "2022-12",
+      "value": 19.2,
+      "percentile": 22.9
+    },
+    {
+      "date": "2023-06",
+      "value": 21.5,
+      "percentile": 28.6
+    },
+    {
+      "date": "2023-12",
+      "value": 23.1,
+      "percentile": 40.0
+    },
+    {
+      "date": "2024-06",
+      "value": 24.8,
+      "percentile": 45.7
+    },
+    {
+      "date": "2024-12",
+      "value": 26.5,
+      "percentile": 62.9
+    },
+    {
+      "date": "2025-01",
+      "value": 27.2,
+      "percentile": 77.1
+    },
+    {
+      "date": "2025-02",
+      "value": 26.8,
+      "percentile": 68.6
+    },
+    {
+      "date": "2025-03",
+      "value": 27.5,
+      "percentile": 85.7
+    },
+    {
+      "date": "2025-04",
+      "value": 26.2,
+      "percentile": 57.1
+    },
+    {
+      "date": "2025-05",
+      "value": 27.8,
+      "percentile": 88.6
+    },
+    {
+      "date": "2025-06",
+      "value": 28.5,
+      "percentile": 97.1
+    },
+    {
+      "date": "2025-07",
+      "value": 27.2,
+      "percentile": 77.1
+    },
+    {
+      "date": "2025-08",
+      "value": 26.5,
+      "percentile": 62.9
+    },
+    {
+      "date": "2025-09",
+      "value": 25.8,
+      "percentile": 51.4
+    },
+    {
+      "date": "2025-10",
+      "value": 26.2,
+      "percentile": 57.1
+    },
+    {
+      "date": "2025-11",
+      "value": 27.5,
+      "percentile": 85.7
+    },
+    {
+      "date": "2025-12",
+      "value": 28.2,
+      "percentile": 91.4
+    },
+    {
+      "date": "2026-01",
+      "value": 28.8,
+      "percentile": 100.0
+    },
+    {
+      "date": "2026-02",
+      "value": 27.5,
+      "percentile": 85.7
+    },
+    {
+      "date": "2026-03",
+      "value": 26.8,
+      "percentile": 68.6
+    },
+    {
+      "date": "2026-04",
+      "value": 27.2,
+      "percentile": 77.1
+    }
+  ],
+  "dividendYieldHistory": [
+    {
+      "date": "2024-01",
+      "value": 2.02
+    },
+    {
+      "date": "2024-02",
+      "value": 1.98
+    },
+    {
+      "date": "2024-03",
+      "value": 1.95
+    },
+    {
+      "date": "2024-04",
+      "value": 1.98
+    },
+    {
+      "date": "2024-05",
+      "value": 1.95
+    },
+    {
+      "date": "2024-06",
+      "value": 1.92
+    },
+    {
+      "date": "2024-07",
+      "value": 1.88
+    },
+    {
+      "date": "2024-08",
+      "value": 1.92
+    },
+    {
+      "date": "2024-09",
+      "value": 1.95
+    },
+    {
+      "date": "2024-10",
+      "value": 1.98
+    },
+    {
+      "date": "2024-11",
+      "value": 1.92
+    },
+    {
+      "date": "2024-12",
+      "value": 1.95
+    },
+    {
+      "date": "2025-01",
+      "value": 1.98
+    },
+    {
+      "date": "2025-02",
+      "value": 1.95
+    },
+    {
+      "date": "2025-03",
+      "value": 1.98
+    },
+    {
+      "date": "2025-04",
+      "value": 2.02
+    },
+    {
+      "date": "2025-05",
+      "value": 1.98
+    },
+    {
+      "date": "2025-06",
+      "value": 1.95
+    },
+    {
+      "date": "2025-07",
+      "value": 1.92
+    },
+    {
+      "date": "2025-08",
+      "value": 1.95
+    },
+    {
+      "date": "2025-09",
+      "value": 1.98
+    },
+    {
+      "date": "2025-10",
+      "value": 2.02
+    },
+    {
+      "date": "2025-11",
+      "value": 2.05
+    },
+    {
+      "date": "2025-12",
+      "value": 2.08
+    },
+    {
+      "date": "2026-01",
+      "value": 2.12
+    },
+    {
+      "date": "2026-02",
+      "value": 2.15
+    },
+    {
+      "date": "2026-03",
+      "value": 2.18
+    },
+    {
+      "date": "2026-04",
+      "value": 2.22
+    },
+    {
+      "date": "2026-04-28",
+      "value": 1.65
+    }
+  ],
+  "bondYieldHistory": [
+    {
+      "date": "2024-01",
+      "value": 4.08
+    },
+    {
+      "date": "2024-02",
+      "value": 4.15
+    },
+    {
+      "date": "2024-03",
+      "value": 4.22
+    },
+    {
+      "date": "2024-04",
+      "value": 4.55
+    },
+    {
+      "date": "2024-05",
+      "value": 4.48
+    },
+    {
+      "date": "2024-06",
+      "value": 4.35
+    },
+    {
+      "date": "2024-07",
+      "value": 4.28
+    },
+    {
+      "date": "2024-08",
+      "value": 3.92
+    },
+    {
+      "date": "2024-09",
+      "value": 3.78
+    },
+    {
+      "date": "2024-10",
+      "value": 4.08
+    },
+    {
+      "date": "2024-11",
+      "value": 4.22
+    },
+    {
+      "date": "2024-12",
+      "value": 4.55
+    },
+    {
+      "date": "2025-01",
+      "value": 4.62
+    },
+    {
+      "date": "2025-02",
+      "value": 4.48
+    },
+    {
+      "date": "2025-03",
+      "value": 4.35
+    },
+    {
+      "date": "2025-04",
+      "value": 4.22
+    },
+    {
+      "date": "2025-05",
+      "value": 4.15
+    },
+    {
+      "date": "2025-06",
+      "value": 4.08
+    },
+    {
+      "date": "2025-07",
+      "value": 3.98
+    },
+    {
+      "date": "2025-08",
+      "value": 3.88
+    },
+    {
+      "date": "2025-09",
+      "value": 3.82
+    },
+    {
+      "date": "2025-10",
+      "value": 3.78
+    },
+    {
+      "date": "2025-11",
+      "value": 3.72
+    },
+    {
+      "date": "2025-12",
+      "value": 3.68
+    },
+    {
+      "date": "2026-01",
+      "value": 3.62
+    },
+    {
+      "date": "2026-02",
+      "value": 3.55
+    },
+    {
+      "date": "2026-03",
+      "value": 3.48
+    },
+    {
+      "date": "2026-04",
+      "value": 4.31
+    }
+  ],
+  "currentData": {
+    "dividendYield": 1.65,
+    "bondYield": 4.31,
+    "pe": 27.2,
+    "pePercentile": 77.1,
+    "pb": 4.85,
+    "pbPercentile": 70.0,
+    "price": 0,
+    "priceChange": 0,
+    "updateTime": "2026-04-29",
+    "note": "道琼斯工业平均指数估值数据（美元10Y国债收益率）"
+  },
+  "valuationAnchor": {
+    "peMean": 24.01,
+    "peStd": 4.03,
+    "dataYears": "10Y",
+    "dataPoints": 35,
+    "source": "JSON历史PE统计(DJIA道琼斯指数，含10年月度/半年度数据)",
+    "updateDate": "2026-04"
+  }
+}

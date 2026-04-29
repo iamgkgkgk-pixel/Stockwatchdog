@@ -71,6 +71,7 @@ ETF_CONFIGS = [
     {"id": "pcb", "file": "pcb.json", "type": "a_growth_new", "danjuanCode": None, "secid": "1.515260", "useBondSpread": False, "bondType": "cn"},
     {"id": "sp500-cn", "file": "sp500-cn.json", "type": "us_stock", "danjuanCode": "SP500", "secid": "1.513650", "useBondSpread": False, "bondType": "us"},
     {"id": "nasdaq100-cn", "file": "nasdaq100-cn.json", "type": "us_stock", "danjuanCode": "NDX", "secid": "1.513110", "useBondSpread": False, "bondType": "us"},
+    {"id": "dow-jones", "file": "dow-jones.json", "type": "us_stock", "danjuanCode": "DJIA", "secid": "1.513400", "useBondSpread": False, "bondType": "us"},
     {"id": "csi-dividend", "file": "csi-dividend.json", "type": "a_value", "danjuanCode": "SH000922", "secid": "1.515080", "useBondSpread": True, "bondType": "cn"},
     {"id": "hk-dividend", "file": "hk-dividend.json", "type": "hk_dividend", "danjuanCode": None, "secid": "1.513820", "useBondSpread": True, "bondType": "cn"},
     {"id": "hstech", "file": "hstech.json", "type": "hk_stock", "danjuanCode": "HKHSTECH", "secid": "1.513180", "useBondSpread": False, "bondType": "cn"},

@@ -188,6 +188,16 @@ ETF_CONFIGS = [
         "useBondSpread": False,
         "bondType": "us",
     },
+    # 美股价值蓝筹 - 道琼斯ETF（513400 道琼斯ETF鹏华，跟踪DJIA）
+    {
+        "id": "dow-jones",
+        "file": "dow-jones.json",
+        "type": "us_stock",
+        "danjuanCode": "DJIA",
+        "secid": "1.513400",
+        "useBondSpread": False,
+        "bondType": "us",
+    },
     # A股价值型 - 中证红利
     {
         "id": "csi-dividend",
