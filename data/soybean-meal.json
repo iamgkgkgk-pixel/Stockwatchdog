@@ -1,6 +1,6 @@
 {
   "description": "豆粕ETF历史数据",
-  "lastUpdate": "2026-04-15",
+  "lastUpdate": "2026-05-01",
   "priceHistory": [
     {
       "date": "2021-01",
@@ -257,12 +257,16 @@
     {
       "date": "2026-04",
       "value": 1.368
+    },
+    {
+      "date": "2026-05",
+      "value": 2.16
     }
   ],
   "currentData": {
-    "price": 1.368,
-    "priceChange": 1.18,
-    "updateTime": "2026-04-15",
+    "price": 2.16,
+    "priceChange": -0.14,
+    "updateTime": "2026-05-01",
     "note": "大商所豆粕期货价格指数(元)"
   }
 }

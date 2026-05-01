@@ -1,6 +1,6 @@
 {
   "description": "储能电池ETF历史数据",
-  "lastUpdate": "2026-04-14",
+  "lastUpdate": "2026-05-01",
   "peHistory": [
     {
       "date": "2020-07",
@@ -121,6 +121,11 @@
       "date": "2026-04",
       "value": 38.5,
       "percentile": 35
+    },
+    {
+      "date": "2026-05",
+      "value": 36.5,
+      "percentile": 31.5
     }
   ],
   "dividendHistory": [
@@ -171,6 +176,10 @@
     {
       "date": "2026-01",
       "value": 0.55
+    },
+    {
+      "date": "2026-05",
+      "value": 0.5
     }
   ],
   "bondYieldHistory": [
@@ -221,6 +230,10 @@
     {
       "date": "2026-01",
       "value": 1.65
+    },
+    {
+      "date": "2026-05",
+      "value": 1.82
     }
   ],
   "valuationAnchor": {

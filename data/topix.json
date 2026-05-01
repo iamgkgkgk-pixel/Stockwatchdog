@@ -1,6 +1,6 @@
 {
   "description": "东证指数(TOPIX)ETF历史数据",
-  "lastUpdate": "2026-04-14",
+  "lastUpdate": "2026-05-01",
   "peHistory": [
     {
       "date": "2016-01",
@@ -376,6 +376,11 @@
       "date": "2026-04",
       "value": 16.2,
       "percentile": 42.5
+    },
+    {
+      "date": "2026-05",
+      "value": 15.55,
+      "percentile": 36.1
     }
   ],
   "dividendYieldHistory": [
@@ -518,6 +523,10 @@
     {
       "date": "2026-04",
       "value": 2.22
+    },
+    {
+      "date": "2026-05",
+      "value": 2.27
     }
   ],
   "bondYieldHistory": [
@@ -660,19 +669,24 @@
     {
       "date": "2026-04",
       "value": 1.15
+    },
+    {
+      "date": "2026-05",
+      "value": 4.31
     }
   ],
   "currentData": {
     "dividendYield": 2.22,
-    "bondYield": 1.15,
+    "bondYield": 4.31,
     "pe": 16.2,
     "pePercentile": 42.5,
     "pb": 1.42,
     "pbPercentile": 55.8,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-04-14",
-    "note": "东证指数(TOPIX)估值数据（日本10Y国债收益率约1.15%，TOPIX覆盖全市场，PE中枢低于日经225）"
+    "updateTime": "2026-05-01",
+    "note": "东证指数(TOPIX)估值数据（日本10Y国债收益率约1.15%，TOPIX覆盖全市场，PE中枢低于日经225）",
+    "spread": -2.09
   },
   "valuationAnchor": {
     "peMean": 14.84,
