@@ -813,6 +813,85 @@ body {
     }
 }
 
+/* ========== 趋势强度卡片（右侧浅回撤追踪） ========== */
+.trend-strength-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 12px;
+    margin: 6px 0 4px 0;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+}
+.trend-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    border-left: 3px solid var(--metric-color, #4a5568);
+}
+.trend-metric-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+.trend-metric-value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+.trend-metric-sub {
+    font-size: 10px;
+    color: var(--text-secondary);
+    opacity: 0.85;
+}
+.trend-zone-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid currentColor;
+    background: rgba(255, 255, 255, 0.04);
+    margin-top: 2px;
+    align-self: flex-start;
+}
+.trend-signal17 {
+    grid-column: 1 / -1;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.trend-signal17 .tag-buy    { background:#0d7337; color:#fff; }
+.trend-signal17 .tag-hold   { background:#ffc107; color:#1a202c; }
+.trend-signal17 .tag-sell   { background:#dc3545; color:#fff; }
+.trend-signal17 .tag {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+@media (max-width: 576px) {
+    .trend-strength-summary {
+        grid-template-columns: 1fr;
+    }
+    .trend-metric-value {
+        font-size: 20px;
+    }
+}
+
 .signal-history-legend {
     display: flex;
     flex-wrap: wrap;

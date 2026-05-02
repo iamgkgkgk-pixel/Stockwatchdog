@@ -1181,6 +1181,186 @@ const SignalEngine = (() => {
         });
     }
 
+    // ========== 趋势强度分析（右侧浅回撤追踪策略） ==========
+
+    /**
+     * 基于K线计算"距前高回撤"类趋势强度指标
+     *
+     * 策略灵感：社交网络上热议的"17号右侧浅回撤追踪"策略
+     *   核心思想："好趋势跌不深"——回撤<20%的标的，大概率趋势仍在
+     *   买入信号：距离前高回撤 < 20%（右侧浅回撤）
+     *   卖出信号：距离前高回撤 ≥ 20%（趋势已坏）
+     *
+     * 我们不作为操作指令，而是把它量化为"趋势强度分"（0-100，越高趋势越强），
+     * 作为现有估值体系的补充视角。
+     *
+     * @param {Array} kline - K线数组 [{date, high, low, close, ...}]
+     * @param {number} lookbackDays - 前高回溯窗口（默认60交易日≈3个月）
+     * @returns {Object|null} {
+     *   currentPrice,         // 最新收盘价
+     *   prevHigh,             // 窗口内前高
+     *   prevHighDate,         // 前高日期
+     *   drawdown,             // 当前回撤% (正数表示已下跌)
+     *   trendScore,           // 趋势强度分 0-100
+     *   zone,                 // 区间判定
+     *   daysSinceHigh,        // 距前高天数
+     *   signal17,             // 17号策略信号 BUY/HOLD/SELL
+     *   signal17Text,
+     * }
+     */
+    function calcTrendStrength(kline, lookbackDays = 60) {
+        if (!kline || kline.length < 5) return null;
+
+        // 取末尾 lookbackDays 个点作为前高窗口
+        const window = kline.slice(-Math.min(lookbackDays, kline.length));
+        const currentPrice = kline[kline.length - 1].close;
+        if (!currentPrice || currentPrice <= 0) return null;
+
+        // 找窗口内最高价（用 high 字段，否则退化用 close）
+        let prevHigh = 0;
+        let prevHighDate = null;
+        let prevHighIdx = -1;
+        window.forEach((bar, i) => {
+            const h = bar.high || bar.close;
+            if (h > prevHigh) {
+                prevHigh = h;
+                prevHighDate = bar.date;
+                prevHighIdx = i;
+            }
+        });
+        if (prevHigh <= 0) return null;
+
+        // 距离前高天数（从窗口内位置换算）
+        const daysSinceHigh = window.length - 1 - prevHighIdx;
+
+        // 回撤比例（正数表示下跌）
+        const drawdown = parseFloat(((prevHigh - currentPrice) / prevHigh * 100).toFixed(2));
+
+        // 趋势强度分映射（与右侧浅回撤策略的区间对应）
+        //   回撤<5%  → 95分（极强趋势，但乖离大，注意过热）
+        //   回撤5-10% → 80分（强趋势）
+        //   回撤10-20% → 60分（健康趋势，17号策略甜区）
+        //   回撤20-30% → 30分（趋势走弱）
+        //   回撤>30%  → 10分（趋势破坏）
+        let trendScore;
+        if (drawdown < 5)       trendScore = 95;
+        else if (drawdown < 10) trendScore = 80;
+        else if (drawdown < 20) trendScore = 60;
+        else if (drawdown < 30) trendScore = 30;
+        else                    trendScore = 10;
+
+        // 用平滑函数做精细化，避免台阶感
+        // 基础分 + 同区间内的线性渐变
+        if (drawdown < 5) {
+            trendScore = 100 - drawdown * 1; // 0%→100, 5%→95
+        } else if (drawdown < 10) {
+            trendScore = 95 - (drawdown - 5) * 3; // 5%→95, 10%→80
+        } else if (drawdown < 20) {
+            trendScore = 80 - (drawdown - 10) * 2; // 10%→80, 20%→60
+        } else if (drawdown < 30) {
+            trendScore = 60 - (drawdown - 20) * 3; // 20%→60, 30%→30
+        } else {
+            trendScore = Math.max(0, 30 - (drawdown - 30) * 1); // 30%→30, 60%→0
+        }
+        trendScore = parseFloat(trendScore.toFixed(1));
+
+        // 区间判定
+        let zone, zoneColor, zoneIcon;
+        if (drawdown < 5) {
+            zone = '极强趋势·过热预警';
+            zoneColor = '#ff6b6b'; // 红色预警
+            zoneIcon = '🔥';
+        } else if (drawdown < 10) {
+            zone = '强势趋势';
+            zoneColor = '#28a745';
+            zoneIcon = '📈';
+        } else if (drawdown < 20) {
+            zone = '健康趋势·策略甜区';
+            zoneColor = '#0d7337';
+            zoneIcon = '✅';
+        } else if (drawdown < 30) {
+            zone = '趋势走弱';
+            zoneColor = '#ffc107';
+            zoneIcon = '⚠️';
+        } else {
+            zone = '趋势破坏';
+            zoneColor = '#dc3545';
+            zoneIcon = '🔴';
+        }
+
+        // 17号策略的操作信号（仅作参考显示）
+        let signal17, signal17Text;
+        if (drawdown < 20) {
+            signal17 = 'BUY';
+            signal17Text = '满仓（回撤<20%，右侧趋势中）';
+        } else if (drawdown < 25) {
+            signal17 = 'HOLD';
+            signal17Text = '观望（回撤接近20%临界）';
+        } else {
+            signal17 = 'SELL';
+            signal17Text = '离场（回撤≥20%，趋势已破坏）';
+        }
+
+        return {
+            currentPrice: parseFloat(currentPrice.toFixed(3)),
+            prevHigh: parseFloat(prevHigh.toFixed(3)),
+            prevHighDate,
+            drawdown,
+            trendScore,
+            zone,
+            zoneColor,
+            zoneIcon,
+            daysSinceHigh,
+            signal17,
+            signal17Text,
+            lookbackDays: window.length,
+        };
+    }
+
+    /**
+     * 基于K线计算趋势强度的历史分位（当前回撤在过去一年中的相对位置）
+     * @param {Array} kline - 需要至少 lookbackDays + historyDays 长度
+     * @param {number} lookbackDays - 前高窗口，默认60
+     * @param {number} historyDays - 回溯历史分位的窗口，默认250
+     * @returns {Object|null} { percentile, worseCount, totalCount }
+     */
+    function calcTrendDrawdownPercentile(kline, lookbackDays = 60, historyDays = 250) {
+        if (!kline || kline.length < lookbackDays + 30) return null;
+
+        // 对历史上每一天，都计算"当时的距前高回撤"，作为分布
+        const drawdownSeries = [];
+        const startIdx = Math.max(lookbackDays, kline.length - historyDays);
+        for (let i = startIdx; i < kline.length; i++) {
+            const window = kline.slice(i - lookbackDays + 1, i + 1);
+            let pH = 0;
+            window.forEach(bar => {
+                const h = bar.high || bar.close;
+                if (h > pH) pH = h;
+            });
+            const cp = kline[i].close;
+            if (pH > 0 && cp > 0) {
+                drawdownSeries.push((pH - cp) / pH * 100);
+            }
+        }
+        if (drawdownSeries.length === 0) return null;
+
+        const current = drawdownSeries[drawdownSeries.length - 1];
+        // 分位计算：当前回撤在历史分布中的排名
+        // 回撤越小(越靠前高) → 分位越高（更接近牛市状态）
+        // 所以用"历史上多少天的回撤≥当前回撤"作为"越高越强势"的分位
+        const worseCount = drawdownSeries.filter(d => d >= current).length;
+        const percentile = parseFloat((worseCount / drawdownSeries.length * 100).toFixed(1));
+
+        return {
+            percentile,
+            worseCount,
+            totalCount: drawdownSeries.length,
+            currentDrawdown: parseFloat(current.toFixed(2)),
+            // 历史回撤序列供可选绘图
+            drawdownSeries: drawdownSeries.map(d => parseFloat(d.toFixed(2))),
+        };
+    }
+
     // ========== 公开API ==========
     return {
         SIGNAL_LEVELS,
@@ -1199,6 +1379,8 @@ const SignalEngine = (() => {
         getPEPercentileZone,
         getCompositeScoreZone,
         getMarketTempDesc,
-        generateInterpretation
+        generateInterpretation,
+        calcTrendStrength,
+        calcTrendDrawdownPercentile
     };
 })();

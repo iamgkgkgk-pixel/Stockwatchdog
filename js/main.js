@@ -782,6 +782,9 @@ const App = (() => {
             renderAlgoCompareChart(etfConfig, historyData, signalData.marketTemp, realtimeValuation);
         }
 
+        // 异步渲染趋势强度卡片（不阻塞主流程，自带加载态）
+        renderTrendStrengthCard(etfConfig);
+
         // 更新信号方法标签
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
         const methodEl = document.getElementById('signal-method');
@@ -1238,6 +1241,9 @@ const App = (() => {
 
         // ========== 算法对比图表（混合模型 vs 纯PE分位）==========
         renderAlgoCompareChart(etfConfig, historyData);
+
+        // ========== 趋势强度卡片（右侧浅回撤追踪）==========
+        renderTrendStrengthCard(etfConfig);
     }
 
     /**
@@ -1335,6 +1341,173 @@ const App = (() => {
         }
 
         ChartManager.initDailySignalHistoryChart('chart-daily-signal-history', signals, etfConfig.color);
+    }
+
+    /**
+     * 渲染【趋势强度】卡片（右侧浅回撤追踪 - 17号策略量化视角）
+     *
+     * 显示内容：
+     *   - 距前高回撤%、前高日期
+     *   - 趋势强度分（0-100，基于回撤分段映射）
+     *   - 当前回撤在过去一年的历史分位
+     *   - 17号策略操作信号（BUY/HOLD/SELL，仅参考）
+     *   - 历史回撤曲线（让用户看清当前在趋势周期的位置）
+     *
+     * 设计原则：纯展示，不改变估值评分体系，作为独立补充视角。
+     *
+     * @param {Object} etfConfig
+     */
+    async function renderTrendStrengthCard(etfConfig) {
+        const section = document.getElementById('chart-section-trend-strength');
+        const summaryEl = document.getElementById('trend-strength-summary');
+        const chartDom = document.getElementById('chart-trend-drawdown');
+        const badgeEl = document.getElementById('trend-strength-badge');
+        if (!section || !summaryEl) return;
+
+        // 非股票类(商品/债券)用同样的价格回撤也有意义，但黄金/商品需要单独解读
+        // 暂时所有标的都启用
+        if (!etfConfig.secid) {
+            section.style.display = 'none';
+            return;
+        }
+        section.style.display = '';
+
+        // 加载态
+        summaryEl.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:#a0aec0;font-size:13px;">⏳ 计算中...</div>';
+        if (badgeEl) badgeEl.textContent = '-- 交易日';
+
+        // 拉取约1年K线用于分位计算
+        let kline;
+        try {
+            kline = await API.fetchKlineBySecid(etfConfig.secid, 300);
+        } catch (e) {
+            kline = [];
+        }
+        if (!kline || kline.length < 65) {
+            summaryEl.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:#a0aec0;font-size:13px;">⚠️ K线数据不足（需至少65个交易日），暂无法计算趋势强度</div>';
+            if (chartDom) chartDom.innerHTML = '';
+            return;
+        }
+
+        // 计算趋势强度（60日前高）
+        const trend = SignalEngine.calcTrendStrength(kline, 60);
+        if (!trend) {
+            summaryEl.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:#a0aec0;font-size:13px;">⚠️ 趋势强度计算失败</div>';
+            return;
+        }
+
+        // 历史回撤分位（近1年）
+        const pctResult = SignalEngine.calcTrendDrawdownPercentile(kline, 60, 250);
+
+        // Badge: 实际使用的交易日数
+        if (badgeEl) badgeEl.textContent = `近${trend.lookbackDays}交易日`;
+
+        // 构建 signal17 的class
+        const sig17Cls = trend.signal17 === 'BUY' ? 'tag-buy' : (trend.signal17 === 'SELL' ? 'tag-sell' : 'tag-hold');
+        const sig17Txt = trend.signal17 === 'BUY' ? '满仓' : (trend.signal17 === 'SELL' ? '离场' : '观望');
+
+        // 历史分位文案
+        let pctHtml = '';
+        if (pctResult) {
+            const pctLabel = pctResult.percentile >= 80 ? '极强势'
+                : pctResult.percentile >= 60 ? '偏强'
+                : pctResult.percentile >= 40 ? '中性'
+                : pctResult.percentile >= 20 ? '偏弱'
+                : '极弱';
+            const pctColor = pctResult.percentile >= 80 ? '#ff6b6b'
+                : pctResult.percentile >= 60 ? '#28a745'
+                : pctResult.percentile >= 40 ? '#ffc107'
+                : pctResult.percentile >= 20 ? '#fd7e14'
+                : '#dc3545';
+            pctHtml = `<div class="trend-metric" style="--metric-color:${pctColor}">
+                <span class="trend-metric-label">近1年趋势分位</span>
+                <span class="trend-metric-value" style="color:${pctColor}">${pctResult.percentile.toFixed(0)}%</span>
+                <span class="trend-metric-sub">比过去 ${pctResult.worseCount}/${pctResult.totalCount} 天更强势 · ${pctLabel}</span>
+            </div>`;
+        }
+
+        summaryEl.innerHTML = `
+            <div class="trend-metric" style="--metric-color:${trend.zoneColor}">
+                <span class="trend-metric-label">距前高回撤</span>
+                <span class="trend-metric-value" style="color:${trend.zoneColor}">${trend.drawdown.toFixed(2)}%</span>
+                <span class="trend-metric-sub">前高 ${trend.prevHigh} (${trend.prevHighDate}, ${trend.daysSinceHigh}日前)</span>
+                <span class="trend-zone-chip" style="color:${trend.zoneColor}">${trend.zoneIcon} ${trend.zone}</span>
+            </div>
+            <div class="trend-metric" style="--metric-color:${trend.zoneColor}">
+                <span class="trend-metric-label">趋势强度分</span>
+                <span class="trend-metric-value" style="color:${trend.zoneColor}">${trend.trendScore.toFixed(0)}</span>
+                <span class="trend-metric-sub">0-100 映射自回撤幅度</span>
+            </div>
+            ${pctHtml}
+            <div class="trend-signal17">
+                <span>🎯 17号策略信号：</span>
+                <span class="tag ${sig17Cls}">${sig17Txt}</span>
+                <span style="color:#a0aec0;font-size:12px;">${trend.signal17Text}</span>
+            </div>
+        `;
+
+        // 渲染历史回撤曲线
+        if (chartDom && pctResult && pctResult.drawdownSeries && pctResult.drawdownSeries.length > 0) {
+            if (!ChartManager.checkECharts(chartDom)) return;
+            let chart = echarts.getInstanceByDom(chartDom);
+            if (chart) chart.dispose();
+            chart = echarts.init(chartDom);
+
+            // 回撤序列的日期
+            const startIdx = Math.max(60, kline.length - 250);
+            const dates = kline.slice(startIdx).map(k => k.date);
+            const data = pctResult.drawdownSeries;
+
+            chart.setOption({
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(26,26,46,0.95)',
+                    borderColor: '#4a5568',
+                    textStyle: { color: '#e2e8f0', fontSize: 12 },
+                    formatter: (params) => {
+                        const p = params[0];
+                        return `<strong>${p.name}</strong><br/>距60日前高回撤：<strong style="color:#ff6b6b">${p.value.toFixed(2)}%</strong>`;
+                    }
+                },
+                grid: { left: '8%', right: '6%', top: '10%', bottom: '15%' },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: { color: '#a0aec0', fontSize: 10, interval: Math.floor(dates.length / 6) },
+                    axisLine: { lineStyle: { color: '#2d3748' } },
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '回撤%',
+                    nameTextStyle: { color: '#a0aec0', fontSize: 10 },
+                    inverse: true, // 反转：0在顶部，回撤越大越往下
+                    axisLabel: { color: '#a0aec0', fontSize: 10, formatter: '{value}%' },
+                    splitLine: { lineStyle: { color: '#2d374844', type: 'dashed' } },
+                },
+                series: [{
+                    name: '距前高回撤',
+                    type: 'line',
+                    data,
+                    smooth: true,
+                    symbol: 'none',
+                    lineStyle: { color: '#ff6b6b', width: 2 },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#ff6b6b50' },
+                            { offset: 1, color: '#ff6b6b05' }
+                        ])
+                    },
+                    markLine: {
+                        silent: true,
+                        data: [
+                            { yAxis: 20, label: { formatter: '20%临界', color: '#ffc107', fontSize: 10, position: 'end' }, lineStyle: { color: '#ffc10766', type: 'dashed' } },
+                        ]
+                    },
+                }],
+                animationDuration: 800,
+            });
+        }
     }
 
     /**
@@ -1942,7 +2115,7 @@ const App = (() => {
 
         // 隐藏常规ETF内容区域
         const hideIds = [
-            'hero-section', 'chart-section-score-percentile', 'chart-section-1', 'chart-section-2',
+            'hero-section', 'chart-section-score-percentile', 'chart-section-trend-strength', 'chart-section-1', 'chart-section-2',
             'chart-section-signal-history', 'chart-section-daily-signal-history',
             'chart-section-algo-compare', 'gauges-section'
         ];
@@ -1989,7 +2162,7 @@ const App = (() => {
 
         // 恢复常规ETF内容区域
         const showIds = [
-            'hero-section', 'chart-section-score-percentile', 'chart-section-1',
+            'hero-section', 'chart-section-score-percentile', 'chart-section-trend-strength', 'chart-section-1',
             'chart-section-signal-history', 'chart-section-daily-signal-history',
             'chart-section-algo-compare', 'gauges-section'
         ];

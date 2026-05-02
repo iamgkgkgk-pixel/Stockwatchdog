@@ -147,6 +147,24 @@
             </div>
         </section>
 
+        <!-- 趋势强度卡片（右侧浅回撤追踪 - 17号策略量化视角） -->
+        <section class="chart-section animate-fade-in animate-delay-2" id="chart-section-trend-strength">
+            <div class="card card-full">
+                <div class="card-title">
+                    <span class="card-title-icon">🎯</span>
+                    <span>趋势强度 · 距前高回撤</span>
+                    <span class="card-title-badge" id="trend-strength-badge" style="margin-left:auto;font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,0.1);color:#a0aec0;">-- 交易日</span>
+                </div>
+                <div id="trend-strength-summary" class="trend-strength-summary"></div>
+                <div class="chart-container" id="chart-trend-drawdown" style="height:240px;"></div>
+                <div class="signal-history-note">
+                    💡 <strong>右侧浅回撤追踪（俗称"17号策略"）</strong>：当价格距离前高回撤 &lt; 20% 时满仓、≥ 20% 时离场。
+                    本卡片把这个策略量化为"趋势强度分"作为估值体系的补充视角——<strong>仅作参考显示，不改变综合评分</strong>。
+                    估值+趋势同向时信号更强：估值便宜（综合分高）+ 趋势强势 = 戴维斯双击；估值贵 + 趋势破坏 = 戴维斯双杀。
+                </div>
+            </div>
+        </section>
+
         <!-- Charts Section -->
         <section class="chart-section animate-fade-in animate-delay-3" id="chart-section-1">
             <div class="card card-full">
@@ -331,11 +349,11 @@
     </div>
 
     <!-- ==================== Scripts ==================== -->
-    <script src="js/etf-config.js?v=20260501"></script>
-    <script src="js/signal.js?v=20260501"></script>
-    <script src="js/storage.js?v=20260501"></script>
-    <script src="js/api.js?v=20260501"></script>
-    <script src="js/charts.js?v=20260501"></script>
-    <script src="js/main.js?v=20260501"></script>
+    <script src="js/etf-config.js?v=20260502a"></script>
+    <script src="js/signal.js?v=20260502a"></script>
+    <script src="js/storage.js?v=20260502a"></script>
+    <script src="js/api.js?v=20260502a"></script>
+    <script src="js/charts.js?v=20260502a"></script>
+    <script src="js/main.js?v=20260502a"></script>
 </body>
 </html>

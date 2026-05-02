@@ -1301,6 +1301,46 @@ const DataAPI = (() => {
         return results;
     }
 
+    /**
+     * 按secid获取指定天数的完整OHLC K线数据（供趋势强度分析使用）
+     * @param {string} secid - 东财secid，如 '1.513650'
+     * @param {number} days - 回溯天数
+     * @returns {Array} [{ date, open, close, high, low, volume }]
+     */
+    async function fetchKlineBySecid(secid, days = 250) {
+        try {
+            const endDate = formatDate(new Date());
+            const startDate = formatDate(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
+            const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
+                secid: secid,
+                fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
+                fields2: 'f51,f52,f53,f54,f55,f56,f57',
+                klt: 101, fqt: 1, // 前复权（对QDII/个股都更准确）
+                beg: startDate.replace(/-/g, ''),
+                end: endDate.replace(/-/g, ''),
+                lmt: days,
+                ut: 'fa5fd1943c7b386f172d6893dbbd2'
+            });
+            if (data && data.data && data.data.klines) {
+                return data.data.klines.map(line => {
+                    const p = line.split(',');
+                    return {
+                        date: p[0],
+                        open: parseFloat(p[1]),
+                        close: parseFloat(p[2]),
+                        high: parseFloat(p[3]),
+                        low: parseFloat(p[4]),
+                        volume: parseInt(p[5])
+                    };
+                });
+            }
+            return [];
+        } catch (e) {
+            console.warn('[fetchKlineBySecid] 失败:', e.message);
+            return [];
+        }
+    }
+
     // ========== 公开API ==========
     return {
         fetchETFQuote,
@@ -1311,6 +1351,7 @@ const DataAPI = (() => {
         fetchDanjuanValuationByIndex,
         fetchQuoteBySecid,
         fetchETFKline,
+        fetchKlineBySecid,
         fetchFearGreedIndex,
         fetchAShareMarketBreadth,
         fearGreedToMarketTemp,
