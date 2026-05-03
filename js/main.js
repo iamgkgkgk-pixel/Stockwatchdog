@@ -1384,9 +1384,10 @@ const App = (() => {
             kline = [];
         }
         if (!kline || kline.length < 10) {
-            summaryEl.innerHTML = `<div style="grid-column:1/-1;padding:20px;text-align:center;color:#a0aec0;font-size:13px;">
-                ⚠️ K线数据获取失败或过少（仅 ${kline ? kline.length : 0} 条）<br/>
-                <small style="color:#718096;">该ETF可能刚上市、secid异常或东财API限流，请稍后重试</small>
+            summaryEl.innerHTML = `<div style="grid-column:1/-1;padding:16px;text-align:center;color:#ffc107;font-size:13px;line-height:1.6;">
+                ⚠️ 无法获取 K线数据（仅 ${kline ? kline.length : 0} 条）<br/>
+                <small style="color:#a0aec0;">标的: ${etfConfig.shortName} (${etfConfig.code} / secid=${etfConfig.secid})</small><br/>
+                <small style="color:#718096;">可能原因：东财API限流/跨域被拦截/标的代码异常。可尝试稍后刷新重试。</small>
             </div>`;
             if (chartDom) chartDom.innerHTML = '';
             return;

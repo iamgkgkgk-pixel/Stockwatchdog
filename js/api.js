@@ -1303,24 +1303,14 @@ const DataAPI = (() => {
 
     /**
      * 按secid获取指定天数的完整OHLC K线数据（供趋势强度分析使用）
+     * 带多策略重试：主参数失败时降级到最简参数请求
+     *
      * @param {string} secid - 东财secid，如 '1.513650'
-     * @param {number} calendarDays - 自然日回溯，默认500（≈2年交易日）
+     * @param {number} calendarDays - 自然日回溯，默认500（≈340交易日）
      * @returns {Array} [{ date, open, close, high, low, volume }]
      */
     async function fetchKlineBySecid(secid, calendarDays = 500) {
-        try {
-            const endDate = formatDate(new Date());
-            const startDate = formatDate(new Date(Date.now() - calendarDays * 24 * 60 * 60 * 1000));
-            const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
-                secid: secid,
-                fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
-                fields2: 'f51,f52,f53,f54,f55,f56,f57',
-                klt: 101, fqt: 0, // 不复权（最通用，对指数/ETF/QDII都OK；与老函数fetchETFKline一致）
-                beg: startDate.replace(/-/g, ''),
-                end: endDate.replace(/-/g, ''),
-                lmt: 1000, // 上限留足，不靠calendarDays切
-                ut: 'fa5fd1943c7b386f172d6893dbbd2'
-            });
+        const parseKlines = (data) => {
             if (data && data.data && data.data.klines && data.data.klines.length > 0) {
                 return data.data.klines.map(line => {
                     const p = line.split(',');
@@ -1334,12 +1324,51 @@ const DataAPI = (() => {
                     };
                 }).filter(b => !isNaN(b.close) && b.close > 0);
             }
-            console.warn('[fetchKlineBySecid] 空数据 secid=' + secid + ' raw=', data);
             return [];
+        };
+
+        // 策略1：带日期范围，最常用参数（和老函数fetchETFKline完全一致）
+        try {
+            const endDate = formatDate(new Date());
+            const startDate = formatDate(new Date(Date.now() - calendarDays * 24 * 60 * 60 * 1000));
+            const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
+                secid: secid,
+                fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
+                fields2: 'f51,f52,f53,f54,f55,f56,f57',
+                klt: 101, fqt: 0,
+                beg: startDate.replace(/-/g, ''),
+                end: endDate.replace(/-/g, ''),
+                lmt: calendarDays, // 与fetchETFKline一致
+                ut: 'fa5fd1943c7b386f172d6893dbbd2'
+            });
+            const r = parseKlines(data);
+            if (r.length > 0) return r;
+            console.warn('[fetchKlineBySecid] 策略1空 secid=' + secid + ' → 降级策略2');
         } catch (e) {
-            console.warn('[fetchKlineBySecid] 失败 secid=' + secid + ' err=' + e.message);
-            return [];
+            console.warn('[fetchKlineBySecid] 策略1异常 secid=' + secid + ' err=' + e.message);
         }
+
+        // 策略2：最简参数（不带beg/end，只传lmt），东财默认返回最近N条
+        try {
+            const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
+                secid: secid,
+                fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
+                fields2: 'f51,f52,f53,f54,f55,f56,f57',
+                klt: 101, fqt: 0,
+                lmt: Math.min(calendarDays, 500),
+                ut: 'fa5fd1943c7b386f172d6893dbbd2'
+            });
+            const r = parseKlines(data);
+            if (r.length > 0) {
+                console.info('[fetchKlineBySecid] 策略2成功 secid=' + secid + ' 条数=' + r.length);
+                return r;
+            }
+            console.warn('[fetchKlineBySecid] 策略2空 secid=' + secid);
+        } catch (e) {
+            console.warn('[fetchKlineBySecid] 策略2异常 secid=' + secid + ' err=' + e.message);
+        }
+
+        return [];
     }
 
     // ========== 公开API ==========
