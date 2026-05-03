@@ -1378,7 +1378,7 @@ const App = (() => {
         // 拉取约2年K线（500自然日 ≈ 340交易日）用于分位计算
         let kline;
         try {
-            kline = await API.fetchKlineBySecid(etfConfig.secid, 500);
+            kline = await DataAPI.fetchKlineBySecid(etfConfig.secid, 500);
         } catch (e) {
             kline = [];
         }
