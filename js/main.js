@@ -782,8 +782,8 @@ const App = (() => {
             renderAlgoCompareChart(etfConfig, historyData, signalData.marketTemp, realtimeValuation);
         }
 
-        // 异步渲染趋势强度卡片（不阻塞主流程，自带加载态）
-        renderTrendStrengthCard(etfConfig);
+        // 异步渲染趋势强度卡片（延迟800ms避免与applyData里的jsonp并发，减少东财限流概率）
+        setTimeout(() => renderTrendStrengthCard(etfConfig), 800);
 
         // 更新信号方法标签
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
@@ -1242,8 +1242,7 @@ const App = (() => {
         // ========== 算法对比图表（混合模型 vs 纯PE分位）==========
         renderAlgoCompareChart(etfConfig, historyData);
 
-        // ========== 趋势强度卡片（右侧浅回撤追踪）==========
-        renderTrendStrengthCard(etfConfig);
+        // 注：趋势强度卡片不在此调用（需要实时K线），由 applyData 成功后触发
     }
 
     /**

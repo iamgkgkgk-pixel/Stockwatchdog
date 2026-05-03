@@ -1310,6 +1310,14 @@ const DataAPI = (() => {
      * @returns {Array} [{ date, open, close, high, low, volume }]
      */
     async function fetchKlineBySecid(secid, calendarDays = 500) {
+        // 内联日期格式：YYYYMMDD (东财beg/end需要的格式)
+        const fmtYmd = (date) => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}${m}${d}`;
+        };
+
         const parseKlines = (data) => {
             if (data && data.data && data.data.klines && data.data.klines.length > 0) {
                 return data.data.klines.map(line => {
@@ -1327,28 +1335,34 @@ const DataAPI = (() => {
             return [];
         };
 
-        // 策略1：带日期范围，最常用参数（和老函数fetchETFKline完全一致）
+        console.info('[fetchKlineBySecid] 开始获取 secid=' + secid);
+
+        // 策略1：带日期范围 + lmt（与老函数fetchETFKline完全一致的参数集）
         try {
-            const endDate = formatDate(new Date());
-            const startDate = formatDate(new Date(Date.now() - calendarDays * 24 * 60 * 60 * 1000));
+            const endYmd = fmtYmd(new Date());
+            const begYmd = fmtYmd(new Date(Date.now() - calendarDays * 24 * 60 * 60 * 1000));
             const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
                 secid: secid,
                 fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
                 fields2: 'f51,f52,f53,f54,f55,f56,f57',
                 klt: 101, fqt: 0,
-                beg: startDate.replace(/-/g, ''),
-                end: endDate.replace(/-/g, ''),
-                lmt: calendarDays, // 与fetchETFKline一致
+                beg: begYmd,
+                end: endYmd,
+                lmt: calendarDays,
                 ut: 'fa5fd1943c7b386f172d6893dbbd2'
             });
+            console.info('[fetchKlineBySecid] 策略1返回 secid=' + secid + ' rawKeys=' + Object.keys(data || {}).join(','));
             const r = parseKlines(data);
-            if (r.length > 0) return r;
-            console.warn('[fetchKlineBySecid] 策略1空 secid=' + secid + ' → 降级策略2');
+            if (r.length > 0) {
+                console.info('[fetchKlineBySecid] ✅策略1成功 secid=' + secid + ' 条数=' + r.length);
+                return r;
+            }
+            console.warn('[fetchKlineBySecid] 策略1空 secid=' + secid + ' → 尝试策略2');
         } catch (e) {
-            console.warn('[fetchKlineBySecid] 策略1异常 secid=' + secid + ' err=' + e.message);
+            console.warn('[fetchKlineBySecid] 策略1异常 secid=' + secid + ' err=' + (e && e.message));
         }
 
-        // 策略2：最简参数（不带beg/end，只传lmt），东财默认返回最近N条
+        // 策略2：最简参数（不带beg/end）
         try {
             const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
                 secid: secid,
@@ -1360,12 +1374,12 @@ const DataAPI = (() => {
             });
             const r = parseKlines(data);
             if (r.length > 0) {
-                console.info('[fetchKlineBySecid] 策略2成功 secid=' + secid + ' 条数=' + r.length);
+                console.info('[fetchKlineBySecid] ✅策略2成功 secid=' + secid + ' 条数=' + r.length);
                 return r;
             }
-            console.warn('[fetchKlineBySecid] 策略2空 secid=' + secid);
+            console.warn('[fetchKlineBySecid] 策略2空 secid=' + secid + ' data=', data);
         } catch (e) {
-            console.warn('[fetchKlineBySecid] 策略2异常 secid=' + secid + ' err=' + e.message);
+            console.warn('[fetchKlineBySecid] 策略2异常 secid=' + secid + ' err=' + (e && e.message));
         }
 
         return [];
