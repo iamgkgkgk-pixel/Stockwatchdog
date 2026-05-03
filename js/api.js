@@ -1342,73 +1342,76 @@ const DataAPI = (() => {
 
         console.info('[fetchKlineBySecid] 开始获取 secid=' + secid);
 
-        // 策略1：带日期范围 + lmt（与老函数fetchETFKline完全一致的参数集）
+        // 【关键】东财强制要求 beg/end 参数，仅传 lmt 会返回 rc=102
+        // 共同参数集
+        const endYmd = fmtYmd(new Date());
+        const begYmd = fmtYmd(new Date(Date.now() - calendarDays * 24 * 60 * 60 * 1000));
+        const params = {
+            secid: secid,
+            fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
+            fields2: 'f51,f52,f53,f54,f55,f56,f57',
+            klt: 101, fqt: 0,
+            beg: begYmd,
+            end: endYmd,
+            lmt: calendarDays,
+            ut: 'fa5fd1943c7b386f172d6893dbbd2'
+        };
+
+        // 策略1：JSONP（最快，桌面浏览器首选）
         try {
-            const endYmd = fmtYmd(new Date());
-            const begYmd = fmtYmd(new Date(Date.now() - calendarDays * 24 * 60 * 60 * 1000));
             diag.strategy = 1;
-            diag.url = `${API_CONFIG.EASTMONEY_KLINE}?secid=${secid}&klt=101&fqt=0&beg=${begYmd}&end=${endYmd}&lmt=${calendarDays}`;
+            const qs = Object.entries(params).map(([k,v]) => `${k}=${v}`).join('&');
+            diag.url = `${API_CONFIG.EASTMONEY_KLINE}?${qs}`;
             const t0 = Date.now();
-            const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
-                secid: secid,
-                fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
-                fields2: 'f51,f52,f53,f54,f55,f56,f57',
-                klt: 101, fqt: 0,
-                beg: begYmd,
-                end: endYmd,
-                lmt: calendarDays,
-                ut: 'fa5fd1943c7b386f172d6893dbbd2'
-            });
+            const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, params);
             diag.durMs = Date.now() - t0;
-            // 精简响应摘要便于UI展示
             diag.resp = data ? {
-                rc: data.rc,
-                rt: data.rt,
+                rc: data.rc, rt: data.rt,
                 msg: (data.msg || '').substring(0, 50),
                 dataKeys: data.data ? Object.keys(data.data).join(',') : '(null data)',
                 klinesLen: data.data && data.data.klines ? data.data.klines.length : 0,
-                firstKline: data.data && data.data.klines && data.data.klines[0] ? String(data.data.klines[0]).substring(0, 80) : null,
             } : '(响应为null)';
-            console.info('[fetchKlineBySecid] 策略1返回', diag.resp);
             const r = parseKlines(data);
             if (r.length > 0) {
-                console.info('[fetchKlineBySecid] ✅策略1成功 条数=' + r.length);
+                console.info('[fetchKlineBySecid] ✅JSONP成功 条数=' + r.length + ' 耗时=' + diag.durMs + 'ms');
                 return r;
             }
-            console.warn('[fetchKlineBySecid] 策略1空 → 尝试策略2');
+            console.warn('[fetchKlineBySecid] JSONP空或拒绝 rc=' + (data && data.rc) + ' → 降级CORS代理');
         } catch (e) {
             diag.err = (e && e.message) || String(e);
-            console.warn('[fetchKlineBySecid] 策略1异常', diag.err);
+            console.warn('[fetchKlineBySecid] JSONP异常 → 降级CORS代理', diag.err);
         }
 
-        // 策略2：最简参数
+        // 策略2：CORS代理 + 纯 fetch（绕过微信内嵌浏览器对跨域script的限制）
         try {
             diag.strategy = 2;
+            const qs = Object.entries(params).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+            const targetUrl = `${API_CONFIG.EASTMONEY_KLINE}?${qs}`;
+            diag.url = targetUrl;
             const t0 = Date.now();
-            const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
-                secid: secid,
-                fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
-                fields2: 'f51,f52,f53,f54,f55,f56,f57',
-                klt: 101, fqt: 0,
-                lmt: Math.min(calendarDays, 500),
-                ut: 'fa5fd1943c7b386f172d6893dbbd2'
-            });
+            const data = await fetchViaCorsProxy(targetUrl, 15000);
             diag.durMs = Date.now() - t0;
-            diag.resp = data ? {
-                rc: data.rc,
-                msg: (data.msg || '').substring(0, 50),
-                dataKeys: data.data ? Object.keys(data.data).join(',') : '(null data)',
-                klinesLen: data.data && data.data.klines ? data.data.klines.length : 0,
-            } : '(响应为null)';
-            const r = parseKlines(data);
+            // codetabs 可能返回字符串 body
+            let payload = data;
+            if (typeof data === 'string') {
+                try { payload = JSON.parse(data); } catch (_) {}
+            } else if (data && typeof data.body === 'string') {
+                try { payload = JSON.parse(data.body); } catch (_) {}
+            }
+            diag.resp = payload ? {
+                rc: payload.rc,
+                dataKeys: payload.data ? Object.keys(payload.data).join(',') : '(null data)',
+                klinesLen: payload.data && payload.data.klines ? payload.data.klines.length : 0,
+            } : '(代理响应为null)';
+            const r = parseKlines(payload);
             if (r.length > 0) {
-                console.info('[fetchKlineBySecid] ✅策略2成功 条数=' + r.length);
+                console.info('[fetchKlineBySecid] ✅CORS代理成功 条数=' + r.length + ' 耗时=' + diag.durMs + 'ms');
                 return r;
             }
-            console.warn('[fetchKlineBySecid] 策略2空');
+            console.warn('[fetchKlineBySecid] CORS代理空 rc=' + (payload && payload.rc));
         } catch (e) {
-            diag.err = (e && e.message) || String(e);
-            console.warn('[fetchKlineBySecid] 策略2异常', diag.err);
+            diag.err = ((e && e.message) || String(e)) + (diag.err ? ' | 之前JSONP错误:' + diag.err : '');
+            console.warn('[fetchKlineBySecid] CORS代理异常', diag.err);
         }
 
         return [];
