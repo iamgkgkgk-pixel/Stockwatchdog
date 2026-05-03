@@ -1304,24 +1304,24 @@ const DataAPI = (() => {
     /**
      * 按secid获取指定天数的完整OHLC K线数据（供趋势强度分析使用）
      * @param {string} secid - 东财secid，如 '1.513650'
-     * @param {number} days - 回溯天数
+     * @param {number} calendarDays - 自然日回溯，默认500（≈2年交易日）
      * @returns {Array} [{ date, open, close, high, low, volume }]
      */
-    async function fetchKlineBySecid(secid, days = 250) {
+    async function fetchKlineBySecid(secid, calendarDays = 500) {
         try {
             const endDate = formatDate(new Date());
-            const startDate = formatDate(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
+            const startDate = formatDate(new Date(Date.now() - calendarDays * 24 * 60 * 60 * 1000));
             const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
                 secid: secid,
                 fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
                 fields2: 'f51,f52,f53,f54,f55,f56,f57',
-                klt: 101, fqt: 1, // 前复权（对QDII/个股都更准确）
+                klt: 101, fqt: 0, // 不复权（最通用，对指数/ETF/QDII都OK；与老函数fetchETFKline一致）
                 beg: startDate.replace(/-/g, ''),
                 end: endDate.replace(/-/g, ''),
-                lmt: days,
+                lmt: 1000, // 上限留足，不靠calendarDays切
                 ut: 'fa5fd1943c7b386f172d6893dbbd2'
             });
-            if (data && data.data && data.data.klines) {
+            if (data && data.data && data.data.klines && data.data.klines.length > 0) {
                 return data.data.klines.map(line => {
                     const p = line.split(',');
                     return {
@@ -1332,11 +1332,12 @@ const DataAPI = (() => {
                         low: parseFloat(p[4]),
                         volume: parseInt(p[5])
                     };
-                });
+                }).filter(b => !isNaN(b.close) && b.close > 0);
             }
+            console.warn('[fetchKlineBySecid] 空数据 secid=' + secid + ' raw=', data);
             return [];
         } catch (e) {
-            console.warn('[fetchKlineBySecid] 失败:', e.message);
+            console.warn('[fetchKlineBySecid] 失败 secid=' + secid + ' err=' + e.message);
             return [];
         }
     }

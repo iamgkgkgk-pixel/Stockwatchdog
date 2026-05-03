@@ -1376,28 +1376,43 @@ const App = (() => {
         summaryEl.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:#a0aec0;font-size:13px;">⏳ 计算中...</div>';
         if (badgeEl) badgeEl.textContent = '-- 交易日';
 
-        // 拉取约1年K线用于分位计算
+        // 拉取约2年K线（500自然日 ≈ 340交易日）用于分位计算
         let kline;
         try {
-            kline = await API.fetchKlineBySecid(etfConfig.secid, 300);
+            kline = await API.fetchKlineBySecid(etfConfig.secid, 500);
         } catch (e) {
             kline = [];
         }
-        if (!kline || kline.length < 65) {
-            summaryEl.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:#a0aec0;font-size:13px;">⚠️ K线数据不足（需至少65个交易日），暂无法计算趋势强度</div>';
+        if (!kline || kline.length < 10) {
+            summaryEl.innerHTML = `<div style="grid-column:1/-1;padding:20px;text-align:center;color:#a0aec0;font-size:13px;">
+                ⚠️ K线数据获取失败或过少（仅 ${kline ? kline.length : 0} 条）<br/>
+                <small style="color:#718096;">该ETF可能刚上市、secid异常或东财API限流，请稍后重试</small>
+            </div>`;
             if (chartDom) chartDom.innerHTML = '';
             return;
         }
 
-        // 计算趋势强度（60日前高）
-        const trend = SignalEngine.calcTrendStrength(kline, 60);
+        // 自适应前高窗口：优先60日，不足时退化到可用长度的一半
+        //   - K线≥70: 用60日窗口（标准17号策略）
+        //   - K线30-70: 用可用长度的60%作窗口
+        //   - K线10-30: 用可用长度的50%作窗口
+        let lookbackDays;
+        if (kline.length >= 70) lookbackDays = 60;
+        else if (kline.length >= 30) lookbackDays = Math.floor(kline.length * 0.6);
+        else lookbackDays = Math.floor(kline.length * 0.5);
+
+        // 计算趋势强度
+        const trend = SignalEngine.calcTrendStrength(kline, lookbackDays);
         if (!trend) {
             summaryEl.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:#a0aec0;font-size:13px;">⚠️ 趋势强度计算失败</div>';
             return;
         }
 
-        // 历史回撤分位（近1年）
-        const pctResult = SignalEngine.calcTrendDrawdownPercentile(kline, 60, 250);
+        // 历史回撤分位（用可用的历史，最多近1年250交易日）
+        let pctResult = null;
+        if (kline.length >= lookbackDays + 30) {
+            pctResult = SignalEngine.calcTrendDrawdownPercentile(kline, lookbackDays, Math.min(250, kline.length - lookbackDays));
+        }
 
         // Badge: 实际使用的交易日数
         if (badgeEl) badgeEl.textContent = `近${trend.lookbackDays}交易日`;
@@ -1454,7 +1469,7 @@ const App = (() => {
             chart = echarts.init(chartDom);
 
             // 回撤序列的日期
-            const startIdx = Math.max(60, kline.length - 250);
+            const startIdx = Math.max(lookbackDays, kline.length - 250);
             const dates = kline.slice(startIdx).map(k => k.date);
             const data = pctResult.drawdownSeries;
 
@@ -1507,6 +1522,9 @@ const App = (() => {
                 }],
                 animationDuration: 800,
             });
+        } else if (chartDom) {
+            // 没有历史分位数据(K线长度<lookback+30)时，清空图表并给提示
+            chartDom.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#718096;font-size:12px;text-align:center;padding:20px;">历史数据不足，暂无法绘制回撤历史曲线<br/><small style="opacity:0.7;">当前趋势强度分仍可参考</small></div>';
         }
     }
 
