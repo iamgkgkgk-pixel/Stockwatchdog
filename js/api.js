@@ -1309,8 +1309,10 @@ const DataAPI = (() => {
      * @param {number} calendarDays - 自然日回溯，默认500（≈340交易日）
      * @returns {Array} [{ date, open, close, high, low, volume }]
      */
+    // 全局诊断：最后一次K线请求的调试信息（供UI显示排错）
+    window.__klineDiag = { secid: null, url: null, durMs: 0, resp: null, err: null, strategy: null };
+
     async function fetchKlineBySecid(secid, calendarDays = 500) {
-        // 内联日期格式：YYYYMMDD (东财beg/end需要的格式)
         const fmtYmd = (date) => {
             const y = date.getFullYear();
             const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -1335,12 +1337,18 @@ const DataAPI = (() => {
             return [];
         };
 
+        const diag = { secid, url: null, durMs: 0, resp: null, err: null, strategy: null };
+        window.__klineDiag = diag;
+
         console.info('[fetchKlineBySecid] 开始获取 secid=' + secid);
 
         // 策略1：带日期范围 + lmt（与老函数fetchETFKline完全一致的参数集）
         try {
             const endYmd = fmtYmd(new Date());
             const begYmd = fmtYmd(new Date(Date.now() - calendarDays * 24 * 60 * 60 * 1000));
+            diag.strategy = 1;
+            diag.url = `${API_CONFIG.EASTMONEY_KLINE}?secid=${secid}&klt=101&fqt=0&beg=${begYmd}&end=${endYmd}&lmt=${calendarDays}`;
+            const t0 = Date.now();
             const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
                 secid: secid,
                 fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
@@ -1351,19 +1359,32 @@ const DataAPI = (() => {
                 lmt: calendarDays,
                 ut: 'fa5fd1943c7b386f172d6893dbbd2'
             });
-            console.info('[fetchKlineBySecid] 策略1返回 secid=' + secid + ' rawKeys=' + Object.keys(data || {}).join(','));
+            diag.durMs = Date.now() - t0;
+            // 精简响应摘要便于UI展示
+            diag.resp = data ? {
+                rc: data.rc,
+                rt: data.rt,
+                msg: (data.msg || '').substring(0, 50),
+                dataKeys: data.data ? Object.keys(data.data).join(',') : '(null data)',
+                klinesLen: data.data && data.data.klines ? data.data.klines.length : 0,
+                firstKline: data.data && data.data.klines && data.data.klines[0] ? String(data.data.klines[0]).substring(0, 80) : null,
+            } : '(响应为null)';
+            console.info('[fetchKlineBySecid] 策略1返回', diag.resp);
             const r = parseKlines(data);
             if (r.length > 0) {
-                console.info('[fetchKlineBySecid] ✅策略1成功 secid=' + secid + ' 条数=' + r.length);
+                console.info('[fetchKlineBySecid] ✅策略1成功 条数=' + r.length);
                 return r;
             }
-            console.warn('[fetchKlineBySecid] 策略1空 secid=' + secid + ' → 尝试策略2');
+            console.warn('[fetchKlineBySecid] 策略1空 → 尝试策略2');
         } catch (e) {
-            console.warn('[fetchKlineBySecid] 策略1异常 secid=' + secid + ' err=' + (e && e.message));
+            diag.err = (e && e.message) || String(e);
+            console.warn('[fetchKlineBySecid] 策略1异常', diag.err);
         }
 
-        // 策略2：最简参数（不带beg/end）
+        // 策略2：最简参数
         try {
+            diag.strategy = 2;
+            const t0 = Date.now();
             const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
                 secid: secid,
                 fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
@@ -1372,14 +1393,22 @@ const DataAPI = (() => {
                 lmt: Math.min(calendarDays, 500),
                 ut: 'fa5fd1943c7b386f172d6893dbbd2'
             });
+            diag.durMs = Date.now() - t0;
+            diag.resp = data ? {
+                rc: data.rc,
+                msg: (data.msg || '').substring(0, 50),
+                dataKeys: data.data ? Object.keys(data.data).join(',') : '(null data)',
+                klinesLen: data.data && data.data.klines ? data.data.klines.length : 0,
+            } : '(响应为null)';
             const r = parseKlines(data);
             if (r.length > 0) {
-                console.info('[fetchKlineBySecid] ✅策略2成功 secid=' + secid + ' 条数=' + r.length);
+                console.info('[fetchKlineBySecid] ✅策略2成功 条数=' + r.length);
                 return r;
             }
-            console.warn('[fetchKlineBySecid] 策略2空 secid=' + secid + ' data=', data);
+            console.warn('[fetchKlineBySecid] 策略2空');
         } catch (e) {
-            console.warn('[fetchKlineBySecid] 策略2异常 secid=' + secid + ' err=' + (e && e.message));
+            diag.err = (e && e.message) || String(e);
+            console.warn('[fetchKlineBySecid] 策略2异常', diag.err);
         }
 
         return [];

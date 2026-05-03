@@ -1383,10 +1383,17 @@ const App = (() => {
             kline = [];
         }
         if (!kline || kline.length < 10) {
-            summaryEl.innerHTML = `<div style="grid-column:1/-1;padding:16px;text-align:center;color:#ffc107;font-size:13px;line-height:1.6;">
-                ⚠️ 无法获取 K线数据（仅 ${kline ? kline.length : 0} 条）<br/>
-                <small style="color:#a0aec0;">标的: ${etfConfig.shortName} (${etfConfig.code} / secid=${etfConfig.secid})</small><br/>
-                <small style="color:#718096;">可能原因：东财API限流/跨域被拦截/标的代码异常。可尝试稍后刷新重试。</small>
+            const diag = (window.__klineDiag || {});
+            const respSummary = diag.resp ? JSON.stringify(diag.resp) : '(未收到响应)';
+            summaryEl.innerHTML = `<div style="grid-column:1/-1;padding:14px;font-size:12px;line-height:1.6;text-align:left;">
+                <div style="color:#ffc107;font-size:13px;margin-bottom:8px;">⚠️ K线获取失败（仅 ${kline ? kline.length : 0} 条）</div>
+                <div style="color:#a0aec0;">
+                  <strong>标的:</strong> ${etfConfig.shortName} · ${etfConfig.code} · secid=${etfConfig.secid}<br/>
+                  <strong>策略:</strong> ${diag.strategy || '?'} &nbsp; <strong>耗时:</strong> ${diag.durMs}ms<br/>
+                  <strong>URL:</strong> <span style="word-break:break-all;color:#718096;font-size:10px;">${diag.url || '?'}</span><br/>
+                  <strong>响应:</strong> <span style="word-break:break-all;color:#718096;font-size:10px;">${respSummary}</span><br/>
+                  <strong>错误:</strong> <span style="color:#ff6b6b;">${diag.err || '无'}</span>
+                </div>
             </div>`;
             if (chartDom) chartDom.innerHTML = '';
             return;
