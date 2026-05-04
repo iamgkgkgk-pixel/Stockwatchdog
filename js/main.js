@@ -30,6 +30,7 @@ const App = (() => {
             }
             renderTabBar();
             bindGlobalEvents();
+            initRegimeSwitcher();
             const hash = window.location.hash.replace('#', '');
             const initialETF = (ETF_CONFIG.getETFById(hash) || ETF_CONFIG.isVIXDashboard(hash)) ? hash : ETF_CONFIG.ETF_LIST[0].id;
             await switchETF(initialETF);
@@ -85,6 +86,74 @@ const App = (() => {
     function updateTabDot(etfId, color) {
         const dot = document.getElementById(`tab-dot-${etfId}`);
         if (dot) dot.style.background = color || 'transparent';
+    }
+
+    // ========== 全局仓位模式切换器 + 当前仓位建议摘要 ==========
+
+    function initRegimeSwitcher() {
+        if (!window.AttackPyramid) return;
+        const switcher = document.getElementById('regime-switcher');
+        if (!switcher) return;
+
+        const current = AttackPyramid.getCurrentRegime();
+        switcher.querySelectorAll('.regime-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.regime === current);
+            btn.addEventListener('click', function() {
+                const key = btn.dataset.regime;
+                if (!AttackPyramid.REGIMES[key]) return;
+                AttackPyramid.setCurrentRegime(key);
+                switcher.querySelectorAll('.regime-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                updateRegimeHint(key);
+                // 档位变化时，重新计算并刷新当前标的的仓位建议
+                updatePositionHintForCurrent();
+            });
+        });
+        updateRegimeHint(current);
+    }
+
+    function updateRegimeHint(regimeKey) {
+        if (!window.AttackPyramid) return;
+        const hintEl = document.getElementById('regime-hint');
+        const regime = AttackPyramid.REGIMES[regimeKey];
+        if (hintEl && regime) {
+            hintEl.textContent = `${regime.icon} ${regime.shortHint}`;
+        }
+    }
+
+    /**
+     * 更新 header 下方的"当前仓位建议"摘要行
+     * 只对 ETF 标的显示（VIX仪表盘等特殊页面隐藏）
+     */
+    function updatePositionHint(etfConfig, signalObj) {
+        const bar = document.getElementById('position-hint-bar');
+        const valueEl = document.getElementById('position-hint-value');
+        const reasonEl = document.getElementById('position-hint-reason');
+        if (!bar || !valueEl || !reasonEl || !window.AttackPyramid) return;
+
+        // VIX / 特殊页面不显示
+        if (!etfConfig || !signalObj) {
+            bar.style.display = 'none';
+            return;
+        }
+
+        const regimeKey = AttackPyramid.getCurrentRegime();
+        const result = AttackPyramid.translateSignalToPosition(signalObj, regimeKey);
+
+        bar.style.display = '';
+        valueEl.textContent = result.label;
+        valueEl.style.color = result.color;
+        valueEl.style.background = `${result.color}22`;
+        reasonEl.textContent = result.reason;
+    }
+
+    function updatePositionHintForCurrent() {
+        if (!currentETFId) return;
+        const etfConfig = ETF_CONFIG.getETFById(currentETFId);
+        if (!etfConfig) return;
+        const cached = etfDataCache[currentETFId];
+        if (!cached || !cached.currentSignal) return;
+        updatePositionHint(etfConfig, cached.currentSignal);
     }
 
     // ========== ETF切换 ==========
@@ -799,6 +868,9 @@ const App = (() => {
         etfDataCache[etfId].currentData = { ...data, spread, spreadPercentile, pePercentile };
         etfDataCache[etfId].scores = scores;
         etfDataCache[etfId].total = total;
+
+        // 更新 header 的"当前仓位建议"摘要（基于综合信号 × 全局档位）
+        updatePositionHint(etfConfig, currentSignal);
 
         updateTabDot(etfId, currentSignal.color);
 

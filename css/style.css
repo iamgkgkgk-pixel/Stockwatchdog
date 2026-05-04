@@ -1937,3 +1937,263 @@ body {
         box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
     }
 }
+
+/* ==================== 进攻仓金字塔：全局周期档位切换器 ==================== */
+.regime-switcher {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 14px;
+    margin-top: 10px;
+    background: linear-gradient(135deg, rgba(42,82,152,0.12) 0%, rgba(28,40,68,0.2) 100%);
+    border: 1px solid rgba(66,153,225,0.18);
+    border-radius: 10px;
+    font-size: 13px;
+}
+.regime-switcher-label {
+    font-weight: 600;
+    color: #a0aec0;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+.regime-options {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.regime-btn {
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    color: #cbd5e0;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.regime-btn:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(66,153,225,0.3);
+    transform: translateY(-1px);
+}
+.regime-btn.active {
+    background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+    border-color: #4299e1;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(66,153,225,0.3);
+}
+.regime-btn[data-regime="NORMAL"].active    { background: linear-gradient(135deg, #28a745 0%, #0d7337 100%); border-color: #28a745; box-shadow:0 3px 10px rgba(40,167,69,0.3);}
+.regime-btn[data-regime="CAUTIOUS"].active  { background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); border-color: #ffc107; color:#1a1a2e; box-shadow:0 3px 10px rgba(255,193,7,0.3);}
+.regime-btn[data-regime="DEFENSIVE"].active { background: linear-gradient(135deg, #dc3545 0%, #85182a 100%); border-color: #dc3545; box-shadow:0 3px 10px rgba(220,53,69,0.3);}
+.regime-btn[data-regime="RETREAT"].active   { background: linear-gradient(135deg, #2d3748 0%, #000 100%); border-color: #718096; box-shadow:0 3px 10px rgba(0,0,0,0.5);}
+.regime-switcher-hint {
+    font-size: 12px;
+    color: #a0aec0;
+    margin-left: auto;
+    font-style: italic;
+    max-width: 280px;
+    text-align: right;
+}
+@media (max-width: 600px) {
+    .regime-switcher-hint {
+        display: none;
+    }
+}
+
+/* ==================== 进攻仓金字塔建议卡片 ==================== */
+.attack-pyramid-card {
+    border: 1px solid rgba(255,127,80,0.2);
+    background: linear-gradient(135deg, rgba(255,107,54,0.05) 0%, rgba(28,40,68,0.3) 100%);
+}
+.attack-pyramid-body {
+    padding: 16px 4px;
+}
+.ap-header-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.ap-stat {
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.ap-stat-label {
+    font-size: 11px;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.ap-stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #e2e8f0;
+}
+.ap-stat-sub {
+    font-size: 11px;
+    color: #a0aec0;
+}
+
+.ap-zone-bar {
+    display: flex;
+    gap: 2px;
+    margin: 14px 0 6px;
+    border-radius: 6px;
+    overflow: hidden;
+    height: 38px;
+}
+.ap-zone-seg {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    position: relative;
+    opacity: 0.35;
+    transition: opacity 0.3s ease;
+}
+.ap-zone-seg.active {
+    opacity: 1;
+    box-shadow: 0 0 12px rgba(255,255,255,0.2) inset;
+}
+.ap-zone-seg .ap-zone-seg-label {
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.ap-zone-pointer {
+    position: relative;
+    margin: 4px 0 14px;
+    height: 18px;
+}
+.ap-zone-pointer-arrow {
+    position: absolute;
+    transform: translateX(-50%);
+    color: #ffc107;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.ap-thresholds {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 18px;
+}
+.ap-threshold-group {
+    padding: 12px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.ap-threshold-title {
+    font-size: 12px;
+    color: #a0aec0;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+.ap-threshold-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 12px;
+}
+.ap-threshold-row .tag {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+    color: #cbd5e0;
+}
+.ap-threshold-row .pe-val {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.ap-threshold-buy .pe-val { color: #9be3b0; }
+.ap-threshold-sell .pe-val { color: #fd7e14; }
+
+.ap-advice-box {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.25);
+    border-left: 4px solid;
+    line-height: 1.6;
+    font-size: 13px;
+}
+.ap-advice-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+.ap-advice-note {
+    font-size: 12px;
+    color: #ffc107;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255,255,255,0.1);
+}
+
+.ap-not-in-pool {
+    padding: 24px 16px;
+    text-align: center;
+    color: #a0aec0;
+    font-size: 13px;
+    line-height: 1.7;
+}
+.ap-not-in-pool-hint {
+    color: #718096;
+    font-size: 11px;
+    margin-top: 8px;
+}
+
+/* ==================== 当前标的仓位建议摘要（header内） ==================== */
+.position-hint-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 14px;
+    margin-top: 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    border-left: 3px solid #4299e1;
+    font-size: 12.5px;
+}
+.position-hint-label {
+    color: #a0aec0;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.position-hint-value {
+    color: #e2e8f0;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 2px 10px;
+    border-radius: 6px;
+    background: rgba(66,153,225,0.18);
+}
+.position-hint-reason {
+    color: #a0aec0;
+    font-style: italic;
+    font-size: 12px;
+    line-height: 1.4;
+    flex: 1;
+    min-width: 180px;
+}
+@media (max-width: 600px) {
+    .position-hint-reason {
+        width: 100%;
+        margin-top: 4px;
+    }
+}

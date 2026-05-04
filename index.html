@@ -101,6 +101,25 @@
             <div class="data-source-bar" id="data-source-status">
                 <span class="status-dot status-loading"></span> 正在连接数据源...
             </div>
+
+            <!-- 全局周期档位选择器 + 当前仓位建议 -->
+            <div class="regime-switcher" id="regime-switcher" title="全局周期档位 - 由您判断当前市场环境（估值高低、美联储动向、地缘、黑天鹅等），作为所有标的仓位建议的宏观过滤器">
+                <span class="regime-switcher-label">全局仓位模式:</span>
+                <div class="regime-options">
+                    <button class="regime-btn" data-regime="NORMAL"    title="正常：按标的综合信号建议仓位">🟢 正常</button>
+                    <button class="regime-btn" data-regime="CAUTIOUS"  title="谨慎：仓位建议上限50%（巴菲特2024式——估值偏高，多拿点现金）">🟡 谨慎</button>
+                    <button class="regime-btn" data-regime="DEFENSIVE" title="防守：禁止新建仓，等待明确机会（巴菲特2000/2007式）">🔴 防守</button>
+                    <button class="regime-btn" data-regime="RETREAT"   title="撤退：清仓进攻仓位，全回现金（巴菲特1969/2020Q1式）">⚫ 撤退</button>
+                </div>
+                <span class="regime-switcher-hint" id="regime-hint">🟢 按综合信号正常建议</span>
+            </div>
+
+            <!-- 当前标的仓位建议摘要（单行，基于综合信号 + 全局档位） -->
+            <div class="position-hint-bar" id="position-hint-bar" style="display:none;">
+                <span class="position-hint-label">当前建议仓位:</span>
+                <span class="position-hint-value" id="position-hint-value">--</span>
+                <span class="position-hint-reason" id="position-hint-reason">--</span>
+            </div>
         </div>
     </header>
 
@@ -349,11 +368,12 @@
     </div>
 
     <!-- ==================== Scripts ==================== -->
-    <script src="js/etf-config.js?v=20260503f"></script>
-    <script src="js/signal.js?v=20260503f"></script>
-    <script src="js/storage.js?v=20260503f"></script>
-    <script src="js/api.js?v=20260503f"></script>
-    <script src="js/charts.js?v=20260503f"></script>
-    <script src="js/main.js?v=20260503f"></script>
+    <script src="js/etf-config.js?v=20260504d"></script>
+    <script src="js/signal.js?v=20260504d"></script>
+    <script src="js/storage.js?v=20260504d"></script>
+    <script src="js/api.js?v=20260504d"></script>
+    <script src="js/charts.js?v=20260504d"></script>
+    <script src="js/attack-pyramid.js?v=20260504d"></script>
+    <script src="js/main.js?v=20260504d"></script>
 </body>
 </html>

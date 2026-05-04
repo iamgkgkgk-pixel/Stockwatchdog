@@ -104,7 +104,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪中证科创创业50指数(931643)，从科创板和创业板选取市值最大的50只新兴产业上市公司。芒格理念：以合理价格买入优质成长公司。场内简称：双创ETF。',
             signalRules: 'buffett_growth',
-            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
         },
 
         // ===== 3. 创业板50ETF =====
@@ -130,7 +130,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '创业板流动性最好的50只股票，聚焦新能源+信息技术+医药。',
             signalRules: 'buffett_growth',
-            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
         },
 
         // ===== 4. 自由现金流ETF =====
@@ -180,7 +180,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪标普500指数。巴菲特遗嘱配置：90%资金投入标普500。美股长牛但需警惕周期性高估。',
             signalRules: 'buffett_us',
-            dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
         },
 
         // ===== 6. 纳指ETF =====
@@ -205,7 +205,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪纳斯达克100指数，聚焦美国科技龙头。成长股PE波动大，需更关注市场情绪。',
             signalRules: 'buffett_us_growth',
-            dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
         },
 
         // ===== 6.5 道琼斯ETF =====
@@ -230,7 +230,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪道琼斯工业平均指数(DJIA)，由美国30家最具代表性的蓝筹工业/金融/消费龙头组成。最古老的美股指数(1896年)，相比标普500和纳指更偏价值/工业，与科技股相关性较低，是美股成熟蓝筹的代表。',
             signalRules: 'buffett_us',
-            dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
         },
 
         // ===== 7. 中证红利ETF =====
@@ -305,7 +305,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪恒生科技指数，覆盖腾讯/阿里/美团等互联网龙头。港股受AH溢价和资金面影响大。',
             signalRules: 'buffett_hk',
-            dimWeights: { valuation: 50, safety: 15, quality: 10, sentiment: 25 },
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
         },
 
         // ===== 8. 沪深300ETF =====
@@ -555,7 +555,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪上证科创板半导体材料设备指数，聚焦中微公司/北方华创/沪硅产业等半导体设备材料龙头。科创板高弹性+国产替代主线，PE波动大（50-150倍），适合成长估值体系。',
             signalRules: 'buffett_growth',
-            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
         },
 
         // ===== 17. 机器人ETF =====
@@ -580,7 +580,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪中证机器人指数，覆盖汇川技术/埃斯顿/绿的谐波等工业机器人及人形机器人产业链龙头。受益于AI+具身智能趋势，成长性强但PE波动大。',
             signalRules: 'buffett_growth',
-            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
         },
 
         // ===== 18. 储能电池ETF =====
@@ -605,7 +605,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪国证新能源电池指数，覆盖宁德时代/亿纬锂能/比亚迪等储能电池产业链龙头。受益于新能源+储能大趋势，成长性强但周期波动明显。',
             signalRules: 'buffett_growth',
-            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
         },
 
         // ===== 19. PCB电子ETF =====
@@ -630,7 +630,7 @@ const ETF_CONFIG = (() => {
             useBondSpread: false,
             description: '跟踪中证电子50指数，覆盖立讯精密/胜宏科技/鹏鼎控股等PCB及消费电子龙头。AI服务器/高速通信带动PCB需求爆发，成长弹性大。',
             signalRules: 'buffett_growth',
-            dimWeights: { valuation: 55, safety: 10, quality: 10, sentiment: 25 },
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
         },
     ];
 
@@ -778,7 +778,7 @@ const ETF_CONFIG = (() => {
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 55, safety: 10, quality: 10, sentiment: 25 };
+                const w = weights || { valuation: 40, safety: 15, quality: 20, sentiment: 25 };
                 const scores = SIGNAL_RULES.buffett_growth.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -854,7 +854,7 @@ const ETF_CONFIG = (() => {
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 45, safety: 15, quality: 10, sentiment: 30 };
+                const w = weights || { valuation: 40, safety: 15, quality: 20, sentiment: 25 };
                 const scores = SIGNAL_RULES.buffett_us.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -926,7 +926,7 @@ const ETF_CONFIG = (() => {
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 45, safety: 15, quality: 10, sentiment: 30 };
+                const w = weights || { valuation: 40, safety: 15, quality: 20, sentiment: 25 };
                 const scores = SIGNAL_RULES.buffett_us_growth.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
@@ -994,7 +994,7 @@ const ETF_CONFIG = (() => {
                 return scores;
             },
             generate: (data, weights) => {
-                const w = weights || { valuation: 50, safety: 15, quality: 10, sentiment: 25 };
+                const w = weights || { valuation: 40, safety: 15, quality: 20, sentiment: 25 };
                 const scores = SIGNAL_RULES.buffett_hk.calcScores(data, w);
 
                 let totalWeight = 0, weightedSum = 0;
