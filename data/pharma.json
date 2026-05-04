@@ -1,6 +1,6 @@
 {
   "description": "医药ETF历史数据",
-  "lastUpdate": "2026-05-01",
+  "lastUpdate": "2026-05-04",
   "peHistory": [
     {
       "date": "2019-01",
@@ -356,6 +356,11 @@
       "date": "2026-05",
       "value": 33.83,
       "percentile": 46.4
+    },
+    {
+      "date": "2026-05-04",
+      "value": 33.83,
+      "percentile": 46.4
     }
   ],
   "dividendYieldHistory": [
@@ -478,6 +483,10 @@
     {
       "date": "2026-05",
       "value": 1.71
+    },
+    {
+      "date": "2026-05-04",
+      "value": 1.71
     }
   ],
   "bondYieldHistory": [
@@ -596,6 +605,10 @@
     {
       "date": "2026-05",
       "value": 1.82
+    },
+    {
+      "date": "2026-05-04",
+      "value": 1.76
     }
   ],
   "currentData": {

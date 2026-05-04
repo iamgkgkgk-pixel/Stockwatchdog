@@ -1,6 +1,6 @@
 {
   "description": "红利低波ETF择时历史数据模板",
-  "lastUpdate": "2026-05-01",
+  "lastUpdate": "2026-05-04",
   "spreadHistory": [
     {
       "date": "2021-01",
@@ -261,6 +261,10 @@
     {
       "date": "2026-05",
       "value": 2.37
+    },
+    {
+      "date": "2026-05-04",
+      "value": 2.43
     }
   ],
   "peHistory": [
@@ -434,6 +438,11 @@
       "date": "2026-05",
       "value": 8.58,
       "percentile": 79.9
+    },
+    {
+      "date": "2026-05-04",
+      "value": 8.58,
+      "percentile": 79.9
     }
   ],
   "dividendYieldHistory": [
@@ -496,6 +505,10 @@
     {
       "date": "2026-05",
       "value": 4.19
+    },
+    {
+      "date": "2026-05-04",
+      "value": 4.19
     }
   ],
   "bondYieldHistory": [
@@ -554,6 +567,10 @@
     {
       "date": "2026-05",
       "value": 1.82
+    },
+    {
+      "date": "2026-05-04",
+      "value": 1.76
     }
   ],
   "currentData": {

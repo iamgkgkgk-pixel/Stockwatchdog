@@ -1,6 +1,6 @@
 {
   "description": "港股通央企红利ETF历史数据（中证港股通央企红利指数 931233）",
-  "lastUpdate": "2026-05-01",
+  "lastUpdate": "2026-05-04",
   "peHistory": [
     {
       "date": "2021-01",
@@ -634,6 +634,10 @@
     {
       "date": "2026-05",
       "value": 1.82
+    },
+    {
+      "date": "2026-05-04",
+      "value": 1.76
     }
   ],
   "currentData": {

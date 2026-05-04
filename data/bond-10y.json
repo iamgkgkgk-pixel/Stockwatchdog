@@ -1,6 +1,6 @@
 {
   "description": "十年国债ETF历史数据",
-  "lastUpdate": "2026-05-01",
+  "lastUpdate": "2026-05-04",
   "bondYieldHistory": [
     {
       "date": "2021-01",
@@ -261,6 +261,10 @@
     {
       "date": "2026-05",
       "value": 1.82
+    },
+    {
+      "date": "2026-05-04",
+      "value": 1.76
     }
   ],
   "currentData": {

@@ -1,6 +1,6 @@
 {
   "description": "沪深300ETF历史数据",
-  "lastUpdate": "2026-05-01",
+  "lastUpdate": "2026-05-04",
   "spreadHistory": [
     {
       "date": "2021-01",
@@ -265,6 +265,10 @@
     {
       "date": "2026-05",
       "value": 0.75
+    },
+    {
+      "date": "2026-05-04",
+      "value": 0.81
     }
   ],
   "peHistory": [
@@ -652,6 +656,11 @@
       "date": "2026-05",
       "value": 14.64,
       "percentile": 92.3
+    },
+    {
+      "date": "2026-05-04",
+      "value": 14.64,
+      "percentile": 92.3
     }
   ],
   "dividendYieldHistory": [
@@ -773,6 +782,10 @@
     },
     {
       "date": "2026-05",
+      "value": 2.57
+    },
+    {
+      "date": "2026-05-04",
       "value": 2.57
     }
   ],
@@ -896,6 +909,10 @@
     {
       "date": "2026-05",
       "value": 1.82
+    },
+    {
+      "date": "2026-05-04",
+      "value": 1.76
     }
   ],
   "currentData": {

@@ -1,6 +1,6 @@
 {
   "description": "中证红利ETF历史数据（中证红利指数 000922）",
-  "lastUpdate": "2026-05-01",
+  "lastUpdate": "2026-05-04",
   "peHistory": [
     {
       "date": "2021-01",
@@ -331,6 +331,11 @@
       "date": "2026-05",
       "value": 8.85,
       "percentile": 85.2
+    },
+    {
+      "date": "2026-05-04",
+      "value": 8.85,
+      "percentile": 85.2
     }
   ],
   "dividendYieldHistory": [
@@ -497,6 +502,10 @@
     {
       "date": "2026-05",
       "value": 4.45
+    },
+    {
+      "date": "2026-05-04",
+      "value": 4.45
     }
   ],
   "bondYieldHistory": [
@@ -643,6 +652,10 @@
     {
       "date": "2026-05",
       "value": 1.82
+    },
+    {
+      "date": "2026-05-04",
+      "value": 1.76
     }
   ],
   "spreadHistory": [
@@ -717,6 +730,10 @@
     {
       "date": "2026-05",
       "value": 2.63
+    },
+    {
+      "date": "2026-05-04",
+      "value": 2.69
     }
   ],
   "currentData": {
