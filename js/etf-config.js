@@ -308,6 +308,31 @@ const ETF_CONFIG = (() => {
             dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
         },
 
+        // ===== 9.5 腾讯控股（港股个股，测试个股信号体系）=====
+        {
+            id: 'tencent-hk',
+            code: '00700',
+            name: '腾讯控股',
+            shortName: '腾讯控股',
+            fullName: '腾讯控股 Tencent Holdings (00700.HK)',
+            type: ETF_TYPE.HK_SHARE_INDEX,
+            market: 'HK',
+            secid: '116.00700',  // 东方财富港股前缀116
+            color: '#0d92f4',
+            icon: '🐧',
+            trackIndex: {
+                name: '腾讯控股',
+                code: '00700',
+                danjuanCode: null,   // 蛋卷基金只有指数无个股，必须依赖本地JSON+行情API
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_HK,
+            useBondSpread: false,
+            description: '腾讯控股(00700.HK) - 中国互联网巨头，游戏+社交+广告+云+金融+投资。首个纳入本工具的个股标的，使用个股专用信号(buffett_stock)，Quality权重30%（ETF只有20%）。历史PE基于公开资料整理，实际数据存在±5%误差，仅作中长期估值参考。',
+            signalRules: 'buffett_stock',
+            dimWeights: { valuation: 35, safety: 20, quality: 30, sentiment: 15 },
+        },
+
         // ===== 8. 沪深300ETF =====
         {
             id: 'csi300',
@@ -1478,6 +1503,110 @@ const ETF_CONFIG = (() => {
                 if (trend >= 15 && trend < 30) return 'BUY';
                 if (trend < 15) return 'STRONG_BUY';
                 return 'NEUTRAL';
+            }
+        },
+
+        // ========== 个股专用规则（巴菲特"用好价格买伟大公司"）==========
+        //
+        // 为什么个股需要独立规则？
+        //   1. 个股有真实的 ROE（ETF 的 ROE 是加权平均，不够锐利）
+        //   2. 个股的质量（ROE/护城河）权重应显著高于 ETF
+        //   3. 个股面临逻辑破坏风险（监管/管理层/技术颠覆），更依赖盈利质量
+        //
+        // 权重分配（区别于 ETF）:
+        //   valuation 35% — 估值重要但不占大头
+        //   safety    20% — 股债利差 / 盈利收益率 vs 国债
+        //   quality   30% — ROE + PB 合理性（个股最看重）← 巴菲特: "最重要的是 ROE"
+        //   sentiment 15% — 市场情绪辅助
+        //
+        // 适用：腾讯 / 苹果 / 贵州茅台 等有长期盈利记录的优质个股
+        buffett_stock: {
+            name: '巴菲特个股估值法（质量优先）',
+            dimensions: ['valuation', 'safety', 'quality', 'sentiment'],
+            dimensionNames: {
+                valuation: '📊 PE均值偏离估值',
+                safety:    '🛡️ 股债利差/盈利收益率',
+                quality:   '💪 ROE+护城河（核心）',
+                sentiment: '🌡️ 市场情绪',
+            },
+            gauges: [
+                { id: 'composite', title: '综合投资评分', colorReverse: false },
+            ],
+            calcScores: (data, weights) => {
+                const scores = {};
+
+                // 维度A: 估值（混合模式：PE均值偏离度×0.7 + PE分位×0.3）
+                scores.valuation = SignalEngine.calcHybridValuationScore(data.pe, data.peMean, data.peStd, data.pePercentile);
+
+                // 维度B: 安全边际（股息率+回购 vs 国债，或盈利收益率 vs 国债）
+                // 腾讯等科技股股息率低(~1%)但回购多，核心用E/P-国债利差
+                if (data.pe > 0 && data.bondYield > 0) {
+                    const earningsYield = (1 / data.pe) * 100;
+                    const gap = earningsYield - data.bondYield;
+                    // Gap 5%→80分, 3%→60, 1%→40, -1%→25, -3%→10
+                    scores.safety = Math.max(0, Math.min(100, 40 + gap * 12));
+                } else if (data.dividendYield > 0 && data.bondYield > 0) {
+                    // 次选：股息率-国债利差
+                    const spread = data.dividendYield - data.bondYield;
+                    scores.safety = Math.max(0, Math.min(100, 40 + spread * 20));
+                } else {
+                    scores.safety = null;
+                }
+
+                // 维度C: 盈利质量（个股核心）— ROE + PB 合理性
+                // 巴菲特: ROE 15%+ 是优秀公司门槛，20%+ 是伟大公司
+                // 腾讯长期 ROE 20%+，苹果 30%+，茅台 30%+
+                if (data.roe > 0) {
+                    // ROE 10%→50分, 15%→70, 20%→85, 25%→95, 30%+→100
+                    const roeScore = Math.max(0, Math.min(100, (data.roe - 5) * 5 + 25));
+                    // PB 合理性加成：低 PB + 高 ROE = 格雷厄姆完美组合
+                    let pbAdj = 0;
+                    if (data.pb > 0) {
+                        if (data.pb < 2)      pbAdj = 10;  // 破 2x PB
+                        else if (data.pb < 4) pbAdj = 0;   // 合理
+                        else if (data.pb < 6) pbAdj = -10; // 偏高
+                        else                  pbAdj = -20; // 过高
+                    }
+                    scores.quality = Math.max(0, Math.min(100, roeScore + pbAdj));
+                } else {
+                    scores.quality = null;
+                }
+
+                // 维度D: 市场情绪（港股参考恒生指数温度）
+                if (data.marketTemp !== null && data.marketTemp !== undefined && !isNaN(data.marketTemp)) {
+                    scores.sentiment = Math.max(0, Math.min(100, 100 - data.marketTemp));
+                } else {
+                    scores.sentiment = null;
+                }
+
+                return scores;
+            },
+            generate: (data, weights) => {
+                const w = weights || { valuation: 35, safety: 20, quality: 30, sentiment: 15 };
+                const scores = SIGNAL_RULES.buffett_stock.calcScores(data, w);
+
+                let totalWeight = 0, weightedSum = 0;
+                Object.keys(w).forEach(dim => {
+                    if (scores[dim] !== null && scores[dim] !== undefined) {
+                        weightedSum += scores[dim] * w[dim];
+                        totalWeight += w[dim];
+                    }
+                });
+
+                if (totalWeight === 0) return 'DATA_INCOMPLETE';
+                const total = weightedSum / totalWeight;
+
+                // 硬性极端规则（个股 ROE 崩塌视为危险）
+                if (scores.valuation !== null && scores.valuation <= 5) return 'OVERHEAT';
+                if (scores.quality !== null && scores.quality <= 20) return 'STRONG_SELL'; // ROE崩溃=逻辑破坏
+
+                if (total >= 80) return 'STRONG_BUY';
+                if (total >= 70) return 'BUY';
+                if (total >= 55) return 'HOLD_ADD';
+                if (total >= 40) return 'HOLD';
+                if (total >= 25) return 'REDUCE_WARN';
+                if (total >= 15) return 'SELL';
+                return 'STRONG_SELL';
             }
         },
     };
