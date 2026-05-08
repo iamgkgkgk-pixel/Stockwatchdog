@@ -1,6 +1,6 @@
 {
   "description": "纳指100ETF历史数据",
-  "lastUpdate": "2026-05-04",
+  "lastUpdate": "2026-05-08",
   "peHistory": [
     {
       "date": "2016-01",
@@ -391,6 +391,26 @@
       "date": "2026-05-04",
       "value": 34.39,
       "percentile": 70.0
+    },
+    {
+      "date": "2026-05-05",
+      "value": 34.39,
+      "percentile": 70.0
+    },
+    {
+      "date": "2026-05-06",
+      "value": 34.39,
+      "percentile": 70.0
+    },
+    {
+      "date": "2026-05-07",
+      "value": 35.96,
+      "percentile": 82.6
+    },
+    {
+      "date": "2026-05-08",
+      "value": 35.99,
+      "percentile": 82.8
     }
   ],
   "dividendYieldHistory": [
@@ -517,6 +537,22 @@
     {
       "date": "2026-05-04",
       "value": 0.44
+    },
+    {
+      "date": "2026-05-05",
+      "value": 0.44
+    },
+    {
+      "date": "2026-05-06",
+      "value": 0.44
+    },
+    {
+      "date": "2026-05-07",
+      "value": 0.42
+    },
+    {
+      "date": "2026-05-08",
+      "value": 0.42
     }
   ],
   "bondYieldHistory": [

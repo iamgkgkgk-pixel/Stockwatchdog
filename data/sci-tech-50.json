@@ -1,6 +1,6 @@
 {
   "description": "科创创业50ETF历史数据",
-  "lastUpdate": "2026-05-04",
+  "lastUpdate": "2026-05-08",
   "peHistory": [
     {
       "date": "2021-01",
@@ -336,6 +336,26 @@
       "date": "2026-05-04",
       "value": 44.41,
       "percentile": 55.2
+    },
+    {
+      "date": "2026-05-05",
+      "value": 44.41,
+      "percentile": 55.2
+    },
+    {
+      "date": "2026-05-06",
+      "value": 44.41,
+      "percentile": 55.2
+    },
+    {
+      "date": "2026-05-07",
+      "value": 45.88,
+      "percentile": 57.4
+    },
+    {
+      "date": "2026-05-08",
+      "value": 46.38,
+      "percentile": 58.2
     }
   ],
   "dividendYieldHistory": [
@@ -462,6 +482,22 @@
     {
       "date": "2026-05-04",
       "value": 0.96
+    },
+    {
+      "date": "2026-05-05",
+      "value": 0.96
+    },
+    {
+      "date": "2026-05-06",
+      "value": 0.96
+    },
+    {
+      "date": "2026-05-07",
+      "value": 0.92
+    },
+    {
+      "date": "2026-05-08",
+      "value": 0.91
     }
   ],
   "bondYieldHistory": [
@@ -584,6 +620,22 @@
     {
       "date": "2026-05-04",
       "value": 1.76
+    },
+    {
+      "date": "2026-05-05",
+      "value": 1.76
+    },
+    {
+      "date": "2026-05-06",
+      "value": 1.78
+    },
+    {
+      "date": "2026-05-07",
+      "value": 1.78
+    },
+    {
+      "date": "2026-05-08",
+      "value": 1.78
     }
   ],
   "currentData": {
