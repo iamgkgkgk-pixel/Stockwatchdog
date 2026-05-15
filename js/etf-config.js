@@ -54,6 +54,37 @@ const ETF_CONFIG = (() => {
         BOND_YIELD: 'bond_yield',
     };
 
+    // ========== 投资分组（按基石/进攻/避险）==========
+    //
+    // 投资哲学映射：
+    //   🏛️ FORTRESS（基石仓 70%）- 长期持有，分红+宽基，不轻易卖
+    //   ⚔️ ATTACK（进攻仓 30%）  - 等机会出击，估值优势区入场
+    //   🛡️ HEDGE（避险仓）       - 股市熊市的对冲（黄金/债/商品）
+    //
+    const GROUPS = {
+        FORTRESS: {
+            key: 'FORTRESS',
+            icon: '🏛️',
+            label: '基石',
+            desc: '长期持有的红利+宽基（70%仓位）',
+            color: '#28a745',
+        },
+        ATTACK: {
+            key: 'ATTACK',
+            icon: '⚔️',
+            label: '进攻',
+            desc: '高弹性标的，等机会出击（30%仓位）',
+            color: '#dc3545',
+        },
+        HEDGE: {
+            key: 'HEDGE',
+            icon: '🛡️',
+            label: '避险',
+            desc: '黄金/债券/商品等股票熊市对冲',
+            color: '#0288d1',
+        },
+    };
+
     // ========== 所有ETF配置（22只）==========
     const ETF_LIST = [
         // ===== 1. 红利低波ETF =====
@@ -79,6 +110,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪中证红利低波动指数，选取股息率高且波动率低的50只股票。巴菲特理念：稳定现金流回报+安全边际。',
             signalRules: 'buffett_value',
             dimWeights: { valuation: 40, safety: 30, quality: 10, sentiment: 20 },
+            group: GROUPS.FORTRESS.key,
         },
 
         // ===== 2. 科创创业50ETF（招商） =====
@@ -105,6 +137,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪中证科创创业50指数(931643)，从科创板和创业板选取市值最大的50只新兴产业上市公司。芒格理念：以合理价格买入优质成长公司。场内简称：双创ETF。',
             signalRules: 'buffett_growth',
             dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 3. 创业板50ETF =====
@@ -131,6 +164,7 @@ const ETF_CONFIG = (() => {
             description: '创业板流动性最好的50只股票，聚焦新能源+信息技术+医药。',
             signalRules: 'buffett_growth',
             dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 4. 自由现金流ETF =====
@@ -156,6 +190,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪国证自由现金流指数。巴菲特核心：企业的内在价值等于未来自由现金流的折现值。',
             signalRules: 'buffett_value',
             dimWeights: { valuation: 35, safety: 40, quality: 10, sentiment: 15 },
+            group: GROUPS.FORTRESS.key,
         },
 
         // ===== 5. 标普500ETF =====
@@ -181,6 +216,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪标普500指数。巴菲特遗嘱配置：90%资金投入标普500。美股长牛但需警惕周期性高估。',
             signalRules: 'buffett_us',
             dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.FORTRESS.key,
         },
 
         // ===== 6. 纳指ETF =====
@@ -206,6 +242,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪纳斯达克100指数，聚焦美国科技龙头。成长股PE波动大，需更关注市场情绪。',
             signalRules: 'buffett_us_growth',
             dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 6.5 道琼斯ETF =====
@@ -231,6 +268,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪道琼斯工业平均指数(DJIA)，由美国30家最具代表性的蓝筹工业/金融/消费龙头组成。最古老的美股指数(1896年)，相比标普500和纳指更偏价值/工业，与科技股相关性较低，是美股成熟蓝筹的代表。',
             signalRules: 'buffett_us',
             dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 7. 中证红利ETF =====
@@ -256,6 +294,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪中证红利指数(000922)，选取100只现金股息率高、分红稳定的上市公司。A股最经典的红利策略指数，连续15次分红，与红利低波互补。',
             signalRules: 'buffett_value',
             dimWeights: { valuation: 40, safety: 30, quality: 10, sentiment: 20 },
+            group: GROUPS.FORTRESS.key,
         },
 
         // ===== 8. 港股通红利ETF =====
@@ -281,6 +320,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪中证港股通高股息投资指数(930914)，选取30只港股通高股息股票，股息率加权。PE约8倍、PB约0.65倍、股息率约5.5%，兼具高股息+港股低估双重安全边际。',
             signalRules: 'buffett_hk_dividend',
             dimWeights: { valuation: 35, safety: 35, quality: 10, sentiment: 20 },
+            group: GROUPS.FORTRESS.key,
         },
 
         // ===== 9. 恒生科技指数ETF（原7）=====
@@ -306,6 +346,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪恒生科技指数，覆盖腾讯/阿里/美团等互联网龙头。港股受AH溢价和资金面影响大。',
             signalRules: 'buffett_hk',
             dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 9.5 腾讯控股（港股个股，测试个股信号体系）=====
@@ -331,6 +372,7 @@ const ETF_CONFIG = (() => {
             description: '腾讯控股(00700.HK) - 中国互联网巨头，游戏+社交+广告+云+金融+投资。首个纳入本工具的个股标的，使用个股专用信号(buffett_stock)，Quality权重30%（ETF只有20%）。历史PE基于公开资料整理，实际数据存在±5%误差，仅作中长期估值参考。',
             signalRules: 'buffett_stock',
             dimWeights: { valuation: 35, safety: 20, quality: 30, sentiment: 15 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 8. 沪深300ETF =====
@@ -356,6 +398,7 @@ const ETF_CONFIG = (() => {
             description: 'A股的"锚"，由沪深两市规模最大、流动性最好的300只股票组成。巴菲特遗嘱配置理念的A股版本。规模3300+亿，费率0.2%，全市场最低。',
             signalRules: 'buffett_broad',
             dimWeights: { valuation: 40, safety: 30, quality: 10, sentiment: 20 },
+            group: GROUPS.FORTRESS.key,
         },
 
         // ===== 9. 上证50ETF =====
@@ -381,6 +424,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪上证50指数(000016)，由沪市规模最大、流动性最好的50只蓝筹股组成。A股大盘核心资产的代表，与沪深300高度相关但更集中于金融+消费龙头。规模870+亿，中国最早的ETF。',
             signalRules: 'buffett_broad',
             dimWeights: { valuation: 40, safety: 30, quality: 10, sentiment: 20 },
+            group: GROUPS.FORTRESS.key,
         },
 
         // ===== 10. 医药ETF =====
@@ -406,6 +450,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪沪深300医药卫生指数，覆盖恒瑞医药、药明康德、迈瑞医疗等龙头。独立周期防御型行业，与科技/消费相关性低。规模170亿，医药ETF中最大。',
             signalRules: 'buffett_pharma',
             dimWeights: { valuation: 50, safety: 20, quality: 10, sentiment: 20 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 10. 黄金ETF =====
@@ -431,6 +476,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪上海黄金交易所Au99.99现货黄金。全球公认避险+抗通胀资产，与股市负相关。费率0.2%为全市场黄金ETF最低。',
             signalRules: 'gold_trend',
             dimWeights: { valuation: 0, safety: 0, quality: 0, sentiment: 100 },
+            group: GROUPS.HEDGE.key,
         },
 
         // ===== 11. 十年国债ETF =====
@@ -456,6 +502,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪上证10年期国债指数。股债跷跷板效应的核心标的——国债大涨=市场避险升温=股市可能有机会。费率0.2%，规模165亿。',
             signalRules: 'bond_yield',
             dimWeights: { valuation: 40, safety: 30, quality: 0, sentiment: 30 },
+            group: GROUPS.HEDGE.key,
         },
 
         // ===== 12. 豆粕ETF =====
@@ -481,6 +528,7 @@ const ETF_CONFIG = (() => {
             description: '商品期货ETF，跟踪大商所豆粕期货价格指数，与股市低相关性。商品无估值，纯趋势跟踪。',
             signalRules: 'commodity_trend',
             dimWeights: { valuation: 0, safety: 0, quality: 0, sentiment: 100 },
+            group: GROUPS.HEDGE.key,
         },
 
         // ===== 13. 港股通央企红利ETF =====
@@ -506,6 +554,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪中证港股通央企红利指数(931233)，从港股通央企中选取股息率高、分红稳定的上市公司。PE约7.5倍、PB约0.6倍、股息率约6%，"666组合"典型代表。兼具高股息+央企+港股低估三重安全边际。',
             signalRules: 'buffett_hk_dividend',
             dimWeights: { valuation: 35, safety: 35, quality: 10, sentiment: 20 },
+            group: GROUPS.FORTRESS.key,
         },
 
         // ===== 14. 日经225ETF =====
@@ -531,6 +580,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪日经225指数，覆盖丰田/索尼/任天堂/东京电子等日本龙头企业。日股受日元汇率和日央行政策影响大，2023年以来巴菲特增持日本商社引发全球关注。费率0.2%，规模约17亿。',
             signalRules: 'buffett_jp',
             dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 15. 东证ETF =====
@@ -556,6 +606,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪日本东证股价指数(TOPIX)，覆盖东京证券交易所主板全部上市公司，比日经225更广泛。TOPIX是市值加权指数，更能反映日本股市整体表现。费率0.2%。',
             signalRules: 'buffett_jp',
             dimWeights: { valuation: 45, safety: 15, quality: 10, sentiment: 30 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 16. 科创半导体ETF =====
@@ -581,6 +632,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪上证科创板半导体材料设备指数，聚焦中微公司/北方华创/沪硅产业等半导体设备材料龙头。科创板高弹性+国产替代主线，PE波动大（50-150倍），适合成长估值体系。',
             signalRules: 'buffett_growth',
             dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 17. 机器人ETF =====
@@ -606,6 +658,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪中证机器人指数，覆盖汇川技术/埃斯顿/绿的谐波等工业机器人及人形机器人产业链龙头。受益于AI+具身智能趋势，成长性强但PE波动大。',
             signalRules: 'buffett_growth',
             dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 18. 储能电池ETF =====
@@ -631,6 +684,7 @@ const ETF_CONFIG = (() => {
             description: '跟踪国证新能源电池指数，覆盖宁德时代/亿纬锂能/比亚迪等储能电池产业链龙头。受益于新能源+储能大趋势，成长性强但周期波动明显。',
             signalRules: 'buffett_growth',
             dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.ATTACK.key,
         },
 
         // ===== 19. PCB电子ETF =====
@@ -656,6 +710,33 @@ const ETF_CONFIG = (() => {
             description: '跟踪中证电子50指数，覆盖立讯精密/胜宏科技/鹏鼎控股等PCB及消费电子龙头。AI服务器/高速通信带动PCB需求爆发，成长弹性大。',
             signalRules: 'buffett_growth',
             dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.ATTACK.key,
+        },
+
+        // ===== 20. 消费50ETF =====
+        {
+            id: 'consumer-50',
+            code: '515650',
+            name: '消费50ETF',
+            shortName: '消费50',
+            fullName: '富国中证消费50ETF',
+            type: ETF_TYPE.A_SHARE_INDEX,
+            market: 'SH',
+            secid: '1.515650',
+            color: '#ff6f00',
+            icon: '🍷',
+            trackIndex: {
+                name: '中证消费50指数',
+                code: '931139',
+                danjuanCode: null,
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
+            useBondSpread: false,
+            description: '跟踪中证消费50指数(931139)，从消费板块选取规模大流动性好的50只龙头（贵州茅台/五粮液/伊利/美的/格力等）。当前PE约17倍处近10年7.91%分位（极度低估），股息率4.7%超中证红利。消费白马的"困境反转"代表。',
+            signalRules: 'buffett_growth',
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.ATTACK.key,
         },
     ];
 
@@ -1645,6 +1726,7 @@ const ETF_CONFIG = (() => {
     return {
         ETF_TYPE,
         VALUATION_METHOD,
+        GROUPS,
         ETF_LIST,
         SIGNAL_RULES,
         VIX_DASHBOARD,
@@ -1659,6 +1741,25 @@ const ETF_CONFIG = (() => {
 
         getSignalRules(ruleKey) {
             return SIGNAL_RULES[ruleKey] || SIGNAL_RULES.buffett_growth;
+        },
+
+        // 获取分组下的所有标的（按ETF_LIST原顺序）
+        getETFsByGroup(groupKey) {
+            return ETF_LIST.filter(e => e.group === groupKey);
+        },
+
+        // 获取所有分组（含标的数量）
+        getAllGroups() {
+            return Object.values(GROUPS).map(g => ({
+                ...g,
+                count: ETF_LIST.filter(e => e.group === g.key).length,
+            }));
+        },
+
+        // 根据 ETF id 反查所属分组
+        getGroupByETFId(id) {
+            const etf = ETF_LIST.find(e => e.id === id);
+            return etf && etf.group ? GROUPS[etf.group] : null;
         },
 
         getAllETFIds() {

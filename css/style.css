@@ -2197,3 +2197,110 @@ body {
         margin-top: 4px;
     }
 }
+
+/* ==================== 二级 Tab Bar：分组（一级）样式 ==================== */
+.tab-group-bar {
+    position: sticky;
+    top: 0;
+    z-index: 201;
+    background: var(--bg-primary, #1a1a2e);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.tab-group-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.tab-group-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    white-space: nowrap;
+    cursor: pointer;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #cbd5e0;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.tab-group-item:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.12);
+    transform: translateY(-1px);
+}
+
+.tab-group-item.active {
+    background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+    border-color: #4299e1;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(66,153,225,0.3);
+}
+
+/* 各分组的激活态颜色 */
+.tab-group-item[data-group="FORTRESS"].active {
+    background: linear-gradient(135deg, #28a745 0%, #0d7337 100%);
+    border-color: #28a745;
+    box-shadow: 0 3px 10px rgba(40,167,69,0.35);
+}
+.tab-group-item[data-group="ATTACK"].active {
+    background: linear-gradient(135deg, #dc3545 0%, #85182a 100%);
+    border-color: #dc3545;
+    box-shadow: 0 3px 10px rgba(220,53,69,0.35);
+}
+.tab-group-item[data-group="HEDGE"].active {
+    background: linear-gradient(135deg, #0288d1 0%, #01579b 100%);
+    border-color: #0288d1;
+    box-shadow: 0 3px 10px rgba(2,136,209,0.35);
+}
+
+.tab-group-icon {
+    font-size: 15px;
+    line-height: 1;
+}
+.tab-group-label {
+    font-weight: 600;
+}
+.tab-group-count {
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.25);
+    color: #fff;
+    font-weight: 700;
+    min-width: 22px;
+    text-align: center;
+}
+
+/* ETF Tab 跟在分组 Tab 下面 */
+.tab-bar {
+    top: 48px !important;  /* 让出分组 Tab 的高度 */
+}
+
+@media (max-width: 600px) {
+    .tab-group-bar {
+        padding: 6px 10px;
+        gap: 4px;
+    }
+    .tab-group-item {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+    .tab-group-icon { font-size: 13px; }
+    .tab-group-count { font-size: 10px; padding: 1px 5px; min-width: 18px; }
+
+    .tab-bar {
+        top: 42px !important;
+    }
+}

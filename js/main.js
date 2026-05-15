@@ -43,28 +43,92 @@ const App = (() => {
         }
     }
 
-    // ========== Tab Bar ==========
+    // ========== Tab Bar（二级：分组 + 标的）==========
+
+    // 当前激活的分组（默认基石仓）
+    let currentGroupKey = 'FORTRESS';
+    const TAB_GROUP_STORAGE_KEY = 'etf_active_group';
 
     function renderTabBar() {
+        renderGroupTabBar();
+        renderItemTabBar();
+    }
+
+    /**
+     * 渲染顶部分组 Tab（基石/进攻/避险）
+     * 样式：B+C组合 — 极简文字+图标+计数
+     */
+    function renderGroupTabBar() {
+        const groupBar = document.getElementById('tab-group-bar');
+        if (!groupBar) return;
+
+        // 恢复上次选中的分组
+        try {
+            const saved = localStorage.getItem(TAB_GROUP_STORAGE_KEY);
+            if (saved && ETF_CONFIG.GROUPS && ETF_CONFIG.GROUPS[saved]) {
+                currentGroupKey = saved;
+            }
+        } catch (e) {}
+
+        const groups = ETF_CONFIG.getAllGroups();
+
+        let html = '';
+        groups.forEach(g => {
+            const active = g.key === currentGroupKey ? 'active' : '';
+            html += `
+            <div class="tab-group-item ${active}" data-group="${g.key}" title="${g.desc}">
+                <span class="tab-group-icon">${g.icon}</span>
+                <span class="tab-group-label">${g.label}</span>
+                <span class="tab-group-count">${g.count}</span>
+            </div>
+            `;
+        });
+        groupBar.innerHTML = html;
+
+        groupBar.querySelectorAll('.tab-group-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const groupKey = item.dataset.group;
+                if (groupKey === currentGroupKey) return;
+                currentGroupKey = groupKey;
+                try {
+                    localStorage.setItem(TAB_GROUP_STORAGE_KEY, groupKey);
+                } catch (e) {}
+                // 刷新激活态
+                groupBar.querySelectorAll('.tab-group-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                // 重新渲染下方的标的Tab
+                renderItemTabBar();
+            });
+        });
+    }
+
+    /**
+     * 渲染下方标的 Tab（仅显示当前分组下的标的）
+     * VIX 仪表盘特殊处理：在"进攻"分组的纳指后面插入
+     */
+    function renderItemTabBar() {
         const tabBar = document.getElementById('tab-bar');
         if (!tabBar) return;
 
         const vix = ETF_CONFIG.VIX_DASHBOARD;
         const insertAfterId = vix.insertAfterETFId;
+        const items = ETF_CONFIG.getETFsByGroup(currentGroupKey);
 
         let html = '';
-        ETF_CONFIG.ETF_LIST.forEach(etf => {
+        items.forEach(etf => {
+            const activeCls = etf.id === currentETFId ? 'active' : '';
             html += `
-            <div class="tab-item" data-etf-id="${etf.id}" title="${etf.fullName} (${etf.code})">
+            <div class="tab-item ${activeCls}" data-etf-id="${etf.id}" title="${etf.fullName} (${etf.code})">
                 <span class="tab-icon">${etf.icon}</span>
                 <span class="tab-name">${etf.shortName}</span>
                 <span class="tab-signal-dot" id="tab-dot-${etf.id}" style="background:transparent;"></span>
             </div>
             `;
-            // 在纳指后面插入VIX Tab
+            // 仅在 VIX 所属分组才插入 VIX Tab（纳指在进攻仓）
             if (etf.id === insertAfterId) {
+                const vixActive = currentETFId === vix.id ? 'active' : '';
                 html += `
-                <div class="tab-item tab-item-vix" data-etf-id="${vix.id}" title="VIX恐惧指数仪表盘（不参与信号计算）">
+                <div class="tab-item tab-item-vix ${vixActive}" data-etf-id="${vix.id}" title="VIX恐惧指数仪表盘（不参与信号计算）">
                     <span class="tab-icon">${vix.icon}</span>
                     <span class="tab-name">${vix.shortName}</span>
                     <span class="tab-vix-badge">仪表盘</span>
@@ -81,6 +145,29 @@ const App = (() => {
                 if (etfId !== currentETFId) switchETF(etfId);
             });
         });
+    }
+
+    /**
+     * 切换到指定 ETF 时，自动同步分组Tab的高亮状态
+     */
+    function syncGroupForCurrentETF() {
+        if (!currentETFId) return;
+        const group = ETF_CONFIG.getGroupByETFId(currentETFId);
+        if (!group) {
+            // 如：VIX 没有 group，不强制切换
+            return;
+        }
+        if (group.key !== currentGroupKey) {
+            currentGroupKey = group.key;
+            try {
+                localStorage.setItem(TAB_GROUP_STORAGE_KEY, group.key);
+            } catch (e) {}
+            renderGroupTabBar();
+            renderItemTabBar();
+        } else {
+            // 仅刷新标的 Tab 的 active 态
+            renderItemTabBar();
+        }
     }
 
     function updateTabDot(etfId, color) {
@@ -182,6 +269,9 @@ const App = (() => {
 
         currentETFId = etfId;
         window.location.hash = etfId;
+
+        // 同步分组Tab高亮：如标的属于其他分组，自动切换到该分组
+        syncGroupForCurrentETF();
 
         document.querySelectorAll('.tab-item').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.etfId === etfId);
