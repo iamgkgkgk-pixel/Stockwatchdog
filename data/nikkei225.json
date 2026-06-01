@@ -1,6 +1,6 @@
 {
   "description": "日经225ETF历史数据",
-  "lastUpdate": "2026-05-01",
+  "lastUpdate": "2026-06-01",
   "peHistory": [
     {
       "date": "2016-01",
@@ -381,6 +381,11 @@
       "date": "2026-05",
       "value": 18.55,
       "percentile": 41.9
+    },
+    {
+      "date": "2026-06",
+      "value": 17.93,
+      "percentile": 35.0
     }
   ],
   "dividendYieldHistory": [
@@ -527,6 +532,10 @@
     {
       "date": "2026-05",
       "value": 1.98
+    },
+    {
+      "date": "2026-06",
+      "value": 2.01
     }
   ],
   "bondYieldHistory": [
@@ -673,6 +682,10 @@
     {
       "date": "2026-05",
       "value": 4.31
+    },
+    {
+      "date": "2026-06",
+      "value": 4.31
     }
   ],
   "currentData": {
@@ -684,7 +697,7 @@
     "pbPercentile": 62.5,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-05-01",
+    "updateTime": "2026-06-01",
     "note": "日经225指数估值数据（日本10Y国债收益率约1.15%）",
     "spread": -2.36
   },

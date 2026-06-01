@@ -1,6 +1,6 @@
 {
   "description": "上证50ETF历史数据",
-  "lastUpdate": "2026-05-08",
+  "lastUpdate": "2026-06-01",
   "spreadHistory": [
     {
       "date": "2021-01",
@@ -281,6 +281,10 @@
     {
       "date": "2026-05-08",
       "value": 1.37
+    },
+    {
+      "date": "2026-06",
+      "value": 1.94
     }
   ],
   "peHistory": [
@@ -693,6 +697,11 @@
       "date": "2026-05-08",
       "value": 11.62,
       "percentile": 82.8
+    },
+    {
+      "date": "2026-06",
+      "value": 11.24,
+      "percentile": 73.6
     }
   ],
   "dividendYieldHistory": [
@@ -835,6 +844,10 @@
     {
       "date": "2026-05-08",
       "value": 3.15
+    },
+    {
+      "date": "2026-06",
+      "value": 3.67
     }
   ],
   "bondYieldHistory": [
@@ -973,20 +986,24 @@
     {
       "date": "2026-05-08",
       "value": 1.78
+    },
+    {
+      "date": "2026-06",
+      "value": 1.73
     }
   ],
   "currentData": {
-    "dividendYield": 3.19,
-    "bondYield": 1.82,
-    "spread": 1.37,
+    "dividendYield": 3.67,
+    "bondYield": 1.73,
+    "spread": 1.94,
     "spreadPercentile": 45.8,
-    "pe": 11.61,
-    "pePercentile": 82.68,
-    "pb": 1.22,
-    "pbPercentile": 43.72,
+    "pe": 11.24,
+    "pePercentile": 73.64,
+    "pb": 1.19,
+    "pbPercentile": 29.2,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-05-01",
+    "updateTime": "2026-06-01",
     "note": "上证50指数估值数据"
   },
   "valuationAnchor": {
