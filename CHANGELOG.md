@@ -4,6 +4,32 @@
 
 ---
 
+## [2026-07-01]
+
+### Fixed — 储能/PCB 数据Bug修复
+
+用户反馈：储能电池和PCB电子ETF只显示"市场情绪"维度，缺失PE和安全边际。
+
+**根本原因**（3个bug）：
+1. **字段名错拼**：`dividendHistory` 应为 `dividendYieldHistory`
+   - signal.js 只认标准字段名，导致股息率历史读不到 → 安全边际维度无数据
+2. **缺失 currentData 兜底**：pe/pb/dividendYield/bondYield 全为 null
+   - 当东财 API 无法获取实时数据时，前端本应回退到 JSON 里的 currentData
+   - 但这两个 ETF 的 currentData 字段是空的，导致所有维度读不到值
+3. **PCB 指数代码错误**（元数据）：`931087` 应为 `931461`
+   - 931087 是"中证科技龙头"指数，与 PCB 无关
+   - 不影响功能（因为 danjuanCode=null，不实际调用蛋卷），但描述性数据错了
+
+**修复内容**：
+- `data/energy-storage.json`：修字段名 + 补 currentData（pe=36.5/pb=2.5/div=0.5/bond=1.71/roe=5%）
+- `data/pcb.json`：修字段名 + 补 currentData（pe=44.2/pb=3.2/div=0.51/bond=1.71/roe=8%）
+- `js/etf-config.js`：PCB 指数代码 931087→931461（同步修正描述文字）
+- PB/ROE 数据基于同类主题ETF估算（参照半导体4.85/7.5、机器人3.85/6.2），note 中标注"估算值"
+
+**验证**：修复后综合信号应能正常显示估值/安全边际/盈利质量/情绪 四个维度
+
+---
+
 ## [2026-05-15]
 
 ### Added — 消费50ETF + 二级Tab分组导航
