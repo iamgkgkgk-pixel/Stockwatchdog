@@ -33,3 +33,6 @@ temp/
 # 构建产物（当前无构建工具，预留）
 dist/
 build/
+
+# Notifier 本地产物（截图/HTML快照/webhook配置——含敏感URL，禁止提交）
+notifier/
