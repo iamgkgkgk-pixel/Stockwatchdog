@@ -1,6 +1,6 @@
 {
   "description": "机器人ETF历史数据",
-  "lastUpdate": "2026-06-01",
+  "lastUpdate": "2026-07-01",
   "peHistory": [
     {
       "date": "2022-01",
@@ -271,6 +271,11 @@
       "date": "2026-06",
       "value": 53.58,
       "percentile": 29.0
+    },
+    {
+      "date": "2026-07",
+      "value": 49.12,
+      "percentile": 21.9
     }
   ],
   "dividendYieldHistory": [
@@ -357,6 +362,10 @@
     {
       "date": "2026-06",
       "value": 0.62
+    },
+    {
+      "date": "2026-07",
+      "value": 0.66
     }
   ],
   "bondYieldHistory": [
@@ -463,11 +472,15 @@
     {
       "date": "2026-06",
       "value": 1.73
+    },
+    {
+      "date": "2026-07",
+      "value": 1.75
     }
   ],
   "currentData": {
     "dividendYield": 0.55,
-    "bondYield": 1.73,
+    "bondYield": 1.75,
     "pe": 62.5,
     "pePercentile": 43.2,
     "pb": 3.85,
@@ -475,9 +488,9 @@
     "roe": 6.2,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-06-01",
+    "updateTime": "2026-07-01",
     "note": "中证机器人指数PE波动大(40-100)，当前PE 62处于历史中位偏低，受益AI+具身智能长期趋势",
-    "spread": -1.18
+    "spread": -1.2
   },
   "valuationAnchor": {
     "peMean": 65.36,

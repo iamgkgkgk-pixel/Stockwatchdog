@@ -1,6 +1,6 @@
 {
   "description": "港股通央企红利ETF历史数据（中证港股通央企红利指数 931233）",
-  "lastUpdate": "2026-06-01",
+  "lastUpdate": "2026-07-01",
   "peHistory": [
     {
       "date": "2021-01",
@@ -331,6 +331,11 @@
       "date": "2026-06",
       "value": 7.71,
       "percentile": 67.7
+    },
+    {
+      "date": "2026-07",
+      "value": 7.79,
+      "percentile": 69.7
     }
   ],
   "dividendYieldHistory": [
@@ -497,6 +502,10 @@
     {
       "date": "2026-06",
       "value": 6.19
+    },
+    {
+      "date": "2026-07",
+      "value": 6.35
     }
   ],
   "bondYieldHistory": [
@@ -667,20 +676,24 @@
     {
       "date": "2026-06",
       "value": 1.73
+    },
+    {
+      "date": "2026-07",
+      "value": 1.75
     }
   ],
   "currentData": {
     "dividendYield": 5.88,
-    "bondYield": 1.73,
+    "bondYield": 1.75,
     "pe": 7.55,
     "pePercentile": 63.8,
     "pb": 0.63,
     "pbPercentile": 36.5,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-06-01",
+    "updateTime": "2026-07-01",
     "note": "中证港股通央企红利指数(931233)估值数据",
-    "spread": 4.15
+    "spread": 4.13
   },
   "valuationAnchor": {
     "peMean": 6.53,

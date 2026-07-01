@@ -1,6 +1,6 @@
 {
   "description": "红利低波ETF择时历史数据模板",
-  "lastUpdate": "2026-06-01",
+  "lastUpdate": "2026-07-01",
   "spreadHistory": [
     {
       "date": "2021-01",
@@ -285,6 +285,10 @@
     {
       "date": "2026-06",
       "value": 3.19
+    },
+    {
+      "date": "2026-07",
+      "value": 3.76
     }
   ],
   "peHistory": [
@@ -597,6 +601,11 @@
       "date": "2026-06",
       "value": 8.21,
       "percentile": 73.5
+    },
+    {
+      "date": "2026-07",
+      "value": 7.54,
+      "percentile": 67.5
     }
   ],
   "dividendYieldHistory": [
@@ -771,6 +780,10 @@
     {
       "date": "2026-06",
       "value": 4.92
+    },
+    {
+      "date": "2026-07",
+      "value": 5.51
     }
   ],
   "bondYieldHistory": [
@@ -941,20 +954,24 @@
     {
       "date": "2026-06",
       "value": 1.73
+    },
+    {
+      "date": "2026-07",
+      "value": 1.75
     }
   ],
   "currentData": {
-    "dividendYield": 4.92,
-    "bondYield": 1.73,
-    "spread": 3.19,
+    "dividendYield": 5.51,
+    "bondYield": 1.75,
+    "spread": 3.76,
     "spreadPercentile": 45.2,
-    "pe": 8.21,
-    "pePercentile": 73.52,
-    "pb": 0.83,
-    "pbPercentile": 52.28,
+    "pe": 7.54,
+    "pePercentile": 67.52,
+    "pb": 0.77,
+    "pbPercentile": 40.28,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-06-01",
+    "updateTime": "2026-07-01",
     "note": "红利低波指数(CSIH30269)估值数据，来源:蛋卷基金"
   },
   "valuationAnchor": {

@@ -1,6 +1,6 @@
 {
   "description": "科创创业50ETF历史数据",
-  "lastUpdate": "2026-06-01",
+  "lastUpdate": "2026-07-01",
   "peHistory": [
     {
       "date": "2021-01",
@@ -361,6 +361,11 @@
       "date": "2026-06",
       "value": 48.25,
       "percentile": 60.3
+    },
+    {
+      "date": "2026-07",
+      "value": 54.63,
+      "percentile": 77.1
     }
   ],
   "dividendYieldHistory": [
@@ -507,6 +512,10 @@
     {
       "date": "2026-06",
       "value": 0.91
+    },
+    {
+      "date": "2026-07",
+      "value": 0.71
     }
   ],
   "bondYieldHistory": [
@@ -649,20 +658,24 @@
     {
       "date": "2026-06",
       "value": 1.73
+    },
+    {
+      "date": "2026-07",
+      "value": 1.75
     }
   ],
   "currentData": {
-    "dividendYield": 0.91,
-    "bondYield": 1.73,
-    "pe": 48.25,
-    "pePercentile": 60.28,
-    "pb": 6.32,
-    "pbPercentile": 77.12,
+    "dividendYield": 0.71,
+    "bondYield": 1.75,
+    "pe": 54.63,
+    "pePercentile": 77.08,
+    "pb": 7.32,
+    "pbPercentile": 85.4,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-06-01",
+    "updateTime": "2026-07-01",
     "note": "科创创业50指数(931643)估值数据 - 对应招商科创创业50ETF(588300)",
-    "spread": -0.82
+    "spread": -1.04
   },
   "valuationAnchor": {
     "peMean": 48.71,

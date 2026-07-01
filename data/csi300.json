@@ -1,6 +1,6 @@
 {
   "description": "沪深300ETF历史数据",
-  "lastUpdate": "2026-06-01",
+  "lastUpdate": "2026-07-01",
   "spreadHistory": [
     {
       "date": "2021-01",
@@ -289,6 +289,10 @@
     {
       "date": "2026-06",
       "value": 1.0
+    },
+    {
+      "date": "2026-07",
+      "value": 0.87
     }
   ],
   "peHistory": [
@@ -706,6 +710,11 @@
       "date": "2026-06",
       "value": 14.56,
       "percentile": 90.8
+    },
+    {
+      "date": "2026-07",
+      "value": 14.51,
+      "percentile": 89.8
     }
   ],
   "dividendYieldHistory": [
@@ -852,6 +861,10 @@
     {
       "date": "2026-06",
       "value": 2.73
+    },
+    {
+      "date": "2026-07",
+      "value": 2.62
     }
   ],
   "bondYieldHistory": [
@@ -998,20 +1011,24 @@
     {
       "date": "2026-06",
       "value": 1.73
+    },
+    {
+      "date": "2026-07",
+      "value": 1.75
     }
   ],
   "currentData": {
-    "dividendYield": 2.73,
-    "bondYield": 1.73,
-    "spread": 1.0,
+    "dividendYield": 2.62,
+    "bondYield": 1.75,
+    "spread": 0.87,
     "spreadPercentile": 32.5,
-    "pe": 14.56,
-    "pePercentile": 90.84,
-    "pb": 1.45,
-    "pbPercentile": 48.0,
+    "pe": 14.51,
+    "pePercentile": 89.8,
+    "pb": 1.47,
+    "pbPercentile": 52.4,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-06-01",
+    "updateTime": "2026-07-01",
     "note": "沪深300指数估值数据"
   },
   "valuationAnchor": {

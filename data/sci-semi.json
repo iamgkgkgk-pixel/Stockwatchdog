@@ -1,6 +1,6 @@
 {
   "description": "科创半导体ETF历史数据",
-  "lastUpdate": "2026-06-01",
+  "lastUpdate": "2026-07-01",
   "peHistory": [
     {
       "date": "2021-01",
@@ -331,6 +331,11 @@
       "date": "2026-06",
       "value": 56.05,
       "percentile": 21.5
+    },
+    {
+      "date": "2026-07",
+      "value": 51.47,
+      "percentile": 16.0
     }
   ],
   "dividendYieldHistory": [
@@ -425,6 +430,10 @@
     {
       "date": "2026-06",
       "value": 0.62
+    },
+    {
+      "date": "2026-07",
+      "value": 0.66
     }
   ],
   "bondYieldHistory": [
@@ -539,11 +548,15 @@
     {
       "date": "2026-06",
       "value": 1.73
+    },
+    {
+      "date": "2026-07",
+      "value": 1.75
     }
   ],
   "currentData": {
     "dividendYield": 0.55,
-    "bondYield": 1.73,
+    "bondYield": 1.75,
     "pe": 65.2,
     "pePercentile": 32.5,
     "pb": 4.85,
@@ -551,9 +564,9 @@
     "roe": 7.5,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-06-01",
+    "updateTime": "2026-07-01",
     "note": "科创板半导体PE波动大(50-150)，当前PE 65处于历史偏低区间，国产替代主线长期逻辑不变",
-    "spread": -1.18
+    "spread": -1.2
   },
   "valuationAnchor": {
     "peMean": 82.22,

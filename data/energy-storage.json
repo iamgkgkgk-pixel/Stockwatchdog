@@ -1,6 +1,6 @@
 {
   "description": "储能电池ETF历史数据",
-  "lastUpdate": "2026-06-30",
+  "lastUpdate": "2026-07-01",
   "peHistory": [
     {
       "date": "2020-07",
@@ -131,6 +131,11 @@
       "date": "2026-06",
       "value": 34.6,
       "percentile": 28.0
+    },
+    {
+      "date": "2026-07",
+      "value": 32.6,
+      "percentile": 24.5
     }
   ],
   "dividendYieldHistory": [
@@ -185,10 +190,6 @@
     {
       "date": "2026-05",
       "value": 0.5
-    },
-    {
-      "date": "2026-06",
-      "value": 0.46
     }
   ],
   "bondYieldHistory": [
@@ -351,6 +352,10 @@
     {
       "date": "2026-06-30",
       "value": 1.71
+    },
+    {
+      "date": "2026-07",
+      "value": 1.75
     }
   ],
   "valuationAnchor": {
@@ -361,60 +366,6 @@
     "source": "JSON历史PE统计(国证新能源电池指数399296，数据点偏少)",
     "updateDate": "2026-04"
   },
-  "dividendYieldHistory": [
-    {
-      "date": "2020-07",
-      "value": 0.35
-    },
-    {
-      "date": "2021-01",
-      "value": 0.28
-    },
-    {
-      "date": "2021-07",
-      "value": 0.22
-    },
-    {
-      "date": "2022-01",
-      "value": 0.32
-    },
-    {
-      "date": "2022-07",
-      "value": 0.38
-    },
-    {
-      "date": "2023-01",
-      "value": 0.55
-    },
-    {
-      "date": "2023-07",
-      "value": 0.72
-    },
-    {
-      "date": "2024-01",
-      "value": 0.85
-    },
-    {
-      "date": "2024-07",
-      "value": 0.78
-    },
-    {
-      "date": "2025-01",
-      "value": 0.65
-    },
-    {
-      "date": "2025-07",
-      "value": 0.58
-    },
-    {
-      "date": "2026-01",
-      "value": 0.55
-    },
-    {
-      "date": "2026-05",
-      "value": 0.5
-    }
-  ],
   "currentData": {
     "pe": 36.5,
     "pb": 2.5,
