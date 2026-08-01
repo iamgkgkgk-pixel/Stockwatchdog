@@ -1,6 +1,6 @@
 {
   "description": "医药ETF历史数据",
-  "lastUpdate": "2026-07-01",
+  "lastUpdate": "2026-08-01",
   "peHistory": [
     {
       "date": "2019-01",
@@ -391,6 +391,11 @@
       "date": "2026-07",
       "value": 31.15,
       "percentile": 33.0
+    },
+    {
+      "date": "2026-08",
+      "value": 33.19,
+      "percentile": 44.2
     }
   ],
   "dividendYieldHistory": [
@@ -541,6 +546,10 @@
     {
       "date": "2026-07",
       "value": 1.89
+    },
+    {
+      "date": "2026-08",
+      "value": 1.75
     }
   ],
   "bondYieldHistory": [
@@ -687,20 +696,24 @@
     {
       "date": "2026-07",
       "value": 1.75
+    },
+    {
+      "date": "2026-08",
+      "value": 1.72
     }
   ],
   "currentData": {
-    "dividendYield": 1.89,
-    "bondYield": 1.75,
-    "pe": 31.15,
-    "pePercentile": 33.04,
-    "pb": 2.95,
-    "pbPercentile": 3.04,
+    "dividendYield": 1.75,
+    "bondYield": 1.72,
+    "pe": 33.19,
+    "pePercentile": 44.24,
+    "pb": 3.16,
+    "pbPercentile": 14.0,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-07-01",
+    "updateTime": "2026-08-01",
     "note": "沪深300医药卫生指数估值数据",
-    "spread": 0.14
+    "spread": 0.03
   },
   "valuationAnchor": {
     "peMean": 30.7,

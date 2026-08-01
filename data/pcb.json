@@ -1,6 +1,6 @@
 {
   "description": "PCB电子ETF历史数据",
-  "lastUpdate": "2026-07-01",
+  "lastUpdate": "2026-08-01",
   "peHistory": [
     {
       "date": "2020-07",
@@ -136,6 +136,11 @@
       "date": "2026-07",
       "value": 32.7,
       "percentile": 24.6
+    },
+    {
+      "date": "2026-08",
+      "value": 27.8,
+      "percentile": 15.5
     }
   ],
   "dividendYieldHistory": [
@@ -356,6 +361,10 @@
     {
       "date": "2026-07",
       "value": 1.75
+    },
+    {
+      "date": "2026-08",
+      "value": 1.72
     }
   ],
   "valuationAnchor": {
