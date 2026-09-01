@@ -1,6 +1,6 @@
 {
   "description": "十年国债ETF历史数据",
-  "lastUpdate": "2026-08-01",
+  "lastUpdate": "2026-09-01",
   "bondYieldHistory": [
     {
       "date": "2021-01",
@@ -293,13 +293,17 @@
     {
       "date": "2026-08",
       "value": 1.72
+    },
+    {
+      "date": "2026-09",
+      "value": 1.7
     }
   ],
   "currentData": {
-    "bondYield": 1.72,
+    "bondYield": 1.7,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-08-01",
+    "updateTime": "2026-09-01",
     "note": "中国10年期国债收益率数据"
   }
 }

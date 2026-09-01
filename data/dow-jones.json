@@ -1,6 +1,6 @@
 {
   "description": "道琼斯ETF历史数据（513400 道琼斯ETF鹏华，跟踪DJIA道琼斯工业平均指数）",
-  "lastUpdate": "2026-08-01",
+  "lastUpdate": "2026-09-01",
   "peHistory": [
     {
       "date": "2016-01",
@@ -196,6 +196,11 @@
       "date": "2026-08",
       "value": 27.23,
       "percentile": 74.3
+    },
+    {
+      "date": "2026-09",
+      "value": 27.26,
+      "percentile": 74.0
     }
   ],
   "dividendYieldHistory": [
@@ -330,6 +335,10 @@
     {
       "date": "2026-08",
       "value": 0.86
+    },
+    {
+      "date": "2026-09",
+      "value": 0.73
     }
   ],
   "bondYieldHistory": [
@@ -460,6 +469,10 @@
     {
       "date": "2026-08",
       "value": 4.31
+    },
+    {
+      "date": "2026-09",
+      "value": 4.31
     }
   ],
   "currentData": {
@@ -471,7 +484,7 @@
     "pbPercentile": 70.0,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-08-01",
+    "updateTime": "2026-09-01",
     "note": "道琼斯工业平均指数估值数据（美元10Y国债收益率）",
     "spread": -2.66
   },

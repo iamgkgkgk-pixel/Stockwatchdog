@@ -1,6 +1,6 @@
 {
   "description": "中证红利ETF历史数据（中证红利指数 000922）",
-  "lastUpdate": "2026-08-01",
+  "lastUpdate": "2026-09-01",
   "peHistory": [
     {
       "date": "2021-01",
@@ -371,6 +371,11 @@
       "date": "2026-08",
       "value": 8.73,
       "percentile": 83.2
+    },
+    {
+      "date": "2026-09",
+      "value": 8.7,
+      "percentile": 82.7
     }
   ],
   "dividendYieldHistory": [
@@ -569,6 +574,10 @@
     {
       "date": "2026-08",
       "value": 4.26
+    },
+    {
+      "date": "2026-09",
+      "value": 4.16
     }
   ],
   "bondYieldHistory": [
@@ -747,6 +756,10 @@
     {
       "date": "2026-08",
       "value": 1.72
+    },
+    {
+      "date": "2026-09",
+      "value": 1.7
     }
   ],
   "spreadHistory": [
@@ -853,19 +866,23 @@
     {
       "date": "2026-08",
       "value": 2.54
+    },
+    {
+      "date": "2026-09",
+      "value": 2.46
     }
   ],
   "currentData": {
-    "dividendYield": 4.26,
-    "bondYield": 1.72,
-    "pe": 8.73,
-    "pePercentile": 83.24,
-    "pb": 0.85,
-    "pbPercentile": 50.4,
-    "spread": 2.54,
+    "dividendYield": 4.16,
+    "bondYield": 1.7,
+    "pe": 8.7,
+    "pePercentile": 82.72,
+    "pb": 0.86,
+    "pbPercentile": 51.76,
+    "spread": 2.46,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-08-01",
+    "updateTime": "2026-09-01",
     "note": "中证红利指数(000922)估值数据，蛋卷有覆盖(SH000922)"
   },
   "valuationAnchor": {

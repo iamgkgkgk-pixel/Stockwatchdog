@@ -1,6 +1,6 @@
 {
   "description": "标普500ETF历史数据",
-  "lastUpdate": "2026-08-01",
+  "lastUpdate": "2026-09-01",
   "peHistory": [
     {
       "date": "2016-01",
@@ -426,6 +426,11 @@
       "date": "2026-08",
       "value": 25.49,
       "percentile": 60.7
+    },
+    {
+      "date": "2026-09",
+      "value": 25.3,
+      "percentile": 58.3
     }
   ],
   "dividendYieldHistory": [
@@ -580,6 +585,10 @@
     {
       "date": "2026-08",
       "value": 1.03
+    },
+    {
+      "date": "2026-09",
+      "value": 1.02
     }
   ],
   "bondYieldHistory": [
@@ -710,20 +719,24 @@
     {
       "date": "2026-08",
       "value": 4.31
+    },
+    {
+      "date": "2026-09",
+      "value": 4.31
     }
   ],
   "currentData": {
-    "dividendYield": 1.03,
+    "dividendYield": 1.02,
     "bondYield": 4.31,
-    "pe": 25.49,
-    "pePercentile": 60.72,
-    "pb": 5.5,
-    "pbPercentile": 94.88,
+    "pe": 25.3,
+    "pePercentile": 58.32,
+    "pb": 5.54,
+    "pbPercentile": 95.2,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-08-01",
+    "updateTime": "2026-09-01",
     "note": "标普500指数估值数据（美元10Y国债收益率）",
-    "spread": -3.28
+    "spread": -3.29
   },
   "valuationAnchor": {
     "peMean": 22.97,

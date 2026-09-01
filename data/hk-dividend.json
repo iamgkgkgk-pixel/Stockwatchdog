@@ -1,6 +1,6 @@
 {
   "description": "港股通红利ETF历史数据（中证港股通高股息投资指数 930914）",
-  "lastUpdate": "2026-08-01",
+  "lastUpdate": "2026-09-01",
   "peHistory": [
     {
       "date": "2021-01",
@@ -341,6 +341,11 @@
       "date": "2026-08",
       "value": 9.25,
       "percentile": 93.2
+    },
+    {
+      "date": "2026-09",
+      "value": 9.46,
+      "percentile": 99.7
     }
   ],
   "dividendYieldHistory": [
@@ -515,6 +520,10 @@
     {
       "date": "2026-08",
       "value": 6.17
+    },
+    {
+      "date": "2026-09",
+      "value": 6.31
     }
   ],
   "bondYieldHistory": [
@@ -693,20 +702,24 @@
     {
       "date": "2026-08",
       "value": 1.72
+    },
+    {
+      "date": "2026-09",
+      "value": 1.7
     }
   ],
   "currentData": {
     "dividendYield": 5.55,
-    "bondYield": 1.72,
+    "bondYield": 1.7,
     "pe": 8.39,
     "pePercentile": 67.5,
     "pb": 0.65,
     "pbPercentile": 42.8,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-08-01",
+    "updateTime": "2026-09-01",
     "note": "中证港股通高股息投资指数(930914)估值数据，蛋卷无覆盖",
-    "spread": 3.83
+    "spread": 3.85
   },
   "valuationAnchor": {
     "peMean": 7.08,
