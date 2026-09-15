@@ -331,6 +331,21 @@
       "date": "2026-06",
       "value": 8.82,
       "percentile": 80.3
+    },
+    {
+      "date": "2026-07",
+      "value": 9.04,
+      "percentile": 86.7
+    },
+    {
+      "date": "2026-08",
+      "value": 9.25,
+      "percentile": 93.2
+    },
+    {
+      "date": "2026-09",
+      "value": 9.46,
+      "percentile": 99.7
     }
   ],
   "dividendYieldHistory": [
@@ -497,6 +512,18 @@
     {
       "date": "2026-06",
       "value": 5.88
+    },
+    {
+      "date": "2026-07",
+      "value": 6.04
+    },
+    {
+      "date": "2026-08",
+      "value": 6.17
+    },
+    {
+      "date": "2026-09",
+      "value": 6.31
     }
   ],
   "bondYieldHistory": [
@@ -582,7 +609,7 @@
     },
     {
       "date": "2025-02",
-      "value": 2.0
+      "value": 2
     },
     {
       "date": "2025-03",
@@ -669,6 +696,10 @@
       "value": 1.73
     },
     {
+      "date": "2026-07",
+      "value": 1.75
+    },
+    {
       "date": "2026-07-01",
       "value": 1.74
     },
@@ -721,6 +752,10 @@
       "value": 1.74
     },
     {
+      "date": "2026-08",
+      "value": 1.72
+    },
+    {
       "date": "2026-08-03",
       "value": 1.72
     },
@@ -761,6 +796,10 @@
       "value": 1.72
     },
     {
+      "date": "2026-09",
+      "value": 1.7
+    },
+    {
       "date": "2026-09-01",
       "value": 1.7
     },
@@ -779,16 +818,16 @@
   ],
   "currentData": {
     "dividendYield": 5.55,
-    "bondYield": 1.73,
+    "bondYield": 1.7,
     "pe": 8.39,
     "pePercentile": 67.5,
     "pb": 0.65,
     "pbPercentile": 42.8,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-06-01",
+    "updateTime": "2026-09-01",
     "note": "中证港股通高股息投资指数(930914)估值数据，蛋卷无覆盖",
-    "spread": 3.82
+    "spread": 3.85
   },
   "valuationAnchor": {
     "peMean": 7.08,

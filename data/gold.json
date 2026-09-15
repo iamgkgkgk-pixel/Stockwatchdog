@@ -1,6 +1,6 @@
 {
   "description": "黄金ETF历史数据",
-  "lastUpdate": "2026-06-01",
+  "lastUpdate": "2026-09-01",
   "priceHistory": [
     {
       "date": "2021-01",
@@ -265,12 +265,24 @@
     {
       "date": "2026-06",
       "value": 9.43
+    },
+    {
+      "date": "2026-07",
+      "value": 8.35
+    },
+    {
+      "date": "2026-08",
+      "value": 8.52
+    },
+    {
+      "date": "2026-09",
+      "value": 8.06
     }
   ],
   "currentData": {
-    "price": 9.43,
-    "priceChange": -0.53,
-    "updateTime": "2026-06-01",
+    "price": 8.06,
+    "priceChange": 0,
+    "updateTime": "2026-09-01",
     "note": "上海金Au99.99现货黄金价格(元/克)"
   }
 }

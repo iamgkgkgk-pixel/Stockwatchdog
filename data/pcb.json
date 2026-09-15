@@ -131,6 +131,21 @@
       "date": "2026-06",
       "value": 38.5,
       "percentile": 33.9
+    },
+    {
+      "date": "2026-07",
+      "value": 32.7,
+      "percentile": 24.6
+    },
+    {
+      "date": "2026-08",
+      "value": 27.8,
+      "percentile": 15.5
+    },
+    {
+      "date": "2026-09",
+      "value": 23.6,
+      "percentile": 6.3
     }
   ],
   "dividendYieldHistory": [
@@ -349,6 +364,10 @@
       "value": 1.71
     },
     {
+      "date": "2026-07",
+      "value": 1.75
+    },
+    {
       "date": "2026-07-01",
       "value": 1.74
     },
@@ -401,6 +420,10 @@
       "value": 1.74
     },
     {
+      "date": "2026-08",
+      "value": 1.72
+    },
+    {
       "date": "2026-08-03",
       "value": 1.72
     },
@@ -441,6 +464,10 @@
       "value": 1.72
     },
     {
+      "date": "2026-09",
+      "value": 1.7
+    },
+    {
       "date": "2026-09-01",
       "value": 1.7
     },
@@ -470,7 +497,7 @@
     "pb": 3.2,
     "dividendYield": 0.51,
     "bondYield": 1.71,
-    "roe": 8.0,
+    "roe": 8,
     "pePercentile": 42.8,
     "pbPercentile": null,
     "price": 0,
