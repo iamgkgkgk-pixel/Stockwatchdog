@@ -156,13 +156,9 @@ const SignalEngine = (() => {
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
         const weights = etfConfig.dimWeights || {};
 
-        // NaN防护：在输入数据层清理NaN值，转为null
         const cleanData = { ...data };
         ['marketTemp', 'pePercentile', 'spreadPercentile', 'trendScore', 'pe', 'pb', 'dividendYield', 'bondYield', 'roe', 'peMean', 'peStd'].forEach(key => {
-            if (typeof cleanData[key] === 'number' && isNaN(cleanData[key])) {
-                cleanData[key] = null;
-                console.warn(`信号引擎: 输入数据 ${key} 为NaN，已清理为null`);
-            }
+            cleanData[key] = DataQuality.number(cleanData[key]);
         });
 
         // 计算各维度分数
@@ -179,24 +175,50 @@ const SignalEngine = (() => {
             }
         });
 
-        // 生成信号关键字
-        const signalKey = rules.generate(cleanData, weights);
-        const signal = SIGNAL_LEVELS[signalKey] || SIGNAL_LEVELS.NEUTRAL;
-
-        // 计算加权总分（用于仪表盘显示）
-        let totalWeight = 0, weightedSum = 0;
-        Object.keys(weights).forEach(dim => {
-            if (scores[dim] !== null && scores[dim] !== undefined && !isNaN(scores[dim])) {
-                weightedSum += scores[dim] * weights[dim];
-                totalWeight += weights[dim];
-            }
+        const primaryField = DataQuality.primaryField(etfConfig);
+        const primaryDim = primaryField === 'trendScore' ? 'sentiment' : 'valuation';
+        const hardReasons = [...(data.quality && data.quality.hardReasons || [])];
+        if (!DataQuality.valid(primaryField, cleanData[primaryField])) hardReasons.push(`缺少有效${primaryField}，不能仅凭情绪评分`);
+        if (!Number.isFinite(scores[primaryDim])) hardReasons.push('缺少可比估值基准或趋势数据');
+        if (DataQuality.isProxy(etfConfig) && !(data.valuationBasis && data.valuationBasis.indexId)) hardReasons.push('代理估值尚未选择同指数参照');
+        const reasons = [...(data.quality && data.quality.reasons || [])];
+        DataQuality.requiredFields(etfConfig).forEach(field => {
+            if (!DataQuality.valid(field, cleanData[field])) reasons.push(`缺少${field}，使用可用维度参考`);
         });
-        const total = totalWeight > 0 ? weightedSum / totalWeight : 0;
-
-        // 最终NaN防护
-        const safeTotal = isNaN(total) ? 0 : parseFloat(total.toFixed(1));
-
-        return { signal, scores, total: safeTotal };
+        if (etfConfig.signalRules === 'buffett_stock' && !Number.isFinite(scores.quality)) reasons.push('个股盈利质量未完整评估');
+        let totalWeight = 0, weightedSum = 0;
+        const activeDimensions = Object.keys(weights).filter(dim => weights[dim] > 0 && Number.isFinite(scores[dim]));
+        activeDimensions.forEach(dim => {
+            weightedSum += scores[dim] * weights[dim];
+            totalWeight += weights[dim];
+        });
+        const total = totalWeight > 0 ? Number((weightedSum / totalWeight).toFixed(1)) : 0;
+        const fullWeight = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
+        if (data.quality && totalWeight < fullWeight) reasons.push('部分评分维度缺失，当前为可用维度参考分');
+        if (data.valuationBasis && data.valuationBasis.isProxy) reasons.push('代理指数只作参考');
+        const calculable = hardReasons.length === 0 && totalWeight > 0;
+        const allowed = calculable && reasons.length === 0 && (!data.quality || data.quality.allowed);
+        const quality = { ...(data.quality || {}), allowed, calculable, status: allowed ? 'verified' : calculable ? 'reference' : 'unavailable',
+            reasons: [...new Set(reasons)], hardReasons: [...new Set(hardReasons)], activeDimensions,
+            coverage: fullWeight > 0 ? Math.round(totalWeight / fullWeight * 100) : 0 };
+        const signalKey = calculable ? rules.generate(cleanData, weights) : 'DATA_INCOMPLETE';
+        const signal = { ...(SIGNAL_LEVELS[signalKey] || SIGNAL_LEVELS.NEUTRAL), quality };
+        if (!calculable) {
+            signal.text = '暂无法计算';
+            signal.advice = quality.hardReasons.join('；') + '。仍可查看下方已有估值历史或价格趋势。';
+            signal.position = '缺少计算依据';
+            signal.icon = '—';
+        } else if (!allowed) {
+            const labels = { STRONG_BUY: '吸引力很高', BUY: '吸引力偏高', HOLD_ADD: '略有吸引力', HOLD: '吸引力中等', REDUCE_WARN: '吸引力偏低', SELL: '吸引力较低', STRONG_SELL: '吸引力很低', OVERHEAT: '估值偏高', NEUTRAL: '中性' };
+            signal.level = 'REFERENCE';
+            signal.referenceLevel = signalKey;
+            const proxy = data.valuationBasis && data.valuationBasis.isProxy;
+            signal.text = `${labels[signalKey] || '参考分析'} · ${proxy ? '代理参考' : '参考'}`;
+            signal.position = `可用维度参考评分 · 覆盖原权重${quality.coverage}%`;
+            signal.advice = `按${quality.dateLabel || quality.asOf || '日期未知'}的${proxy ? data.valuationBasis.label : '已记录数据'}计算，参考分${total.toFixed(1)}。可判断估值吸引力与维度分歧；时效、缺项或代理限制见下方，不直接折算仓位。`;
+            signal.icon = '参考';
+        }
+        return { signal, scores, total: calculable ? total : 0, referenceTotal: total, quality };
     }
 
     /**
@@ -290,7 +312,8 @@ const SignalEngine = (() => {
      * @returns {Array<{date, score, signal, signalText, signalColor}>}
      */
     function calcHistoricalSignals(historyData, etfConfig, months = 96, currentMarketTemp = null, realtimeData = null) {
-        if (!historyData || !etfConfig) return [];
+        if (!historyData || !etfConfig || (DataQuality.isProxy(etfConfig) && !historyData.referenceBasis)) return [];
+        historyData = DataQuality.monthlyHistory(DataQuality.comparableHistory(historyData, etfConfig));
 
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
         if (!rules || !rules.calcScores) return [];
@@ -301,25 +324,13 @@ const SignalEngine = (() => {
         const dividendMap = buildDateMap(historyData.dividendYieldHistory);
         const bondMap = buildDateMap(historyData.bondYieldHistory);
 
-        // 【方案B增强】将实时PE注入当月映射表，更新最后一个月的PE值
-        const today = new Date();
-        const currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
-        if (realtimeData && realtimeData.pe > 0) {
-            peMap[currentMonth] = realtimeData.pe;
-            console.info(`📈 [calcHistoricalSignals] 实时PE注入当月: ${currentMonth}=${realtimeData.pe}`);
-            if (realtimeData.dividendYield > 0) dividendMap[currentMonth] = realtimeData.dividendYield;
-            if (realtimeData.bondYield > 0) bondMap[currentMonth] = realtimeData.bondYield;
+        if (realtimeData) {
+            for (const [field, map, dateField] of [['pe', peMap, 'asOf'], ['dividendYield', dividendMap, 'dividendAsOf'], ['bondYield', bondMap, 'bondAsOf']]) {
+                const date = DataQuality.asOf(realtimeData[dateField]);
+                if (date && date <= DataQuality.today() && DataQuality.valid(field, realtimeData[field])) map[date.slice(0, 7)] = realtimeData[field];
+            }
         }
-
-        // 获取所有可用的月末日期（取所有历史数据的并集）
-        const allDates = new Set();
-        if (historyData.peHistory) historyData.peHistory.forEach(d => allDates.add(d.date));
-        if (historyData.spreadHistory) historyData.spreadHistory.forEach(d => allDates.add(d.date));
-        if (historyData.bondYieldHistory) historyData.bondYieldHistory.forEach(d => allDates.add(d.date));
-        if (historyData.dividendYieldHistory) historyData.dividendYieldHistory.forEach(d => allDates.add(d.date));
-        if (historyData.priceHistory) historyData.priceHistory.forEach(d => allDates.add(d.date));
-        // 确保当月也在日期集合中（即使JSON没有当月数据，实时注入后也应该包含）
-        if (realtimeData && realtimeData.pe > 0) allDates.add(currentMonth);
+        const allDates = new Set(Object.keys(etfConfig.type === 'bond' ? bondMap : peMap));
 
         // 按时间排序，取最近N个月
         const sortedDates = Array.from(allDates).sort();
@@ -332,15 +343,8 @@ const SignalEngine = (() => {
 
         console.log(`[calcHistoricalSignals] ${etfConfig.id}: 找到 ${sortedDates.length} 个日期，取最近 ${recentDates.length} 个:`, recentDates[0], '...', recentDates[recentDates.length - 1]);
 
-        // 【方案B核心】统一用全量PE历史值计算分位，不再使用JSON预设的percentile
-        const allPeValues = historyData.peHistory ? historyData.peHistory.map(d => d.value) : [];
-        // 如果有实时PE，也加入分位计算的参考集合
-        if (realtimeData && realtimeData.pe > 0 && !allPeValues.includes(realtimeData.pe)) {
-            allPeValues.push(realtimeData.pe);
-        }
-
-        // 全量利差历史值数组
-        const allSpreadValues = historyData.spreadHistory ? historyData.spreadHistory.map(d => d.value) : [];
+        const allPeValues = DataQuality.referenceValues(historyData, 'peHistory');
+        const allSpreadValues = DataQuality.referenceValues(historyData, 'spreadHistory');
 
         // 获取valuationAnchor（均值偏离度锚点）
         const anchor = historyData.valuationAnchor || {};
@@ -367,12 +371,14 @@ const SignalEngine = (() => {
 
             const signalData = {
                 pePercentile: pePercentile,
+                valuationBasis: historyData.referenceBasis,
+                quality: { allowed: false, reasons: ['历史重算仅作参考，不代表当时交易信号'], dateLabel: dateStr },
                 spreadPercentile: null,
                 trendScore: null,
                 pe: pe || 0,
                 pb: 0, // 历史PB数据不全，用默认
-                dividendYield: dividend || 0,
-                bondYield: bond || 0,
+                dividendYield: dividend,
+                bondYield: bond,
                 roe: 0, // 历史ROE不可用
                 marketTemp: marketTemp,
                 // 巴菲特均值回归锚点
@@ -387,6 +393,7 @@ const SignalEngine = (() => {
 
             // 生成综合信号
             const { signal, scores, total } = generateMultiDimSignal(signalData, etfConfig);
+            if (signal.level === 'DATA_INCOMPLETE') continue;
 
             results.push({
                 date: dateStr,
@@ -411,10 +418,13 @@ const SignalEngine = (() => {
      * 支持混合日期格式：YYYY-MM（月度）和 YYYY-MM-DD（日级别）
      * 日级别数据和月度数据共存，interpolateFromMap 会优先使用日级别精确命中
      */
-    function buildDateMap(arr) {
+    function buildDateMap(arr, useObservationDate = false) {
         const map = {};
         if (!arr) return map;
-        arr.forEach(d => { map[d.date] = d.value; });
+        arr.forEach(d => {
+            const key = useObservationDate ? DataQuality.asOf(d.asOf) || d.date : d.date;
+            map[key] = d.value;
+        });
         return map;
     }
 
@@ -480,86 +490,17 @@ const SignalEngine = (() => {
      * @returns {number|null}
      */
     function interpolateFromMap(dateMap, sortedKeys, targetDate) {
-        if (!sortedKeys || sortedKeys.length === 0) return null;
-
-        // === 优先级1: 精确命中日级别 YYYY-MM-DD ===
-        if (dateMap[targetDate] !== undefined) {
-            return dateMap[targetDate];
+        let previous = null;
+        for (const key of sortedKeys || []) {
+            const date = key.length === 7 ? key + '-01' : key;
+            if (date <= targetDate) previous = key;
+            else break;
         }
-
-        // === 优先级2: 在日级别数据点之间插值 ===
-        // 查找targetDate前后最近的日级别数据点
-        let dailyBefore = null, dailyAfter = null;
-        for (let i = 0; i < sortedKeys.length; i++) {
-            const key = sortedKeys[i];
-            if (key.length !== 10) continue; // 跳过月级别 YYYY-MM（长度7）
-            if (key <= targetDate) dailyBefore = key;
-            if (key > targetDate && dailyAfter === null) dailyAfter = key;
-        }
-        
-        // 如果前后都有日级别数据点 → 在它们之间线性插值
-        if (dailyBefore && dailyAfter) {
-            return interpolateDaily(dailyBefore, dateMap[dailyBefore], dailyAfter, dateMap[dailyAfter], targetDate);
-        }
-        
-        // 如果只有前面有日级别数据点，且距离很近（7天内）→ 直接用它的值
-        if (dailyBefore && !dailyAfter) {
-            const daysDiff = (new Date(targetDate) - new Date(dailyBefore)) / 86400000;
-            if (daysDiff <= 7) {
-                return dateMap[dailyBefore];
-            }
-        }
-
-        // === 优先级3: 回退到月级别插值 ===
-        const targetMonth = targetDate.slice(0, 7); // YYYY-MM
-
-        // 精确命中月份
-        if (dateMap[targetMonth] !== undefined) {
-            // 找下一个月来插值
-            const idx = sortedKeys.indexOf(targetMonth);
-            if (idx >= 0 && idx < sortedKeys.length - 1) {
-                const nextKey = sortedKeys[idx + 1];
-                // 如果下一个key是日级别(YYYY-MM-DD)，用interpolateDaily
-                if (nextKey.length === 10) {
-                    return interpolateDaily(targetMonth + '-01', dateMap[targetMonth], nextKey, dateMap[nextKey], targetDate);
-                }
-                return interpolate(targetMonth, dateMap[targetMonth], nextKey, dateMap[nextKey], targetDate);
-            }
-            // 最后一个月：用前两个月的趋势做线性外推，避免整月数据是一条平线
-            if (idx >= 1) {
-                const prevKey = sortedKeys[idx - 1];
-                const prevVal = dateMap[prevKey];
-                const currVal = dateMap[targetMonth];
-                const virtualNextVal = currVal + (currVal - prevVal);
-                // 安全构造下个月的YYYY-MM（避免toISOString时区问题）
-                const tmYear = parseInt(targetMonth.slice(0, 4));
-                const tmMon = parseInt(targetMonth.slice(5, 7)); // 1-indexed
-                const vnYear = tmMon === 12 ? tmYear + 1 : tmYear;
-                const vnMon = tmMon === 12 ? 1 : tmMon + 1;
-                const virtualNextMonth = vnYear + '-' + String(vnMon).padStart(2, '0');
-                return interpolate(targetMonth, currVal, virtualNextMonth, virtualNextVal, targetDate);
-            }
-            return dateMap[targetMonth];
-        }
-
-        // 在两个键之间
-        let before = null, after = null;
-        for (let i = 0; i < sortedKeys.length; i++) {
-            const key = sortedKeys[i];
-            const compareKey = key.length === 10 ? key : key + '-01'; // 月份转为月初日期比较
-            const compareTarget = targetDate;
-            if (compareKey <= compareTarget) before = key;
-            if (compareKey > compareTarget && after === null) after = key;
-        }
-
-        if (before !== null && after !== null) {
-            const beforeDate = before.length === 10 ? before : before + '-01';
-            const afterDate = after.length === 10 ? after : after + '-01';
-            return interpolateDaily(beforeDate, dateMap[before], afterDate, dateMap[after], targetDate);
-        }
-        if (before !== null) return dateMap[before];
-        if (after !== null) return dateMap[after];
-        return null;
+        if (previous === null) return null;
+        const date = previous.length === 7 ? previous + '-01' : previous;
+        const age = (Date.parse(targetDate) - Date.parse(date)) / 86400000;
+        const maxAge = previous.length === 7 ? 31 : 7;
+        return age <= maxAge ? dateMap[previous] : null;
     }
 
     /**
@@ -609,42 +550,26 @@ const SignalEngine = (() => {
      * @returns {Array<{date, score, signal, signalText, signalColor, scores}>}
      */
     function calcDailyHistoricalSignals(historyData, etfConfig, days = 365, currentMarketTemp = null, realtimeData = null) {
-        if (!historyData || !etfConfig) return [];
+        if (!historyData || !etfConfig || (DataQuality.isProxy(etfConfig) && !historyData.referenceBasis)) return [];
+        historyData = DataQuality.comparableHistory(historyData, etfConfig);
 
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
         if (!rules || !rules.calcScores) return [];
 
-        // 构建月度映射表
-        const peMap = buildDateMap(historyData.peHistory);
-        const spreadMap = buildDateMap(historyData.spreadHistory);
-        const dividendMap = buildDateMap(historyData.dividendYieldHistory);
-        const bondMap = buildDateMap(historyData.bondYieldHistory);
+        // 有源日期的采样使用真实观测日，旧月度记录保留月度位置。
+        const peMap = buildDateMap(historyData.peHistory, true);
+        const spreadMap = buildDateMap(historyData.spreadHistory, true);
+        const dividendMap = buildDateMap(historyData.dividendYieldHistory, true);
+        const bondMap = buildDateMap(historyData.bondYieldHistory, true);
 
-        // 【方案B增强】注入实时PE：在月度映射表中添加"下个月"的虚拟锚点
-        // 这样 interpolateFromMap 在处理JSON最后一个月时就能从"JSON PE"插值到"实时PE"
-        // 而不是整个月都返回同一个静态值
         const today = new Date();
-        const todayStr = today.toISOString().slice(0, 10);
-        const currentMonth = todayStr.slice(0, 7); // YYYY-MM
-        if (realtimeData && realtimeData.pe > 0) {
-            // 计算下个月的YYYY-MM作为插值终点
-            // 注意：不能用 new Date(year, month+1, 1).toISOString()，因为 toISOString 输出UTC时间
-            // 在UTC+8时区，5月1日0点在UTC中是4月30日，导致 slice(0,7) 返回上个月！
-            const curYear = today.getFullYear();
-            const curMonth = today.getMonth(); // 0-indexed
-            const nextYear = curMonth === 11 ? curYear + 1 : curYear;
-            const nextMon = curMonth === 11 ? 1 : curMonth + 2; // 1-indexed for display
-            const nextMonth = nextYear + '-' + String(nextMon).padStart(2, '0');
-            // 将实时PE设为"下个月"的值，这样当月内的日期就能在JSON最后值和实时值之间插值
-            peMap[nextMonth] = realtimeData.pe;
-            console.info(`📈 [calcDailyHistoricalSignals] 实时PE注入: ${nextMonth}=${realtimeData.pe} (API实时值，作为插值终点)`);
-
-            // 同步注入实时股息率和国债收益率（如果有的话）
-            if (realtimeData.dividendYield > 0) {
-                dividendMap[nextMonth] = realtimeData.dividendYield;
-            }
-            if (realtimeData.bondYield > 0) {
-                bondMap[nextMonth] = realtimeData.bondYield;
+        const todayStr = DataQuality.today(today);
+        const observationDate = realtimeData && DataQuality.asOf(realtimeData.asOf);
+        if (observationDate && observationDate <= todayStr && realtimeData.pe > 0) peMap[observationDate] = realtimeData.pe;
+        if (realtimeData) {
+            for (const [field, map, dateField] of [['dividendYield', dividendMap, 'dividendAsOf'], ['bondYield', bondMap, 'bondAsOf']]) {
+                const date = DataQuality.asOf(realtimeData[dateField]);
+                if (date && date <= todayStr && DataQuality.valid(field, realtimeData[field])) map[date] = realtimeData[field];
             }
         }
 
@@ -653,55 +578,15 @@ const SignalEngine = (() => {
         const sortedDividendKeys = Object.keys(dividendMap).sort();
         const sortedBondKeys = Object.keys(bondMap).sort();
 
-        // 【方案B核心】统一用全量PE值计算分位，不再读取JSON中的预设percentile
-        // 如果有实时PE，也加入分位计算的参考集合（让分位计算包含最新值）
-        const allPeValues = historyData.peHistory ? historyData.peHistory.map(d => d.value) : [];
-        if (realtimeData && realtimeData.pe > 0 && !allPeValues.includes(realtimeData.pe)) {
-            allPeValues.push(realtimeData.pe);
-        }
-
-        // 获取PE均值偏离度锚定数据
+        const allPeValues = DataQuality.referenceValues(historyData, 'peHistory');
         const anchor = historyData.valuationAnchor || {};
+        const allSpreadValues = DataQuality.referenceValues(historyData, 'spreadHistory');
 
-        // 全量利差历史值
-        const allSpreadValues = historyData.spreadHistory ? historyData.spreadHistory.map(d => d.value) : [];
-
-        // 确定日期范围：从数据最早可用月的第1天，到今天
-        const allMonths = new Set();
-        [sortedPeKeys, sortedSpreadKeys, sortedDividendKeys, sortedBondKeys].forEach(keys => {
-            keys.forEach(k => allMonths.add(k));
-        });
-        const sortedMonths = Array.from(allMonths).sort();
-        if (sortedMonths.length < 2) return []; // 至少需要2个月才能插值
-
-        // 结束日期：今天（复用前面已声明的 today 变量）
-        const endDate = today.toISOString().slice(0, 10);
-
-        // 起始日期：往前推 days 天
-        const startDateObj = new Date(today);
-        startDateObj.setDate(startDateObj.getDate() - days);
-        // 不能早于数据最早月份
-        const dataStart = sortedMonths[0] + '-01';
-        const actualStart = startDateObj.toISOString().slice(0, 10) > dataStart
-            ? startDateObj.toISOString().slice(0, 10) : dataStart;
-
-        const dailyDates = generateDateRange(actualStart, endDate);
-        if (dailyDates.length === 0) return [];
-
-        // 采样：如果天数太多（>1000天），每隔N天取一个点，保持图表流畅
-        let sampledDates = dailyDates;
-        let sampleInterval = 1;
-        if (dailyDates.length > 800) {
-            sampleInterval = Math.ceil(dailyDates.length / 800);
-            sampledDates = dailyDates.filter((_, i) => i % sampleInterval === 0);
-            // 确保最后一天（今天）被包含
-            if (sampledDates[sampledDates.length - 1] !== dailyDates[dailyDates.length - 1]) {
-                sampledDates.push(dailyDates[dailyDates.length - 1]);
-            }
-        }
-
+        const startDate = new Date(Date.parse(todayStr) - days * 86400000).toISOString().slice(0, 10);
+        const primaryKeys = etfConfig.type === 'bond' ? sortedBondKeys : sortedPeKeys;
+        const sampledDates = [...new Set(primaryKeys.map(key => key.length === 7 ? key + '-01' : key))]
+            .filter(date => date >= startDate && date <= todayStr).sort();
         const results = [];
-        const lastDate = sampledDates[sampledDates.length - 1];
 
         for (const dateStr of sampledDates) {
             // 对每个日期做PE值插值
@@ -721,12 +606,14 @@ const SignalEngine = (() => {
 
             const signalData = {
                 pePercentile: pePercentile,
+                valuationBasis: historyData.referenceBasis,
+                quality: { allowed: false, reasons: ['历史重算仅作参考，不代表当时交易信号'], dateLabel: dateStr },
                 spreadPercentile: null,
                 trendScore: null,
                 pe: pe || 0,
                 pb: 0,
-                dividendYield: dividend || 0,
-                bondYield: bond || 0,
+                dividendYield: dividend,
+                bondYield: bond,
                 roe: 0,
                 marketTemp: marketTemp,
                 peMean: anchor.peMean || null,
@@ -742,6 +629,7 @@ const SignalEngine = (() => {
             }
 
             const { signal, scores, total } = generateMultiDimSignal(signalData, etfConfig);
+            if (signal.level === 'DATA_INCOMPLETE') continue;
 
             // === 对比线：使用旧的纯PE分位算法计算估值分 + 总分 ===
             // 旧算法: valuation = 100 - pePercentile（不使用均值偏离度）
@@ -1361,9 +1249,88 @@ const SignalEngine = (() => {
         };
     }
 
+    function analyzeCurrent(data, etfConfig, historyData) {
+        const context = DataQuality.valuationContext(historyData, etfConfig, data);
+        const quality = DataQuality.assess(data, etfConfig, new Date(), context.basis);
+        const input = { quality, valuationBasis: context.basis };
+        const usedFields = new Set(quality.required);
+        if (DataQuality.primaryField(etfConfig) !== 'trendScore') usedFields.add('marketTemp');
+        if (etfConfig.type === 'bond') usedFields.add('trendScore');
+        if (!['buffett_us', 'buffett_us_growth', 'buffett_jp', 'bond_yield', 'gold_trend', 'commodity_trend'].includes(etfConfig.signalRules)) usedFields.add('roe');
+        if (['buffett_value', 'buffett_broad', 'buffett_hk_dividend', 'buffett_stock'].includes(etfConfig.signalRules)) usedFields.add('pb');
+        for (const field of ['pe', 'pb', 'roe', 'dividendYield', 'bondYield', 'marketTemp', 'trendScore']) {
+            input[field] = DataQuality.referenceUsable(data, field, etfConfig, context.basis) ? DataQuality.number(data[field]) : null;
+            if (usedFields.has(field) && input[field] !== null && !quality.required.includes(field)) {
+                const issue = DataQuality.fieldIssue(data, field, etfConfig);
+                if (issue) quality.reasons.push(issue);
+            }
+        }
+        if (quality.reasons.length) quality.allowed = false;
+        const values = DataQuality.referenceValues(context.history, 'peHistory');
+        const anchor = context.history && context.history.valuationAnchor || {};
+        input.pePercentile = input.pe > 0 && values.length ? calcPercentile(input.pe, values) : null;
+        input.peMean = context.basis.isProxy ? null : DataQuality.number(anchor.peMean);
+        input.peStd = context.basis.isProxy ? null : DataQuality.number(anchor.peStd);
+        const spreadValues = DataQuality.referenceValues(context.history, 'spreadHistory');
+        const canCalcSpread = etfConfig.useBondSpread && input.dividendYield !== null && input.bondYield !== null;
+        const spread = canCalcSpread ? calcSpread(input.dividendYield, input.bondYield) : null;
+        input.spreadPercentile = canCalcSpread && spreadValues.length ? calcPercentile(spread, spreadValues) : null;
+        const result = generateMultiDimSignal(input, etfConfig);
+        return { ...result, input, context, spread, canCalcSpread };
+    }
+
+    function calcValuationBaseline(historyData, etfConfig, currentData = {}) {
+        const context = DataQuality.valuationContext(historyData, etfConfig, currentData);
+        const field = DataQuality.primaryField(etfConfig);
+        if (field === 'trendScore') return { available: false, reason: '黄金与商品没有PE估值，请查看价格趋势与回撤。', context, series: [] };
+        const historyKey = field === 'bondYield' ? 'bondYieldHistory' : 'peHistory';
+        const points = DataQuality.monthlyPoints(context.history && context.history[historyKey]).filter(point => DataQuality.valid(field, point.value));
+        const samples = points.map(point => point.value);
+        const result = { available: false, context, field, sampleCount: samples.length, series: [], start: points[0] && points[0].date, end: points.length ? points[points.length - 1].date : null };
+        if (samples.length < 5) return { ...result, reason: `当前只有${samples.length}个月样本，暂不计算排名；保留已有数值供查看。` };
+        const flat = new Set(samples).size === 1;
+        const position = value => {
+            const lower = samples.filter(sample => sample < value).length;
+            const equal = samples.filter(sample => sample === value).length;
+            const raw = (lower + equal * 0.5) / samples.length * 100;
+            return { rawPercentile: Number(raw.toFixed(2)), percentile: Number((field === 'pe' ? 100 - raw : raw).toFixed(2)) };
+        };
+        const mapPoint = (point, isCurrent = false) => {
+            const rank = position(point.value);
+            const zone = flat ? { text: '样本无差异', color: '#718096' } : {
+                ...getScorePercentileZone(rank.percentile, false),
+                text: rank.percentile >= 80 ? '相对很便宜' : rank.percentile >= 65 ? '相对偏便宜' : rank.percentile >= 45 ? '历史中位' : rank.percentile >= 25 ? '相对偏贵' : '相对很贵'
+            };
+            return { date: point.date, value: point.value, ...rank, score: rank.percentile, zone, metric: field === 'pe' ? 'PE' : '10年期国债收益率',
+                asOf: point.asOf || point.date, isCurrent, signalText: '估值历史位置（不是交易指令）' };
+        };
+        const series = points.map(point => mapPoint(point));
+        const meta = DataQuality.metadata(currentData, field);
+        const date = meta.asOf || meta.dateLabel;
+        const currentUsable = DataQuality.referenceUsable(currentData, field, etfConfig, context.basis);
+        const latest = currentUsable ? mapPoint({ date: date || '最新记录（日期未知）', asOf: date, value: DataQuality.number(currentData[field]) }, true) : series[series.length - 1];
+        const notes = [];
+        if (context.basis.isProxy) notes.push('仅比较创业板指代理采样，不使用目标指数旧PE或锚点');
+        if (samples.length < 36) notes.push(`短样本：仅${samples.length}个月，不能代表完整市场周期`);
+        if (points.some(point => !['observed', 'manual'].includes(point.quality))) notes.push('含旧版历史记录，来源未逐点核验');
+        if (flat) notes.push('历史样本相同，排名区分度不足');
+        if (!currentUsable) notes.push('当前估值不足，标记的是最新历史记录');
+        if (currentUsable) {
+            const existing = series.findIndex(point => point.date === latest.date);
+            if (existing >= 0) series[existing] = latest;
+            else series.push(latest);
+            series.sort((a, b) => a.date.localeCompare(b.date));
+        }
+        return { ...result, available: true, flat, series, current: latest, currentUsable, notes };
+    }
+
     // ========== 公开API ==========
     return {
+        analyzeCurrent,
+        calcValuationBaseline,
         SIGNAL_LEVELS,
+        getComparableHistory: DataQuality.comparableHistory,
+        getReferenceValues: DataQuality.referenceValues,
         calcSpread,
         calcPercentile,
         calcDeviationScore,

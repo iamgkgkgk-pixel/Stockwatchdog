@@ -75,7 +75,7 @@ jobs:
           git commit -m "📊 自动更新ETF数据 ${MONTH}
 
           - 更新 ${CHANGED_FILES} 个数据文件
-          - 数据来源: 蛋卷基金API + 东方财富API + 趋势外推
+          - 数据来源: 蛋卷基金API + 东方财富API（逐字段记录真实观测日期，不使用外推）
           - 触发方式: ${{ github.event_name == 'schedule' && '定时任务' || '手动触发' }}
           
           [skip ci]"
@@ -87,11 +87,10 @@ jobs:
         run: |
           echo "### 📊 ETF数据更新摘要" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.check_changes.outputs.changed }}" = "true" ]; then
-            echo "✅ 数据已更新并推送到仓库" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "更新的文件:" >> $GITHUB_STEP_SUMMARY
-            git diff --name-only HEAD~1 data/ 2>/dev/null | while read f; do echo "- \`$f\`" >> $GITHUB_STEP_SUMMARY; done || true
+          if [ "${{ job.status }}" != "success" ]; then
+            echo "采集、校验或推送失败；不能据此认定数据已更新，请检查步骤日志。" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.check_changes.outputs.changed }}" = "true" ]; then
+            echo "有效观测已更新并推送；各字段时效以 asOf 为准。" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⏭️ 所有数据文件已是最新，无需更新" >> $GITHUB_STEP_SUMMARY
+            echo "没有新增有效观测；不代表所有标的均有最新估值。" >> $GITHUB_STEP_SUMMARY
           fi

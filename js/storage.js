@@ -17,12 +17,17 @@ const DataStorage = (() => {
 
     function saveCurrentData(etfId, data) {
         if (typeof etfId === 'object') { data = etfId; etfId = 'default'; }
-        data.timestamp = new Date().toISOString();
-        return save(`${PREFIX}${etfId}_current`, data);
+        return save(`${PREFIX}${etfId}_current`, { ...data, cachedAt: new Date().toISOString() });
     }
     function getCurrentData(etfId) {
         if (!etfId) etfId = 'default';
         return load(`${PREFIX}${etfId}_current`);
+    }
+    function saveManualData(etfId, data) {
+        return save(`${PREFIX}${etfId}_manual`, data);
+    }
+    function getManualData(etfId) {
+        return load(`${PREFIX}${etfId}_manual`);
     }
     function saveHistoryData(etfId, data) {
         if (typeof etfId === 'object') { data = etfId; etfId = 'default'; }
@@ -73,6 +78,7 @@ const DataStorage = (() => {
         localStorage.removeItem(`${PREFIX}${etfId}_current`);
         localStorage.removeItem(`${PREFIX}${etfId}_history`);
         localStorage.removeItem(`${PREFIX}${etfId}_records`);
+        localStorage.removeItem(`${PREFIX}${etfId}_manual`);
     }
     function clearAll() {
         const keys = [];
@@ -83,7 +89,7 @@ const DataStorage = (() => {
         keys.forEach(k => localStorage.removeItem(k));
     }
 
-    return { saveCurrentData, getCurrentData, saveHistoryData, getHistoryData,
+    return { saveCurrentData, getCurrentData, saveManualData, getManualData, saveHistoryData, getHistoryData,
         addUserRecord, getUserRecords, saveSettings, getSettings,
         exportToCSV, downloadCSV, clearETFData, clearAll };
 })();

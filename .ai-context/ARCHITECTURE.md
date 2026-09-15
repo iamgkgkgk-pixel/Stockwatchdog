@@ -1,5 +1,22 @@
 # 🏗️ 架构设计文档
 
+## 2026-09-15 参考分析恢复（优先于下文旧版流程）
+
+- `SignalEngine.analyzeCurrent` 是当前页面唯一分析入口：按字段数值可用性计算，再以 `quality.status` 区分 `verified/reference/unavailable`。`calculable` 控制显示评分，`allowed` 只控制原买卖信号与仓位许可，禁止再次合并为全停开关。
+- `calcValuationBaseline` 独立比较PE/债息的历史分布，不调用完整买卖评分、不要求ROE/情绪/股息；按月一票，并列值计半票。其纵轴是相对便宜程度，不是综合分的分位。
+- `DataQuality.valuationContext` 选择同指数参照；创业板两标的按配置的2026-04-28切换边界分开目标与代理，代理只用自己的短样本，删除目标锚点。旧标签不升级为真实数据。
+- 数据问题降级为有日期、覆盖率和可展开说明的参考分析；主估值缺失、错指数或错市场仍不可用于该项计算。补充字段的缺失不应清空独立PE历史。
+- 验收覆盖实际全部股票/债券标的，不能仅以几个纯函数通过代表页面可用。
+
+## 2026-09-14 数据可信性补充（历史记录，显示门禁以09-15为准）
+
+- `js/data-quality.js` 在 `signal.js` 前加载，统一数值、指数身份、字段观测日期、数据质量、手填及缓存合并。`fieldMeta` 是字段真实性依据，`cachedAt`/`fetchedAt` 不是估值日期。
+- `main.js` 首载、刷新、手填均经 `resolveCurrentData`；自动缓存与人工记录分别存储。`SignalEngine` 在原规则之前检查核心输入与 `quality`，未通过时停止信号、仓位及操作解读，不改既有评分阈值。
+- 统计参照经 `comparableHistory` 过滤，再由 `monthlyPoints` 每月取最后样本；历史分位按月等权。日图只使用已有记录和源观测日期，不制造日点，不借未来值插值。现有历史图仍为事后重算，不是逐时点回测。
+- `scripts/observations.py` 为日/月采集共用的无I/O观测契约：带日期写入、cn/us/jp市场匹配、`currentData.fieldMeta` 同步、force修订记录。代理值独立保存为 `proxyValuation`，ETF价格另存 `etfPriceHistory`，不混入旧现货价格序列。
+- `tests/data-trust.test.js` 与 `tests/test_observations.py` 为离线回归测试，不调用真实更新或通知服务。
+- 旧JSON缺少可验证元信息的部分只供参考，原始文件不被自动补齐“真实”标记或批量改写。详见 DEC-013。
+
 ## 一、模块架构
 
 ### IIFE 模式说明

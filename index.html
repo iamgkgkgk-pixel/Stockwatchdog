@@ -52,7 +52,8 @@
     </script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260915a">
+    <link rel="stylesheet" href="css/price-roc.css?v=20260915d">
 </head>
 <body>
     <!-- Loading Screen -->
@@ -94,6 +95,7 @@
                         <span class="btn-icon refresh-icon">🔄</span>
                         刷新
                     </button>
+                    <a class="strategy-page-switch" id="btn-gpt-strategy" href="gpt-strategy.html" title="切换到GPT策略">GPT策略 ↗</a>
                     <button class="btn btn-primary" id="btn-input-data" title="手动补充PE/股息率等数据">
                         <span class="btn-icon">📝</span>
                         补充数据
@@ -149,23 +151,47 @@
             <div class="card card-full">
                 <div class="card-title">
                     <span class="card-title-icon">📊</span>
-                    <span id="score-percentile-title">综合分历史分位</span>
+                    <span id="score-percentile-title">独立估值历史位置</span>
                 </div>
                 <div class="score-percentile-summary" id="score-percentile-summary">
                     <!-- 由JS动态填充当前分位摘要 -->
                 </div>
                 <div class="signal-history-legend">
-                    <span class="legend-item"><span class="legend-dot" style="background:#0d7337"></span>历史高位(≥80%)</span>
-                    <span class="legend-item"><span class="legend-dot" style="background:#28a745"></span>历史偏高(65-80%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#0d7337"></span>相对很便宜(≥80%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#28a745"></span>相对偏便宜(65-80%)</span>
                     <span class="legend-item"><span class="legend-dot" style="background:#ffc107"></span>历史中位(45-65%)</span>
-                    <span class="legend-item"><span class="legend-dot" style="background:#fd7e14"></span>历史偏低(25-45%)</span>
-                    <span class="legend-item"><span class="legend-dot" style="background:#dc3545"></span>历史低位(<25%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#fd7e14"></span>相对偏贵(25-45%)</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#dc3545"></span>相对很贵(&lt;25%)</span>
                 </div>
                 <div class="chart-container" id="chart-score-percentile" style="height:350px;"></div>
                 <div class="signal-history-note">
-                    💡 <strong>综合分历史分位</strong> = 历史上有多少时间综合评分比现在更低？分位越高（越靠顶部）= 当前在历史中排名越高。
-                    此指标仅反映当前在历史中的相对位置，不代表"安全/危险"结论（那是综合信号的职责）。追溯至数据最早可用时间。
+                    <strong>独立估值历史位置</strong>：股票只比较同指数PE，债券只比较同市场收益率；不依赖情绪、ROE或股息数据是否齐全。每个有记录的月份一票，并列值计半票；PE越低，便宜程度越高。
+                    这是相对贵贱，不是当前综合分的排名、当时买卖信号或安全概率。原值分位、日期、短样本和代理说明见上方。
                 </div>
+            </div>
+        </section>
+
+        <section class="chart-section price-roc-panel" id="chart-section-price-roc" aria-labelledby="legacy-roc-title" aria-busy="true">
+            <div class="card card-full">
+                <div class="price-roc-header">
+                    <div><span class="price-roc-eyebrow">波段参考 · 不参与综合评分</span><h2 id="legacy-roc-title">价格与 ROC</h2></div>
+                    <div class="price-roc-controls">
+                        <label for="legacy-roc-timeframe" class="price-roc-sr-only">价格ROC的K线周期</label>
+                        <select id="legacy-roc-timeframe"><option value="day">日线</option><option value="week">周线</option></select>
+                        <div class="price-roc-ranges" role="group" aria-label="价格ROC显示范围"><button type="button" data-roc-range="6" aria-pressed="false">6个月</button><button type="button" data-roc-range="12" aria-pressed="true">1年</button><button type="button" data-roc-range="all" aria-pressed="false">全部</button></div>
+                        <button type="button" id="legacy-roc-refresh">更新价格</button>
+                    </div>
+                </div>
+                <div class="price-roc-readout"><span id="legacy-roc-price">价格 —</span><span id="legacy-roc-value">ROC —</span><span id="legacy-roc-rank">动量分位 —</span></div>
+                <div id="legacy-roc-chart" role="img" aria-label="价格与ROC联动双图，峰谷标在确认日"></div>
+                <p id="legacy-roc-empty" class="price-roc-empty" hidden>正在读取真实价格数据…</p>
+                <div class="price-roc-footer"><span><i class="price-roc-line price-roc-raw"></i>ROC <i class="price-roc-line price-roc-average"></i>ROC均线 <i class="price-roc-line price-roc-band"></i>历史20% / 80%线</span><span id="legacy-roc-source"></span></div>
+                <p id="legacy-roc-status" class="price-roc-status" role="status" aria-live="polite"></p>
+                <details class="price-roc-settings"><summary>ROC参数与最近峰谷确认</summary>
+                    <form id="legacy-roc-form"><label>ROC周期 N<input id="legacy-roc-length" type="number" min="2" max="120" step="1" value="12" required></label><label>均线周期 M<input id="legacy-roc-smoothing" type="number" min="1" max="30" step="1" value="6" required></label><label>右侧确认期数<input id="legacy-roc-confirmation" type="number" min="1" max="5" step="1" value="2" required></label><button type="submit">应用参数</button></form>
+                    <p>优先采用已完成的前复权K线，指数不复权；备用源复权未确认时明确标注，并暂停峰谷确认。日线按交易日、周线按完整周；ROC峰谷不等于价格顶底，参数仅影响本图，不改变原工具评分或仓位建议。</p>
+                    <div class="price-roc-table"><table><thead><tr><th>形态</th><th>发生 → 确认</th><th>ROC均线</th><th>当时分位</th></tr></thead><tbody id="legacy-roc-turns"><tr><td colspan="4">等待读取</td></tr></tbody></table></div>
+                </details>
             </div>
         </section>
 
@@ -247,7 +273,7 @@
                 </div>
                 <div class="chart-container" id="chart-daily-signal-history" style="height:400px;"></div>
                 <div class="signal-history-note">
-                    ⚠️ 日级别走势基于月度数据插值生成，反映趋势方向而非精确日度值。拖动底部滑块可缩放时间范围。
+                    仅展示已有月度记录与日采样，缺失日期不补造、不外推；旧月度记录的月初位置不代表确切观测日。这是中性情绪下的事后估值基准，不是当时可交易信号。
                 </div>
             </div>
         </section>
@@ -371,12 +397,18 @@
     </div>
 
     <!-- ==================== Scripts ==================== -->
-    <script src="js/etf-config.js?v=20260701a"></script>
-    <script src="js/signal.js?v=20260701a"></script>
-    <script src="js/storage.js?v=20260701a"></script>
-    <script src="js/api.js?v=20260701a"></script>
-    <script src="js/charts.js?v=20260701a"></script>
-    <script src="js/attack-pyramid.js?v=20260701a"></script>
-    <script src="js/main.js?v=20260701a"></script>
+    <script src="js/etf-config.js?v=20260915a"></script>
+    <script src="js/data-quality.js?v=20260915a"></script>
+    <script src="js/signal.js?v=20260915a"></script>
+    <script src="js/storage.js?v=20260915a"></script>
+    <script src="js/api.js?v=20260915a"></script>
+    <script src="js/charts.js?v=20260915a"></script>
+    <script src="js/attack-pyramid.js?v=20260915a"></script>
+    <script src="js/gpt-strategy-engine.js?v=20260915d"></script>
+    <script src="js/gpt-strategy-data.js?v=20260915d"></script>
+    <script src="js/price-roc-chart.js?v=20260915d"></script>
+    <script src="js/strategy-navigation.js?v=20260915d"></script>
+    <script src="js/legacy-price-roc.js?v=20260915d"></script>
+    <script src="js/main.js?v=20260915d"></script>
 </body>
 </html>

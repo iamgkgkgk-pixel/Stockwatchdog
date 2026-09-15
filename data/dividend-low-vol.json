@@ -1,6 +1,6 @@
 {
   "description": "红利低波ETF择时历史数据模板",
-  "lastUpdate": "2026-06-01",
+  "lastUpdate": "2026-09-15",
   "spreadHistory": [
     {
       "date": "2021-01",
@@ -285,6 +285,114 @@
     {
       "date": "2026-06",
       "value": 3.19
+    },
+    {
+      "date": "2026-07-01",
+      "value": 3.77
+    },
+    {
+      "date": "2026-07-02",
+      "value": 3.58
+    },
+    {
+      "date": "2026-07-03",
+      "value": 3.58
+    },
+    {
+      "date": "2026-07-06",
+      "value": 3.59
+    },
+    {
+      "date": "2026-07-09",
+      "value": 3.4
+    },
+    {
+      "date": "2026-07-10",
+      "value": 3.47
+    },
+    {
+      "date": "2026-07-13",
+      "value": 4.01
+    },
+    {
+      "date": "2026-07-14",
+      "value": 3.57
+    },
+    {
+      "date": "2026-07-15",
+      "value": 3.54
+    },
+    {
+      "date": "2026-07-16",
+      "value": 3.14
+    },
+    {
+      "date": "2026-07-20",
+      "value": 3.2
+    },
+    {
+      "date": "2026-07-23",
+      "value": 2.73
+    },
+    {
+      "date": "2026-07-29",
+      "value": 2.6
+    },
+    {
+      "date": "2026-08-03",
+      "value": 2.6
+    },
+    {
+      "date": "2026-08-05",
+      "value": 2.74
+    },
+    {
+      "date": "2026-08-10",
+      "value": 2.79
+    },
+    {
+      "date": "2026-08-12",
+      "value": 2.75
+    },
+    {
+      "date": "2026-08-18",
+      "value": 2.82
+    },
+    {
+      "date": "2026-08-19",
+      "value": 2.75
+    },
+    {
+      "date": "2026-08-21",
+      "value": 2.66
+    },
+    {
+      "date": "2026-08-24",
+      "value": 2.67
+    },
+    {
+      "date": "2026-08-26",
+      "value": 2.61
+    },
+    {
+      "date": "2026-08-28",
+      "value": 2.71
+    },
+    {
+      "date": "2026-09-01",
+      "value": 2.54
+    },
+    {
+      "date": "2026-09-07",
+      "value": 2.5
+    },
+    {
+      "date": "2026-09-09",
+      "value": 2.57
+    },
+    {
+      "date": "2026-09-14",
+      "value": 2.57
     }
   ],
   "peHistory": [
@@ -597,6 +705,236 @@
       "date": "2026-06",
       "value": 8.21,
       "percentile": 73.5
+    },
+    {
+      "date": "2026-07-01",
+      "value": 7.54,
+      "percentile": 67.5
+    },
+    {
+      "date": "2026-07-02",
+      "value": 7.56,
+      "percentile": 67.7
+    },
+    {
+      "date": "2026-07-03",
+      "value": 7.58,
+      "percentile": 67.7
+    },
+    {
+      "date": "2026-07-06",
+      "value": 7.58,
+      "percentile": 67.7
+    },
+    {
+      "date": "2026-07-07",
+      "value": 7.7,
+      "percentile": 68.8
+    },
+    {
+      "date": "2026-07-08",
+      "value": 7.77,
+      "percentile": 69.5
+    },
+    {
+      "date": "2026-07-09",
+      "value": 7.88,
+      "percentile": 70.7
+    },
+    {
+      "date": "2026-07-10",
+      "value": 7.8,
+      "percentile": 69.7
+    },
+    {
+      "date": "2026-07-13",
+      "value": 7.82,
+      "percentile": 70.0
+    },
+    {
+      "date": "2026-07-14",
+      "value": 7.98,
+      "percentile": 71.1
+    },
+    {
+      "date": "2026-07-15",
+      "value": 8.0,
+      "percentile": 71.2
+    },
+    {
+      "date": "2026-07-16",
+      "value": 8.05,
+      "percentile": 71.4
+    },
+    {
+      "date": "2026-07-17",
+      "value": 7.96,
+      "percentile": 70.9
+    },
+    {
+      "date": "2026-07-20",
+      "value": 8.09,
+      "percentile": 71.7
+    },
+    {
+      "date": "2026-07-21",
+      "value": 8.37,
+      "percentile": 76.3
+    },
+    {
+      "date": "2026-07-22",
+      "value": 8.19,
+      "percentile": 72.4
+    },
+    {
+      "date": "2026-07-23",
+      "value": 8.28,
+      "percentile": 74.3
+    },
+    {
+      "date": "2026-07-29",
+      "value": 8.5,
+      "percentile": 79.2
+    },
+    {
+      "date": "2026-08-03",
+      "value": 8.57,
+      "percentile": 79.8
+    },
+    {
+      "date": "2026-08-04",
+      "value": 8.53,
+      "percentile": 79.4
+    },
+    {
+      "date": "2026-08-05",
+      "value": 8.29,
+      "percentile": 74.1
+    },
+    {
+      "date": "2026-08-06",
+      "value": 8.17,
+      "percentile": 72.0
+    },
+    {
+      "date": "2026-08-07",
+      "value": 8.21,
+      "percentile": 72.6
+    },
+    {
+      "date": "2026-08-10",
+      "value": 8.19,
+      "percentile": 72.0
+    },
+    {
+      "date": "2026-08-12",
+      "value": 8.3,
+      "percentile": 74.4
+    },
+    {
+      "date": "2026-08-13",
+      "value": 8.23,
+      "percentile": 73.0
+    },
+    {
+      "date": "2026-08-14",
+      "value": 8.27,
+      "percentile": 73.6
+    },
+    {
+      "date": "2026-08-17",
+      "value": 8.25,
+      "percentile": 73.3
+    },
+    {
+      "date": "2026-08-18",
+      "value": 8.24,
+      "percentile": 73.2
+    },
+    {
+      "date": "2026-08-19",
+      "value": 8.34,
+      "percentile": 75.3
+    },
+    {
+      "date": "2026-08-21",
+      "value": 8.46,
+      "percentile": 78.4
+    },
+    {
+      "date": "2026-08-24",
+      "value": 8.39,
+      "percentile": 76.8
+    },
+    {
+      "date": "2026-08-25",
+      "value": 8.49,
+      "percentile": 78.9
+    },
+    {
+      "date": "2026-08-26",
+      "value": 8.49,
+      "percentile": 79.0
+    },
+    {
+      "date": "2026-08-27",
+      "value": 8.51,
+      "percentile": 79.1
+    },
+    {
+      "date": "2026-08-28",
+      "value": 8.41,
+      "percentile": 77.3
+    },
+    {
+      "date": "2026-09-01",
+      "value": 8.54,
+      "percentile": 79.5
+    },
+    {
+      "date": "2026-09-02",
+      "value": 8.64,
+      "percentile": 80.2
+    },
+    {
+      "date": "2026-09-03",
+      "value": 8.63,
+      "percentile": 80.1
+    },
+    {
+      "date": "2026-09-04",
+      "value": 8.55,
+      "percentile": 79.5
+    },
+    {
+      "date": "2026-09-07",
+      "value": 8.58,
+      "percentile": 79.8
+    },
+    {
+      "date": "2026-09-08",
+      "value": 8.44,
+      "percentile": 77.5
+    },
+    {
+      "date": "2026-09-09",
+      "value": 8.45,
+      "percentile": 77.9
+    },
+    {
+      "date": "2026-09-10",
+      "value": 8.49,
+      "percentile": 78.5
+    },
+    {
+      "date": "2026-09-11",
+      "value": 8.56,
+      "percentile": 79.5
+    },
+    {
+      "date": "2026-09-14",
+      "value": 8.55,
+      "percentile": 79.4
     }
   ],
   "dividendYieldHistory": [
@@ -771,6 +1109,190 @@
     {
       "date": "2026-06",
       "value": 4.92
+    },
+    {
+      "date": "2026-07-01",
+      "value": 5.51
+    },
+    {
+      "date": "2026-07-02",
+      "value": 5.33
+    },
+    {
+      "date": "2026-07-03",
+      "value": 5.34
+    },
+    {
+      "date": "2026-07-06",
+      "value": 5.34
+    },
+    {
+      "date": "2026-07-07",
+      "value": 5.25
+    },
+    {
+      "date": "2026-07-08",
+      "value": 5.22
+    },
+    {
+      "date": "2026-07-09",
+      "value": 5.15
+    },
+    {
+      "date": "2026-07-10",
+      "value": 5.22
+    },
+    {
+      "date": "2026-07-13",
+      "value": 5.76
+    },
+    {
+      "date": "2026-07-14",
+      "value": 5.32
+    },
+    {
+      "date": "2026-07-15",
+      "value": 5.29
+    },
+    {
+      "date": "2026-07-16",
+      "value": 4.89
+    },
+    {
+      "date": "2026-07-17",
+      "value": 5.03
+    },
+    {
+      "date": "2026-07-20",
+      "value": 4.95
+    },
+    {
+      "date": "2026-07-21",
+      "value": 4.42
+    },
+    {
+      "date": "2026-07-22",
+      "value": 4.52
+    },
+    {
+      "date": "2026-07-23",
+      "value": 4.47
+    },
+    {
+      "date": "2026-07-29",
+      "value": 4.34
+    },
+    {
+      "date": "2026-08-03",
+      "value": 4.32
+    },
+    {
+      "date": "2026-08-04",
+      "value": 4.33
+    },
+    {
+      "date": "2026-08-05",
+      "value": 4.46
+    },
+    {
+      "date": "2026-08-06",
+      "value": 4.52
+    },
+    {
+      "date": "2026-08-07",
+      "value": 4.49
+    },
+    {
+      "date": "2026-08-10",
+      "value": 4.51
+    },
+    {
+      "date": "2026-08-12",
+      "value": 4.47
+    },
+    {
+      "date": "2026-08-13",
+      "value": 4.52
+    },
+    {
+      "date": "2026-08-14",
+      "value": 4.49
+    },
+    {
+      "date": "2026-08-17",
+      "value": 4.51
+    },
+    {
+      "date": "2026-08-18",
+      "value": 4.51
+    },
+    {
+      "date": "2026-08-19",
+      "value": 4.45
+    },
+    {
+      "date": "2026-08-21",
+      "value": 4.37
+    },
+    {
+      "date": "2026-08-24",
+      "value": 4.37
+    },
+    {
+      "date": "2026-08-25",
+      "value": 4.32
+    },
+    {
+      "date": "2026-08-26",
+      "value": 4.32
+    },
+    {
+      "date": "2026-08-27",
+      "value": 4.31
+    },
+    {
+      "date": "2026-08-28",
+      "value": 4.43
+    },
+    {
+      "date": "2026-09-01",
+      "value": 4.24
+    },
+    {
+      "date": "2026-09-02",
+      "value": 4.19
+    },
+    {
+      "date": "2026-09-03",
+      "value": 4.17
+    },
+    {
+      "date": "2026-09-04",
+      "value": 4.21
+    },
+    {
+      "date": "2026-09-07",
+      "value": 4.19
+    },
+    {
+      "date": "2026-09-08",
+      "value": 4.26
+    },
+    {
+      "date": "2026-09-09",
+      "value": 4.26
+    },
+    {
+      "date": "2026-09-10",
+      "value": 4.23
+    },
+    {
+      "date": "2026-09-11",
+      "value": 4.27
+    },
+    {
+      "date": "2026-09-14",
+      "value": 4.28
     }
   ],
   "bondYieldHistory": [
@@ -941,21 +1463,180 @@
     {
       "date": "2026-06",
       "value": 1.73
+    },
+    {
+      "date": "2026-07-01",
+      "value": 1.74
+    },
+    {
+      "date": "2026-07-02",
+      "value": 1.75
+    },
+    {
+      "date": "2026-07-03",
+      "value": 1.76
+    },
+    {
+      "date": "2026-07-06",
+      "value": 1.75
+    },
+    {
+      "date": "2026-07-09",
+      "value": 1.75
+    },
+    {
+      "date": "2026-07-10",
+      "value": 1.75
+    },
+    {
+      "date": "2026-07-13",
+      "value": 1.75
+    },
+    {
+      "date": "2026-07-14",
+      "value": 1.75
+    },
+    {
+      "date": "2026-07-15",
+      "value": 1.75
+    },
+    {
+      "date": "2026-07-16",
+      "value": 1.75
+    },
+    {
+      "date": "2026-07-20",
+      "value": 1.75
+    },
+    {
+      "date": "2026-07-23",
+      "value": 1.74
+    },
+    {
+      "date": "2026-07-29",
+      "value": 1.74
+    },
+    {
+      "date": "2026-08-03",
+      "value": 1.72
+    },
+    {
+      "date": "2026-08-05",
+      "value": 1.72
+    },
+    {
+      "date": "2026-08-10",
+      "value": 1.72
+    },
+    {
+      "date": "2026-08-12",
+      "value": 1.72
+    },
+    {
+      "date": "2026-08-18",
+      "value": 1.69
+    },
+    {
+      "date": "2026-08-19",
+      "value": 1.7
+    },
+    {
+      "date": "2026-08-21",
+      "value": 1.71
+    },
+    {
+      "date": "2026-08-24",
+      "value": 1.7
+    },
+    {
+      "date": "2026-08-26",
+      "value": 1.71
+    },
+    {
+      "date": "2026-08-28",
+      "value": 1.72
+    },
+    {
+      "date": "2026-09-01",
+      "value": 1.7
+    },
+    {
+      "date": "2026-09-07",
+      "value": 1.69
+    },
+    {
+      "date": "2026-09-09",
+      "value": 1.69
+    },
+    {
+      "date": "2026-09-14",
+      "value": 1.71
     }
   ],
   "currentData": {
-    "dividendYield": 4.92,
+    "dividendYield": 4.26,
     "bondYield": 1.73,
     "spread": 3.19,
     "spreadPercentile": 45.2,
-    "pe": 8.21,
-    "pePercentile": 73.52,
-    "pb": 0.83,
-    "pbPercentile": 52.28,
+    "pe": 8.59,
+    "pePercentile": 79.88,
+    "pb": 0.88,
+    "pbPercentile": 63.44,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-06-01",
-    "note": "红利低波指数(CSIH30269)估值数据，来源:蛋卷基金"
+    "updateTime": "2026-09-14",
+    "note": "红利低波指数(CSIH30269)估值数据，来源:蛋卷基金",
+    "fieldMeta": {
+      "pe": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-红利低波",
+        "quality": "observed",
+        "instrumentId": "CSIH30269"
+      },
+      "pb": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-红利低波",
+        "quality": "observed",
+        "instrumentId": "CSIH30269"
+      },
+      "pePercentile": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-红利低波",
+        "quality": "observed",
+        "instrumentId": "CSIH30269"
+      },
+      "pbPercentile": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-红利低波",
+        "quality": "observed",
+        "instrumentId": "CSIH30269"
+      },
+      "dividendYield": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-红利低波",
+        "quality": "observed",
+        "instrumentId": "CSIH30269"
+      },
+      "bondYield": {
+        "asOf": "2026-06-01",
+        "quality": "legacy",
+        "source": "旧版快照（来源待核验）"
+      },
+      "priceChange": {
+        "asOf": "2026-06-01",
+        "quality": "legacy",
+        "source": "旧版快照（来源待核验）"
+      },
+      "roe": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-红利低波",
+        "quality": "observed",
+        "instrumentId": "CSIH30269"
+      }
+    },
+    "valuationAsOf": "2026-09-14",
+    "valuationSource": "蛋卷基金-红利低波",
+    "roe": 10.23
   },
   "valuationAnchor": {
     "peMean": 7.69,

@@ -1,6 +1,6 @@
 {
   "description": "标普500ETF历史数据",
-  "lastUpdate": "2026-06-01",
+  "lastUpdate": "2026-09-15",
   "peHistory": [
     {
       "date": "2016-01",
@@ -416,6 +416,236 @@
       "date": "2026-06",
       "value": 29.11,
       "percentile": 85.9
+    },
+    {
+      "date": "2026-07-01",
+      "value": 28.32,
+      "percentile": 80.0
+    },
+    {
+      "date": "2026-07-02",
+      "value": 28.32,
+      "percentile": 80.0
+    },
+    {
+      "date": "2026-07-03",
+      "value": 28.31,
+      "percentile": 79.8
+    },
+    {
+      "date": "2026-07-06",
+      "value": 28.31,
+      "percentile": 79.8
+    },
+    {
+      "date": "2026-07-07",
+      "value": 28.56,
+      "percentile": 81.8
+    },
+    {
+      "date": "2026-07-08",
+      "value": 28.44,
+      "percentile": 80.7
+    },
+    {
+      "date": "2026-07-09",
+      "value": 28.33,
+      "percentile": 79.9
+    },
+    {
+      "date": "2026-07-10",
+      "value": 28.52,
+      "percentile": 81.0
+    },
+    {
+      "date": "2026-07-13",
+      "value": 28.62,
+      "percentile": 82.4
+    },
+    {
+      "date": "2026-07-14",
+      "value": 28.39,
+      "percentile": 80.3
+    },
+    {
+      "date": "2026-07-15",
+      "value": 28.35,
+      "percentile": 80.0
+    },
+    {
+      "date": "2026-07-16",
+      "value": 28.48,
+      "percentile": 80.8
+    },
+    {
+      "date": "2026-07-17",
+      "value": 28.22,
+      "percentile": 78.6
+    },
+    {
+      "date": "2026-07-20",
+      "value": 27.9,
+      "percentile": 76.4
+    },
+    {
+      "date": "2026-07-21",
+      "value": 27.86,
+      "percentile": 75.9
+    },
+    {
+      "date": "2026-07-22",
+      "value": 27.97,
+      "percentile": 76.9
+    },
+    {
+      "date": "2026-07-23",
+      "value": 26.21,
+      "percentile": 66.3
+    },
+    {
+      "date": "2026-07-29",
+      "value": 25.98,
+      "percentile": 64.0
+    },
+    {
+      "date": "2026-08-03",
+      "value": 25.49,
+      "percentile": 60.7
+    },
+    {
+      "date": "2026-08-04",
+      "value": 25.9,
+      "percentile": 63.3
+    },
+    {
+      "date": "2026-08-05",
+      "value": 26.32,
+      "percentile": 67.1
+    },
+    {
+      "date": "2026-08-06",
+      "value": 26.06,
+      "percentile": 64.6
+    },
+    {
+      "date": "2026-08-07",
+      "value": 25.93,
+      "percentile": 63.4
+    },
+    {
+      "date": "2026-08-10",
+      "value": 26.03,
+      "percentile": 64.5
+    },
+    {
+      "date": "2026-08-12",
+      "value": 25.84,
+      "percentile": 62.8
+    },
+    {
+      "date": "2026-08-13",
+      "value": 25.9,
+      "percentile": 63.1
+    },
+    {
+      "date": "2026-08-14",
+      "value": 26.06,
+      "percentile": 64.5
+    },
+    {
+      "date": "2026-08-17",
+      "value": 26.01,
+      "percentile": 64.1
+    },
+    {
+      "date": "2026-08-18",
+      "value": 25.87,
+      "percentile": 62.8
+    },
+    {
+      "date": "2026-08-19",
+      "value": 25.7,
+      "percentile": 61.6
+    },
+    {
+      "date": "2026-08-21",
+      "value": 25.5,
+      "percentile": 60.3
+    },
+    {
+      "date": "2026-08-24",
+      "value": 25.63,
+      "percentile": 61.2
+    },
+    {
+      "date": "2026-08-25",
+      "value": 25.58,
+      "percentile": 60.9
+    },
+    {
+      "date": "2026-08-26",
+      "value": 25.65,
+      "percentile": 61.3
+    },
+    {
+      "date": "2026-08-27",
+      "value": 25.31,
+      "percentile": 58.4
+    },
+    {
+      "date": "2026-08-28",
+      "value": 25.48,
+      "percentile": 60.0
+    },
+    {
+      "date": "2026-09-01",
+      "value": 25.3,
+      "percentile": 58.3
+    },
+    {
+      "date": "2026-09-02",
+      "value": 25.08,
+      "percentile": 57.0
+    },
+    {
+      "date": "2026-09-03",
+      "value": 25.17,
+      "percentile": 57.4
+    },
+    {
+      "date": "2026-09-04",
+      "value": 25.45,
+      "percentile": 59.7
+    },
+    {
+      "date": "2026-09-07",
+      "value": 25.33,
+      "percentile": 58.6
+    },
+    {
+      "date": "2026-09-08",
+      "value": 25.33,
+      "percentile": 58.6
+    },
+    {
+      "date": "2026-09-09",
+      "value": 25.2,
+      "percentile": 57.4
+    },
+    {
+      "date": "2026-09-10",
+      "value": 25.05,
+      "percentile": 56.6
+    },
+    {
+      "date": "2026-09-11",
+      "value": 24.9,
+      "percentile": 55.4
+    },
+    {
+      "date": "2026-09-14",
+      "value": 25.14,
+      "percentile": 57.0
     }
   ],
   "dividendYieldHistory": [
@@ -562,6 +792,190 @@
     {
       "date": "2026-06",
       "value": 1.0
+    },
+    {
+      "date": "2026-07-01",
+      "value": 1.03
+    },
+    {
+      "date": "2026-07-02",
+      "value": 1.03
+    },
+    {
+      "date": "2026-07-03",
+      "value": 1.03
+    },
+    {
+      "date": "2026-07-06",
+      "value": 1.03
+    },
+    {
+      "date": "2026-07-07",
+      "value": 1.02
+    },
+    {
+      "date": "2026-07-08",
+      "value": 1.02
+    },
+    {
+      "date": "2026-07-09",
+      "value": 1.02
+    },
+    {
+      "date": "2026-07-10",
+      "value": 1.02
+    },
+    {
+      "date": "2026-07-13",
+      "value": 1.03
+    },
+    {
+      "date": "2026-07-14",
+      "value": 1.02
+    },
+    {
+      "date": "2026-07-15",
+      "value": 1.02
+    },
+    {
+      "date": "2026-07-16",
+      "value": 1.02
+    },
+    {
+      "date": "2026-07-17",
+      "value": 1.02
+    },
+    {
+      "date": "2026-07-20",
+      "value": 1.03
+    },
+    {
+      "date": "2026-07-21",
+      "value": 1.03
+    },
+    {
+      "date": "2026-07-22",
+      "value": 1.02
+    },
+    {
+      "date": "2026-07-23",
+      "value": 1.02
+    },
+    {
+      "date": "2026-07-29",
+      "value": 1.04
+    },
+    {
+      "date": "2026-08-03",
+      "value": 1.03
+    },
+    {
+      "date": "2026-08-04",
+      "value": 1.01
+    },
+    {
+      "date": "2026-08-05",
+      "value": 0.99
+    },
+    {
+      "date": "2026-08-06",
+      "value": 1.0
+    },
+    {
+      "date": "2026-08-07",
+      "value": 1.0
+    },
+    {
+      "date": "2026-08-10",
+      "value": 1.0
+    },
+    {
+      "date": "2026-08-12",
+      "value": 1.01
+    },
+    {
+      "date": "2026-08-13",
+      "value": 1.0
+    },
+    {
+      "date": "2026-08-14",
+      "value": 0.99
+    },
+    {
+      "date": "2026-08-17",
+      "value": 1.0
+    },
+    {
+      "date": "2026-08-18",
+      "value": 1.01
+    },
+    {
+      "date": "2026-08-19",
+      "value": 1.02
+    },
+    {
+      "date": "2026-08-21",
+      "value": 1.03
+    },
+    {
+      "date": "2026-08-24",
+      "value": 1.03
+    },
+    {
+      "date": "2026-08-25",
+      "value": 1.02
+    },
+    {
+      "date": "2026-08-26",
+      "value": 1.02
+    },
+    {
+      "date": "2026-08-27",
+      "value": 1.02
+    },
+    {
+      "date": "2026-08-28",
+      "value": 1.01
+    },
+    {
+      "date": "2026-09-01",
+      "value": 1.02
+    },
+    {
+      "date": "2026-09-02",
+      "value": 1.03
+    },
+    {
+      "date": "2026-09-03",
+      "value": 1.03
+    },
+    {
+      "date": "2026-09-04",
+      "value": 1.01
+    },
+    {
+      "date": "2026-09-07",
+      "value": 1.03
+    },
+    {
+      "date": "2026-09-08",
+      "value": 1.01
+    },
+    {
+      "date": "2026-09-09",
+      "value": 1.02
+    },
+    {
+      "date": "2026-09-10",
+      "value": 1.02
+    },
+    {
+      "date": "2026-09-11",
+      "value": 1.04
+    },
+    {
+      "date": "2026-09-14",
+      "value": 1.03
     }
   ],
   "bondYieldHistory": [
@@ -687,17 +1101,68 @@
     }
   ],
   "currentData": {
-    "dividendYield": 1.0,
+    "dividendYield": 1.03,
     "bondYield": 4.31,
-    "pe": 29.11,
-    "pePercentile": 85.88,
-    "pb": 5.84,
-    "pbPercentile": 99.96,
+    "pe": 25.08,
+    "pePercentile": 56.72,
+    "pb": 5.5,
+    "pbPercentile": 94.04,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-06-01",
+    "updateTime": "2026-09-14",
     "note": "标普500指数估值数据（美元10Y国债收益率）",
-    "spread": -3.31
+    "spread": -3.31,
+    "fieldMeta": {
+      "pe": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-标普500",
+        "quality": "observed",
+        "instrumentId": "SPX"
+      },
+      "pb": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-标普500",
+        "quality": "observed",
+        "instrumentId": "SPX"
+      },
+      "pePercentile": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-标普500",
+        "quality": "observed",
+        "instrumentId": "SPX"
+      },
+      "pbPercentile": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-标普500",
+        "quality": "observed",
+        "instrumentId": "SPX"
+      },
+      "dividendYield": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-标普500",
+        "quality": "observed",
+        "instrumentId": "SPX"
+      },
+      "bondYield": {
+        "asOf": "2026-06-01",
+        "quality": "legacy",
+        "source": "旧版快照（来源待核验）"
+      },
+      "priceChange": {
+        "asOf": "2026-06-01",
+        "quality": "legacy",
+        "source": "旧版快照（来源待核验）"
+      },
+      "roe": {
+        "asOf": "2026-09-14",
+        "source": "蛋卷基金-标普500",
+        "quality": "observed",
+        "instrumentId": "SPX"
+      }
+    },
+    "valuationAsOf": "2026-09-14",
+    "valuationSource": "蛋卷基金-标普500",
+    "roe": 21.95
   },
   "valuationAnchor": {
     "peMean": 22.97,

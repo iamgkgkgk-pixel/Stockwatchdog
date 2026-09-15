@@ -100,8 +100,11 @@ const ChartManager = (() => {
     }
 
     function resizeAll() {
-        Object.values(gaugeCharts).forEach(c=>{ if(c) c.resize(); });
-        Object.values(lineCharts).forEach(c=>{ if(c) c.resize(); });
+        if (typeof echarts === 'undefined') return;
+        document.querySelectorAll('.chart-container, .gauge-container').forEach(dom => {
+            const chart = echarts.getInstanceByDom(dom);
+            if (chart && dom.clientWidth > 0 && dom.clientHeight > 0) chart.resize();
+        });
     }
     window.addEventListener('resize', ()=>setTimeout(resizeAll, 100));
 
@@ -294,7 +297,7 @@ const ChartManager = (() => {
                     if (d.pePercentile !== null && d.pePercentile !== undefined) html += ` (分位:${d.pePercentile.toFixed(1)}%)`;
                     if (d.dividend) html += `<br/>股息率: ${d.dividend.toFixed(2)}%`;
                     if (d.bond) html += `<br/>国债收益率: ${d.bond.toFixed(2)}%`;
-                    html += `<br/><span style="color:#718096;font-size:10px;">* 基于月度数据插值</span>`;
+                    html += `<br/><span style="color:#718096;font-size:10px;">* 历史基准重算；月度记录与日采样，不补造缺失日期</span>`;
                     return html;
                 }
             },
@@ -475,7 +478,7 @@ const ChartManager = (() => {
 
                     if (d.dividend) html += `<br/><span style="font-size:11px;color:#a0aec0;">股息率: ${d.dividend.toFixed(2)}%</span>`;
                     if (d.bond) html += `<br/><span style="font-size:11px;color:#a0aec0;">国债: ${d.bond.toFixed(2)}%</span>`;
-                    html += `<br/><span style="color:#718096;font-size:10px;">* 基于月度数据插值</span>`;
+                    html += `<br/><span style="color:#718096;font-size:10px;">* 历史基准重算；月度记录与日采样，不补造缺失日期</span>`;
                     return html;
                 }
             },
@@ -494,16 +497,8 @@ const ChartManager = (() => {
                 axisLine: { lineStyle: { color: '#2d3748' } },
                 axisLabel: {
                     color: '#a0aec0', fontSize: 10, rotate: 30,
-                    formatter: function(value) {
-                        if (value.endsWith('-01-01') || value.endsWith('-01-02') || value.endsWith('-01-03')) {
-                            return value.slice(0, 7);
-                        }
-                        if (value.endsWith('-01') || value.endsWith('-02')) {
-                            return value.slice(5, 7) + '月';
-                        }
-                        return '';
-                    },
-                    interval: 0,
+                    formatter: value => value.slice(0, 7),
+                    interval: Math.max(0, Math.floor(dates.length / 7)),
                 },
                 axisTick: { show: false },
             },
@@ -648,8 +643,14 @@ const ChartManager = (() => {
                     let html = `<strong>${d.date}</strong><br/>`;
                     html += `<span style="color:${d.zone.color};font-weight:bold;font-size:14px;">● ${d.zone.text}</span><br/>`;
                     html += `历史分位: <strong style="color:${d.zone.color}">${d.percentile.toFixed(1)}%</strong>`;
-                    html += `<span style="font-size:11px;color:#a0aec0;">（历史 ${d.percentile.toFixed(0)}% 的时间综合评分 ≤ 当时）</span><br/>`;
-                    html += `当时综合评分: ${d.score.toFixed(1)}分 · ${d.signalText}`;
+                    html += '<br/>';
+                    if (d.metric) {
+                        html += `${d.metric}: <strong>${d.value.toFixed(2)}</strong><br/>`;
+                        html += `原值历史分位: ${d.rawPercentile.toFixed(1)}%<br/>`;
+                        html += '<span style="font-size:11px;color:#a0aec0;">按月等权，越高表示相对更便宜；不是当时交易信号</span>';
+                    } else {
+                        html += `历史基准分: ${d.score.toFixed(1)}分`;
+                    }
                     return html;
                 }
             },
@@ -661,16 +662,8 @@ const ChartManager = (() => {
                 axisLine: { lineStyle: { color: '#2d3748' } },
                 axisLabel: {
                     color: '#a0aec0', fontSize: 10, rotate: 30,
-                    formatter: function(value) {
-                        if (value.endsWith('-01-01') || value.endsWith('-01-02') || value.endsWith('-01-03')) {
-                            return value.slice(0, 7);
-                        }
-                        if (value.endsWith('-01') || value.endsWith('-02')) {
-                            return value.slice(5, 7) + '月';
-                        }
-                        return '';
-                    },
-                    interval: 0,
+                    formatter: value => value.slice(0, 7),
+                    interval: Math.max(0, Math.floor(dates.length / 7)),
                 },
                 axisTick: { show: false },
             },
@@ -697,10 +690,10 @@ const ChartManager = (() => {
                 seriesIndex: 0,
             },
             series: [{
-                name: '综合分历史分位',
+                name: '相对便宜程度',
                 type: 'line',
                 data: percentiles,
-                smooth: true,
+                smooth: false,
                 symbol: 'none',
                 lineStyle: { width: 2.5 },
                 areaStyle: {
@@ -714,16 +707,16 @@ const ChartManager = (() => {
                     silent: true,
                     lineStyle: { type: 'dashed', width: 1 },
                     data: [
-                        { yAxis: 80, label: { formatter: '非常安全 80%', color: '#0d7337', fontSize: 9, position: 'end' }, lineStyle: { color: '#0d733744' } },
-                        { yAxis: 65, label: { formatter: '相对安全 65%', color: '#28a745', fontSize: 9, position: 'end' }, lineStyle: { color: '#28a74544' } },
+                        { yAxis: 80, label: { formatter: '偏便宜 80%', color: '#0d7337', fontSize: 9, position: 'end' }, lineStyle: { color: '#0d733744' } },
+                        { yAxis: 65, label: { formatter: '较便宜 65%', color: '#28a745', fontSize: 9, position: 'end' }, lineStyle: { color: '#28a74544' } },
                         { yAxis: 50, label: { formatter: '中位线 50%', color: '#a0aec0', fontSize: 9, position: 'end' }, lineStyle: { color: '#a0aec044' } },
-                        { yAxis: 25, label: { formatter: '偏危险 25%', color: '#fd7e14', fontSize: 9, position: 'end' }, lineStyle: { color: '#fd7e1444' } },
+                        { yAxis: 25, label: { formatter: '偏贵 25%', color: '#fd7e14', fontSize: 9, position: 'end' }, lineStyle: { color: '#fd7e1444' } },
                     ]
                 },
                 // 当前分位标记点（最后一个点）
                 markPoint: currentPercentile ? {
                     data: [{
-                        coord: [dates[dates.length - 1], percentiles[percentiles.length - 1]],
+                        coord: [currentPercentile.date || dates[dates.length - 1], currentPercentile.percentile],
                         symbol: 'pin',
                         symbolSize: 40,
                         label: {

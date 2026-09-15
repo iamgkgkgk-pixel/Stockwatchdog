@@ -123,6 +123,12 @@ const AttackPyramid = (() => {
             };
         }
 
+        if (signal.quality && signal.quality.status === 'reference') {
+            return { pct: null, label: '参考分析，不折算仓位', color: '#b78b45', reason: '可看估值位置与参考分；执行加减仓前需核对时效、缺项及已有持仓。', regime };
+        }
+        if (signal.level === 'DATA_INCOMPLETE' || (signal.quality && !signal.quality.allowed)) {
+            return { pct: null, label: '暂无仓位建议', color: '#718096', reason: signal.advice || '请先核对核心数据', regime };
+        }
         const base = SIGNAL_TO_POSITION[signal.level] || SIGNAL_TO_POSITION.DATA_INCOMPLETE;
 
         // ⚫ 撤退：无论信号如何，强制0%

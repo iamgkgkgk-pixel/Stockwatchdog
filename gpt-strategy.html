@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>GPT 策略 · 估值与 ROC 实验页</title>
+    <link rel="stylesheet" href="css/gpt-strategy.css?v=20260915d">
+    <link rel="stylesheet" href="css/price-roc.css?v=20260915d">
+    <script defer src="lib/echarts.min.js"></script>
+    <script defer src="js/data-quality.js?v=20260915d"></script>
+    <script defer src="js/gpt-strategy-engine.js?v=20260915d"></script>
+    <script defer src="js/gpt-strategy-data.js?v=20260915d"></script>
+    <script defer src="js/etf-config.js?v=20260915a"></script>
+    <script defer src="js/strategy-navigation.js?v=20260915d"></script>
+    <script defer src="js/price-roc-chart.js?v=20260915d"></script>
+    <script defer src="js/gpt-strategy-app.js?v=20260915d"></script>
+</head>
+<body>
+    <a class="skip-link" href="#decision">跳到策略结论</a>
+    <div class="shell">
+        <header class="page-header">
+            <div class="brand"><span class="brand-mark" aria-hidden="true">G</span><div><span class="eyebrow">VALUE / MOMENTUM</span><h1>GPT 策略 <span class="experiment">独立实验</span></h1></div></div>
+            <div class="header-note">不算仓位，只拆解买、持、卖的依据。<a id="btn-original-strategy" class="strategy-page-switch" href="index.html">返回原工具 ↗</a></div>
+        </header>
+
+        <section class="workspace-controls" aria-label="标的和环境">
+            <nav id="asset-tabs" class="asset-tabs" aria-label="选择标的"></nav>
+            <div class="environment"><label for="regime">你判断的利率阶段</label><select id="regime"><option value="unknown">未确认 / 暂停观察</option><option value="tightening">加息阶段</option><option value="easing">降息阶段</option></select></div>
+        </section>
+        <div class="context-line"><span id="asset-context">读取标的…</span><span id="regime-note">降息只解除科技准入限制，不自动产生买点。</span></div>
+
+        <p id="return-context-note" class="strategy-return-note" hidden></p>
+        <main>
+            <section id="decision" class="decision-panel" aria-labelledby="decision-title" aria-live="polite" aria-busy="true">
+                <div class="decision-topline"><span class="eyebrow">主判断 · 估值为主，恐慌辅助</span><span id="decision-asof">正在读取估值</span></div>
+                <div class="decision-heading"><h2 id="decision-title">读取中</h2><span id="decision-scope" class="scope-tag">尚无结论</span></div>
+                <p id="decision-reason" class="decision-reason">正在读取这个标的的PE与历史分位。</p>
+                <p id="sentiment-summary" class="sentiment-summary">恐慌参考读取中</p>
+                <div class="decision-actions"><div><span id="hold-label" class="action-label">长期底仓</span><strong id="hold-action">—</strong></div><div><span id="buy-label" class="action-label">新买 / 加仓</span><strong id="buy-action">—</strong></div></div>
+                <div class="tactical-hint"><span>波段辅助 · ROC</span><strong id="tactical-title">等待数据</strong><span class="tactical-boundary">只调节奏，不改主方向</span></div>
+                <details id="decision-details" class="decision-details"><summary id="decision-caveat">数据说明</summary><div><p id="decision-limitation"></p><p id="sentiment-detail"></p><p id="sentiment-effect"></p><p id="tactical-detail"></p><p id="decision-next"></p><p id="premise">参考信号，未验证收益优势。</p></div></details>
+            </section>
+
+            <section class="chart-panel" aria-labelledby="chart-title">
+                <div class="chart-header"><div><span class="eyebrow">02 / 波段证据</span><h2 id="chart-title">价格与 ROC</h2></div><div class="chart-controls"><label for="timeframe" class="sr-only">K线周期</label><select id="timeframe"><option value="day">日线</option><option value="week">周线</option></select><div class="ranges" role="group" aria-label="显示范围"><button data-range="6" type="button">6个月</button><button data-range="12" type="button" aria-pressed="true">1年</button><button data-range="all" type="button">全部</button></div><button id="refresh" type="button" class="button-quiet">更新数据</button></div></div>
+                <div class="chart-readout"><span id="price-readout">价格 —</span><span id="roc-readout">ROC —</span><span id="rank-readout">动量历史位置 —</span></div>
+                <div id="strategy-chart" role="img" aria-label="前复权价格与ROC双图，转折标记位于确认日"></div>
+                <div id="chart-empty" class="empty-state" hidden>暂无真实价格数据。请尝试更新；页面不会生成模拟行情。</div>
+                <div class="chart-footer"><span><i class="legend-line roc"></i>ROC <i class="legend-line average"></i>ROC均线 <i class="legend-line band"></i>过去样本20% / 80%线</span><span id="price-source">只使用已完成的前复权K线</span></div>
+                <p class="chart-disclaimer">图中“谷确认 / 峰确认”是动量形态，不是历史买卖信号。标记落在确认日；尚未确认的右端不补画顶底。</p>
+            </section>
+
+            <section class="evidence-grid" aria-label="估值与转折证据">
+                <div class="valuation-panel"><div class="section-heading"><span class="eyebrow">03 / 估值前提</span><span id="valuation-mode" class="small-tag">历史参考</span></div><div class="valuation-headline"><strong id="pe-value">—</strong><span id="valuation-band">读取估值</span></div><div class="reference-ranks"><div><span>3年 PE 分位</span><strong id="rank-3y">—</strong></div><div><span>5年 PE 分位</span><strong id="rank-5y">—</strong></div></div><p id="valuation-note" class="muted">估值与动量不合成总分。PE分位越低，相对历史越便宜。</p><p id="valuation-source" class="source-text"></p></div>
+                <div class="turn-panel"><div class="section-heading"><span class="eyebrow">04 / 最近确认记录</span><span id="turn-definition" class="muted">以ROC均线判定</span></div><div class="table-scroll"><table><thead><tr><th>形态</th><th>发生 → 确认</th><th>ROC均线</th><th>当时分位</th></tr></thead><tbody id="turn-rows"><tr><td colspan="4">等待价格数据</td></tr></tbody></table></div><p class="source-text">分位只用发生日前的样本；尾部谷需为负、峰需为正。普通转折不产生波段动作。</p></div>
+            </section>
+
+            <details class="settings-panel" id="settings-panel">
+                <summary>参数与手动估值前提 <span>仅影响这个实验页</span></summary>
+                <div class="settings-grid">
+                    <form id="roc-form"><h3>ROC参数</h3><div class="form-fields"><label>ROC周期 N<input id="roc-length" name="length" type="number" min="2" max="120" step="1" value="12" required></label><label>均线周期 M<input id="roc-smoothing" name="smoothing" type="number" min="1" max="30" step="1" value="6" required></label><label>右侧确认周期<input id="roc-confirmation" name="confirmation" type="number" min="1" max="5" step="1" value="2" required></label></div><p class="muted">日线按交易日，周线按完整周。极值左右各比较确认周期数；确认越多越滞后。默认12 / 6 / 2未做最优参数搜索。</p><button type="submit" class="button-primary">应用参数</button></form>
+                    <form id="valuation-form"><h3>我已自行核对估值</h3><p class="muted">双创不借用创业板估值；缺少可比历史时可填写自己的判断。保存后会明确标注“你的前提”，30天后失效。</p><div class="form-fields manual-fields"><label>当前区间<select id="manual-band" required><option value="">选择已核对的区间</option><option value="low">历史相对低位</option><option value="fair">合理区间</option><option value="elevated">偏高，但未明显透支</option><option value="rich">明显偏高 / 可能透支</option></select></label><label>观测日期<input id="manual-date" type="date" required></label></div><label>核对依据<input id="manual-reason" type="text" maxlength="160" placeholder="例如：同指数PE、所用历史区间与来源" required></label><div class="form-buttons"><button type="submit" class="button-primary">保存此前提</button><button id="clear-manual" type="button" class="button-quiet">恢复数据判断</button></div></form>
+                </div>
+            </details>
+
+            <details class="method-panel"><summary>算法规则与数据边界</summary><div class="method-content">
+                <div><h3>估值决定主方向，ROC只调节奏</h3><p>主判断先看当前PE、历史分位，再参考匹配市场的恐慌情况。低估可分批买入；合理估值以持有为主；偏贵先暂停加仓；明显高估才提示分批减仓。ROC无论是波峰、波谷、继续下跌还是暂时缺失，都不能独自改写主方向。</p><p>红利低波与自由现金流按长期底仓＋机动仓理解。科技新买仍服从你手动选择的利率阶段，但不再要求ROC先见底。利率阶段不代表未来盈利保证，也不会强制已有持仓清仓。</p><h3>有限的情绪修正</h3><p>低估遇到恐慌，增强分批投入意愿，而不是一次买满；红利类合理估值叠加较强压力可提示小幅加仓；科技仍优先等低估。估值偏贵时，恐慌不能把它变成买点。缺失或过期情绪不当作中性，也不清空估值判断。</p></div>
+                <div><h3>PE历史如何影响结论</h3><p>同指数历史按月等权，排除本月、估算及代理记录。3年或5年窗口覆盖至少80%的月份才计算分位；5年优先、3年辅助。只有一个窗口足够时使用单窗口参考。窗口分歧向持有方向保守处理；一个判断便宜、另一个判断偏贵时不下单边结论。</p><p>实验边界：PE分位≤20%为相对低位，20%–60%为合理，60%–90%为偏高。减仓须同时达到≥90%分位和相对参考中位PE高出至少20%，且另一个有效窗口不反对高估判断。这个幅度缓冲是显式假设，避免仅因狭窄区间内分位高就卖出，不是内在价值模型。</p><p>没有本地完整窗口时，同指数服务商分位可作注明来源的有限参考，不冒充本地3年或5年结果，也不据此确认明显透支。人工估值是独立覆盖：你选“明显偏高 / 可能透支”并填写日期和依据后，将按你的判断提示分批减仓，不再要求本地数值门槛，主标题旁会标明“采用你的估值判断”。人工判断30天后失效。PE与分位不重复加权，不输出虚假的综合胜率。</p></div>
+                <div><h3>恐慌参考用什么</h3><p>美股使用Cboe官方VIX日收盘：20以上作为有所恐慌参考，30以上作为较强恐慌参考。VIX来自标普500期权的30天预期波动，不是纳指专属情绪，更不是涨跌方向预测。低VIX不自动等于贪婪。</p><p>A股使用沪深300价格压力代理，不使用单日涨跌家数当恐惧贪婪。先计算20日对数收益样本标准差并年化，再与此前最多756日波动率比较（至少252个有效样本）；同时看当前价格距252日最高收盘的回撤。回撤≥10%且波动分位≥80%为压力偏高；回撤≥15%且分位≥90%为压力很高。回撤与高波动须同时出现，单独普跌或放量上涨不等于恐慌。这是市场压力代理，不能识别所有情绪或行业风险。</p><p>恐慌参考始终用日线，与ROC日/周线参数无关。各市场按当地收盘时区过滤未完成日线。观测超过7天不参与；抓取时间不能代替观测日。跨域更新失败时保留只读快照及原日期。</p></div>
+                <div><h3>波段辅助与已知局限</h3><p>ROC =（当前收盘 / N期前收盘 − 1）×100%，转折按M期简单均线判定。日线历史分位回看252期（至少126个样本），周线回看104期（至少52个）；低于20%且为负的谷、高于80%且为正的峰，在右侧完成确认后才显示。最近3期且方向仍有效的形态仅用于分批节奏或机动仓做T，不倒画成可预知顶底。</p><p>ETF价格使用前复权已完成K线；纳指场内价格还受汇率与溢价影响。价格过期仅暂停波段提示；PE过期或身份不明暂停当前估值主判断。历史样本来源与成分变化仍需核验，历史图不是完整策略回测；本页没有可靠的未来盈利预测，不把“相对低估”说成“绝对底部”。</p><p>计算只在浏览器内进行，不读取账户、不给仓位比例、不调用模型、不改原工具评分。所有阈值为透明的实验规则，尚未验证投资收益优势。</p><p>参考：<a href="https://www.cboe.com/tradable_products/vix/" target="_blank" rel="noopener noreferrer">Cboe VIX定义</a> · <a href="https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/rate-of-change-roc-and-momentum" target="_blank" rel="noopener noreferrer">ROC说明</a></p></div>
+            </div></details>
+            <div id="status-message" class="status-message" role="status" aria-live="polite"></div>
+        </main>
+        <footer class="page-footer"><span>独立规则 · 独立偏好 · 新旧页可切换</span><span>先验证，再信任。实验提示不构成收益保证。</span></footer>
+    </div>
+    <noscript><p>需要启用JavaScript才能读取数据和计算ROC；原始工具仍可从 index.html 打开。</p></noscript>
+</body>
+</html>

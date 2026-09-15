@@ -584,6 +584,7 @@ body {
 
 /* ========== Cards ========== */
 .card {
+    min-width: 0;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);

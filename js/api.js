@@ -144,28 +144,25 @@ const DataAPI = (() => {
      * 获取十年期国债收益率
      * @returns {Object} { bondYield, change, prevYield }
      */
-    async function fetchBondYield() {
+    async function fetchBondYield(market = 'cn') {
+        const secid = { cn: API_CONFIG.SECID_CN10Y, us: '171.ZCUS10Y', jp: '171.ZCJP10Y' }[market];
+        if (!secid) return null;
         try {
-            const data = await jsonp(API_CONFIG.EASTMONEY_QUOTE, {
-                secid: API_CONFIG.SECID_CN10Y,
-                fields: 'f43,f57,f58,f60,f170,f171',
-                invt: 2,
-                fltt: 2,
+            const response = await jsonp(API_CONFIG.EASTMONEY_QUOTE, {
+                secid, fields: 'f43,f57,f58,f60,f124,f170,f171', invt: 2, fltt: 2,
                 ut: 'fa5fd1943c7b386f172d6893dbbd2'
             });
-
-            if (data && data.data) {
-                const d = data.data;
-                return {
-                    bondYield: d.f43,            // fltt=2下直接是百分比值，如1.8458
-                    prevYield: d.f60,
-                    change: d.f170,
-                    changePercent: d.f171,
-                    source: '东方财富(CN10Y)',
-                    fetchTime: new Date().toISOString()
-                };
-            }
-            throw new Error('国债收益率数据为空');
+            const d = response && response.data;
+            if (!d || !DataQuality.valid('bondYield', d.f43)) return null;
+            return {
+                bondYield: DataQuality.number(d.f43),
+                prevYield: DataQuality.number(d.f60),
+                change: DataQuality.number(d.f170),
+                market, instrumentId: secid,
+                asOf: DataQuality.asOf(d.f124),
+                source: `东方财富(${secid})`,
+                fetchTime: new Date().toISOString()
+            };
         } catch (e) {
             console.warn('获取国债收益率失败:', e.message);
             return null;
@@ -498,16 +495,19 @@ const DataAPI = (() => {
             // 通过东方财富JSONP获取上证指数(1.000001)的涨跌家数: f104=上涨, f105=下跌, f106=平盘
             const data = await jsonp(API_CONFIG.EASTMONEY_QUOTE, {
                 secid: '1.000001',
-                fields: 'f43,f58,f104,f105,f106,f170',
+                fields: 'f43,f58,f104,f105,f106,f124,f170',
                 invt: 2, fltt: 2,
                 ut: 'fa5fd1943c7b386f172d6893dbbd2'
             });
 
             if (data && data.data) {
                 const d = data.data;
-                const upCount = d.f104 || 0;    // 上涨家数
-                const downCount = d.f105 || 0;  // 下跌家数
-                const flatCount = d.f106 || 0;  // 平盘家数
+                const upCount = DataQuality.number(d.f104);
+                const downCount = DataQuality.number(d.f105);
+                const flatCount = DataQuality.number(d.f106);
+                if (![upCount, downCount, flatCount].every(value => Number.isInteger(value) && value >= 0)) {
+                    throw new Error('涨跌家数缺失或无效');
+                }
                 const total = upCount + downCount + flatCount;
 
                 if (total === 0) {
@@ -581,6 +581,7 @@ const DataAPI = (() => {
                     indexChange: d.f170,
                     rating,
                     source: 'A股市场广度(涨跌家数比)',
+                    asOf: DataQuality.asOf(d.f124),
                     isCachedFallback: false,
                     fetchTime: new Date().toISOString()
                 };
@@ -664,16 +665,16 @@ const DataAPI = (() => {
 
             const data = await resp.json();
 
-            if (data && data.fear_and_greed) {
+            if (data && data.fear_and_greed && DataQuality.valid('marketTemp', data.fear_and_greed.score)) {
                 const fg = data.fear_and_greed;
                 const result = {
-                    score: parseFloat(fg.score) || 50,
+                    score: DataQuality.number(fg.score),
                     rating: fg.rating || 'Neutral',
                     previous: fg.previous_close ? parseFloat(fg.previous_close) : null,
                     oneWeekAgo: fg.previous_1_week ? parseFloat(fg.previous_1_week) : null,
                     oneMonthAgo: fg.previous_1_month ? parseFloat(fg.previous_1_month) : null,
                     oneYearAgo: fg.previous_1_year ? parseFloat(fg.previous_1_year) : null,
-                    timestamp: fg.timestamp || new Date().toISOString(),
+                    timestamp: fg.timestamp || null,
                     source: 'CNN Fear & Greed Index',
                     fetchTime: new Date().toISOString()
                 };
@@ -693,16 +694,16 @@ const DataAPI = (() => {
             try {
                 const backupUrl = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata';
                 const data = await fetchViaCorsProxy(backupUrl, 15000);
-                if (data && data.fear_and_greed) {
+                if (data && data.fear_and_greed && DataQuality.valid('marketTemp', data.fear_and_greed.score)) {
                     const fg = data.fear_and_greed;
                     const result = {
-                        score: parseFloat(fg.score) || 50,
+                        score: DataQuality.number(fg.score),
                         rating: fg.rating || 'Neutral',
                         previous: fg.previous_close ? parseFloat(fg.previous_close) : null,
                         oneWeekAgo: fg.previous_1_week ? parseFloat(fg.previous_1_week) : null,
                         oneMonthAgo: fg.previous_1_month ? parseFloat(fg.previous_1_month) : null,
                         oneYearAgo: fg.previous_1_year ? parseFloat(fg.previous_1_year) : null,
-                        timestamp: fg.timestamp || new Date().toISOString(),
+                        timestamp: fg.timestamp || null,
                         source: 'CNN Fear & Greed (CORS代理)',
                         fetchTime: new Date().toISOString()
                     };
@@ -770,9 +771,9 @@ const DataAPI = (() => {
             promiseLabels.push('etf');
         }
 
-        // 2. 国债收益率（所有ETF都可能用到）
-        if (etfConfig.useBondSpread) {
-            promises.push(fetchBondYield());
+        // 与该标的估值规则匹配的无风险利率。
+        if (DataQuality.requiredFields(etfConfig).includes('bondYield')) {
+            promises.push(fetchBondYield(DataQuality.bondMarket(etfConfig)));
             promiseLabels.push('bond');
         }
 
@@ -792,43 +793,12 @@ const DataAPI = (() => {
             // 美股/港股 → CNN Fear & Greed
             promises.push(fetchFearGreedIndex());
             promiseLabels.push('fearGreed');
+        } else if (etfConfig.signalRules === 'buffett_jp') {
+            // 无同市场自动情绪源，保留缺失，不使用A股广度替代。
         } else {
             // A股相关（a_share_index, smart_beta, bond）→ A股市场广度
             promises.push(fetchAShareMarketBreadth());
             promiseLabels.push('aShareBreadth');
-        }
-
-        // 5. 短期K线（仅对完全无蛋卷覆盖的ETF，用于行情反推PE）
-        const noDanjuan = !etfConfig.trackIndex || (!etfConfig.trackIndex.danjuanCode && !etfConfig.trackIndex.danjuanName);
-        if (etfConfig.secid && noDanjuan) {
-            const klinePromise = (async () => {
-                try {
-                    const endDate = formatDate(new Date());
-                    const startDate = formatDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
-                    const data = await jsonp(API_CONFIG.EASTMONEY_KLINE, {
-                        secid: etfConfig.secid,
-                        fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10',
-                        fields2: 'f51,f52,f53,f54,f55,f56,f57',
-                        klt: 101, fqt: 0,
-                        beg: startDate.replace(/-/g, ''),
-                        end: endDate.replace(/-/g, ''),
-                        lmt: 30,
-                        ut: 'fa5fd1943c7b386f172d6893dbbd2'
-                    });
-                    if (data && data.data && data.data.klines) {
-                        return data.data.klines.map(line => {
-                            const parts = line.split(',');
-                            return { date: parts[0], close: parseFloat(parts[2]) };
-                        });
-                    }
-                    return null;
-                } catch (e) {
-                    console.warn('短期K线获取失败:', e.message);
-                    return null;
-                }
-            })();
-            promises.push(klinePromise);
-            promiseLabels.push('kline');
         }
 
         const settled = await Promise.allSettled(promises);
@@ -886,7 +856,7 @@ const DataAPI = (() => {
         try {
             const data = await jsonp(API_CONFIG.EASTMONEY_QUOTE, {
                 secid: secid,
-                fields: 'f43,f44,f45,f46,f47,f48,f57,f58,f60,f170,f171',
+                fields: 'f43,f44,f45,f46,f47,f48,f57,f58,f60,f124,f170,f171',
                 invt: 2, fltt: 2,
                 ut: 'fa5fd1943c7b386f172d6893dbbd2'
             });
@@ -901,15 +871,17 @@ const DataAPI = (() => {
                 }
                 return {
                     code: d.f57, name: d.f58,
-                    price: price || 0,
-                    open: _safeParseEMField(d.f46) || 0,
-                    high: _safeParseEMField(d.f44) || 0,
-                    low: _safeParseEMField(d.f45) || 0,
-                    prevClose: _safeParseEMField(d.f60) || 0,
-                    priceChange: _safeParseEMField(d.f170) || 0,
-                    priceChangeAmt: _safeParseEMField(d.f171) || 0,
-                    volume: _safeParseEMField(d.f47) || 0,
-                    amount: _safeParseEMField(d.f48) || 0,
+                    price,
+                    open: _safeParseEMField(d.f46),
+                    high: _safeParseEMField(d.f44),
+                    low: _safeParseEMField(d.f45),
+                    prevClose: _safeParseEMField(d.f60),
+                    priceChange: _safeParseEMField(d.f170),
+                    priceChangeAmt: _safeParseEMField(d.f171),
+                    volume: _safeParseEMField(d.f47),
+                    amount: _safeParseEMField(d.f48),
+                    instrumentId: secid,
+                    asOf: DataQuality.asOf(d.f124),
                     source: '东方财富', fetchTime: new Date().toISOString()
                 };
             }
@@ -945,46 +917,24 @@ const DataAPI = (() => {
             if (!payload || !payload.data || !payload.data.items) return null;
 
             const items = payload.data.items;
-            // 优先精确匹配，再模糊匹配
-            let target = null;
-            if (indexCode) {
-                target = items.find(item => item.index_code === indexCode);
-            }
-            if (!target && indexName) {
-                target = items.find(item => item.name === indexName); // 精确名称匹配
-            }
-            if (!target && indexCode) {
-                // 双向模糊代码匹配：兼容 danjuanCode='SZ399673' vs API返回 index_code='399673' 的情况
-                // 原来只检查 item.index_code.includes(indexCode)，对于 '399673'.includes('SZ399673') 会失败
-                // 现在也检查 indexCode.includes(item.index_code)，覆盖带市场前缀的情况
-                // 安全：反向匹配要求 API 返回的 index_code 长度≥4，防止短代码误匹配
-                target = items.find(item => item.index_code && (
-                    item.index_code.includes(indexCode) ||
-                    (item.index_code.length >= 4 && indexCode.includes(item.index_code))
-                ));
-            }
-            if (!target && indexName) {
-                target = items.find(item => item.name && item.name.includes(indexName)); // 模糊名称（兜底）
-            }
-
-            if (!target) {
-                console.warn(`蛋卷基金未找到指数 ${indexCode || indexName}`);
-                return null;
-            }
-
-            const rawYield = parseFloat(target.yeild) || parseFloat(target.dy) || 0;
-            const rawPePct = parseFloat(target.pe_percentile) || 0;
-            const rawPbPct = parseFloat(target.pb_percentile) || 0;
-            const rawRoe = parseFloat(target.roe) || 0;
-
+            const matches = items.filter(item => indexCode
+                ? DataQuality.indexKey(item.index_code) === DataQuality.indexKey(indexCode)
+                : item.name === indexName);
+            if (matches.length !== 1) return null;
+            const target = matches[0];
+            const percent = value => {
+                const n = DataQuality.number(value);
+                return n === null ? null : Math.abs(n) <= 1 ? n * 100 : n;
+            };
             return {
-                pe: parseFloat(target.pe) || 0,
-                pb: parseFloat(target.pb) || 0,
-                dividendYield: rawYield > 1 ? rawYield : rawYield * 100,
-                pePercentile: rawPePct > 1 ? rawPePct : rawPePct * 100,
-                pbPercentile: rawPbPct > 1 ? rawPbPct : rawPbPct * 100,
-                roe: rawRoe > 1 ? rawRoe : rawRoe * 100,  // 蛋卷返回0-1格式，转为百分比
-                tradeDate: target.date || '',
+                pe: DataQuality.number(target.pe),
+                pb: DataQuality.number(target.pb),
+                dividendYield: percent(target.yeild ?? target.dy),
+                pePercentile: percent(target.pe_percentile),
+                pbPercentile: percent(target.pb_percentile),
+                roe: percent(target.roe),
+                instrumentId: DataQuality.indexKey(target.index_code),
+                tradeDate: DataQuality.asOf(target.date),
                 evaluationStatus: target.eva_type || '',
                 source: `蛋卷基金-${target.name}`,
                 fetchTime: new Date().toISOString()
@@ -1006,79 +956,33 @@ const DataAPI = (() => {
         return (val !== null && val !== undefined && !isNaN(val)) ? val : (fallback || 0);
     }
 
-    function normalizeData(apiData, manualData = {}) {
+    function normalizeData(apiData = {}, manualData = {}, etfConfig = null) {
         const data = {
-            // 默认值（从手动补充或localStorage）
-            dividendYield: _safeVal(manualData.dividendYield, 0),
-            bondYield: 0,
-            pe: _safeVal(manualData.pe, 0),
-            pb: _safeVal(manualData.pb, 0),
-            pbPercentile: _safeVal(manualData.pbPercentile, 0),
-            price: 0,
-            priceChange: 0,
-            updateTime: formatDateTime(new Date()),
-            dataSource: [],
+            ...DataQuality.mergeSnapshots(manualData),
+            fetchedAt: apiData.fetchTime || new Date().toISOString(),
             autoFetched: false
         };
-
-        // 填入ETF行情
-        if (apiData.etf) {
-            data.price = apiData.etf.price;
-            data.priceChange = apiData.etf.priceChange;
-            data.dataSource.push('ETF行情:自动');
-            data.autoFetched = true;
-        }
-
-        // 填入国债收益率
-        if (apiData.bond) {
-            data.bondYield = apiData.bond.bondYield;
-            data.dataSource.push('国债收益率:自动');
-            data.autoFetched = true;
-        }
-
-        // 填入估值数据（如果API成功获取到）
-        // 安全检查：如果API获取的PE与本地预设PE差异过大（>100%），说明可能指数错配，忽略API估值
-        if (apiData.valuation) {
-            const apiPE = apiData.valuation.pe || 0;
-            const localPE = manualData.pe || 0;
-            const peDeviation = (localPE > 0 && apiPE > 0) ? Math.abs(apiPE - localPE) / localPE : 0;
-
-            if (peDeviation > 1.0) {
-                // PE偏差超过100%，很可能是指数错配（如科创50 vs 科创创业50）
-                console.warn(`⚠️ API估值PE(${apiPE.toFixed(1)})与本地预设PE(${localPE.toFixed(1)})偏差${(peDeviation * 100).toFixed(0)}%，疑似指数错配，忽略API估值数据`);
-                console.warn(`  API来源: ${apiData.valuation.source || '未知'}`);
-                data.dataSource.push('估值数据:忽略(偏差过大⚠️)');
-            } else {
-                // 正常模式：全部采用蛋卷数据（含代理指数数据，PE/PB/股息率/分位统一来源）
-                if (apiData.valuation.pe) data.pe = apiData.valuation.pe;
-                if (apiData.valuation.pb) data.pb = apiData.valuation.pb;
-                if (apiData.valuation.dividendYield) data.dividendYield = apiData.valuation.dividendYield;
-                if (apiData.valuation.pePercentile) data.pePercentile = apiData.valuation.pePercentile;
-                if (apiData.valuation.pbPercentile) data.pbPercentile = apiData.valuation.pbPercentile;
-                data.valuationSource = apiData.valuation.source || '';
-                data.dataSource.push('估值数据:自动(' + (apiData.valuation.source || '') + ')');
+        const applyObservation = (payload, fields, quality = 'observed') => {
+            if (!payload) return;
+            for (const field of fields) {
+                if (!DataQuality.valid(field, payload[field])) continue;
+                data[field] = DataQuality.number(payload[field]);
+                data.fieldMeta[field] = {
+                    source: payload.source || '来源未标注',
+                    quality,
+                    asOf: DataQuality.asOf(payload.asOf || payload.tradeDate || payload.timestamp),
+                    fetchedAt: payload.fetchTime || data.fetchedAt,
+                    instrumentId: payload.instrumentId,
+                    market: payload.market
+                };
+                data.autoFetched = true;
             }
-        }
-
-        // ========== 行情反推实时PE（仅限完全无蛋卷覆盖的ETF）==========
-        // 场景：蛋卷API完全无数据（apiData.valuation=null）
-        // 解决：用 JSON预设PE × (1 + 当日涨跌幅%) 反推当日PE
-        //       原理：EPS短期不变，PE与ETF价格同比例变动
-        if (!apiData.valuation && apiData.etf) {
-            const basePE = manualData.pe || data.pe;  // JSON预设PE作为基准
-            if (basePE > 0 && apiData.etf.priceChange !== null && apiData.etf.priceChange !== undefined) {
-                const changeRatio = apiData.etf.priceChange / 100;
-                if (Math.abs(changeRatio) <= 0.20) {
-                    const estimatedPE = basePE * (1 + changeRatio);
-                    if (estimatedPE > 0) {
-                        data.pe = parseFloat(estimatedPE.toFixed(2));
-                        data.valuationSource = '东财行情反推';
-                        data.dataSource.push(`估值数据:行情反推(PE=${data.pe}, 基准${basePE}×(1${changeRatio >= 0 ? '+' : ''}${(changeRatio * 100).toFixed(2)}%), 当日涨跌幅)`);
-                        console.info(`📈 [行情反推PE] 基准PE=${basePE}, 当日涨跌幅=${(changeRatio * 100).toFixed(2)}%, 反推PE=${data.pe}`);
-                    }
-                }
-            }
-        }
+        };
+        applyObservation(apiData.etf, ['price', 'priceChange']);
+        applyObservation(apiData.bond, ['bondYield']);
+        applyObservation(apiData.valuation, ['pe', 'pb', 'dividendYield', 'pePercentile', 'pbPercentile', 'roe'],
+            DataQuality.isProxy(etfConfig) ? 'proxy' : 'observed');
+        // 无有效估值时保留原观测及日期，不用单日行情反推数月前的PE。
 
         // 填入恐惧贪婪指数 → 自动转换为市场温度（美股/港股使用）
         if (apiData.fearGreed) {
@@ -1135,17 +1039,16 @@ const DataAPI = (() => {
             }
         }
 
-        // 手动数据覆盖：仅在API未提供该字段时才用手动数据（避免旧缓存覆盖新API数据）
-        // 使用严格检查，不再用 || 以避免合法0值被跳过
-        const _hasVal = (v) => v !== null && v !== undefined && v !== '' && !isNaN(v);
-        if (_hasVal(manualData.dividendYield) && !apiData.valuation) data.dividendYield = manualData.dividendYield;
-        if (_hasVal(manualData.pe) && !apiData.valuation) data.pe = manualData.pe;
-        if (_hasVal(manualData.pb) && !apiData.valuation) data.pb = manualData.pb;
-        if (_hasVal(manualData.spreadPercentile)) data.spreadPercentile = manualData.spreadPercentile;
-        if (_hasVal(manualData.pePercentile) && !apiData.valuation) data.pePercentile = manualData.pePercentile;
-        if (_hasVal(manualData.pbPercentile) && !apiData.valuation) data.pbPercentile = manualData.pbPercentile;
-
-        return data;
+        const sentiment = apiData.aShareBreadth || apiData.fearGreed || apiData.fearGreedFallback;
+        if (data.marketTempAutoFetched && sentiment) {
+            data.fieldMeta.marketTemp = {
+                source: sentiment.source || '市场情绪',
+                quality: apiData.fearGreedFallback === sentiment ? 'proxy' : 'observed',
+                asOf: DataQuality.asOf(sentiment.asOf || sentiment.tradeDate || sentiment.timestamp || sentiment.date),
+                fetchedAt: sentiment.fetchTime || data.fetchedAt
+            };
+        }
+        return { ...data, ...DataQuality.mergeSnapshots(manualData, data) };
     }
 
     // ========== 工具函数 ==========

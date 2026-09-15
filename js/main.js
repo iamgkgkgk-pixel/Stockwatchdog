@@ -257,6 +257,7 @@ const App = (() => {
 
             // 切换到VIX仪表盘模式
             showVIXDashboard();
+            if (typeof LegacyPriceRoc !== 'undefined') LegacyPriceRoc.showETF({ id: etfId, name: 'VIX', code: 'VIX', secid: '100.VIX', market: 'US' });
             await loadVIXDashboardData();
             return;
         }
@@ -283,6 +284,7 @@ const App = (() => {
         renderDataGrid(etfConfig);
         renderStrategyContent(etfConfig);
         updateChartTitles(etfConfig);
+        if (typeof LegacyPriceRoc !== 'undefined') LegacyPriceRoc.showETF(etfConfig);
 
         if (etfDataCache[etfId] && etfDataCache[etfId].loaded) {
             displayCachedData(etfId, etfConfig);
@@ -664,126 +666,49 @@ const App = (() => {
 
     // ========== 数据加载 ==========
 
+    function resolveCurrentData(etfId, etfConfig, historyData, apiData = {}) {
+        const cached = { ...(DataStorage.getCurrentData(etfId) || {}) };
+        Object.entries(cached.fieldMeta || {}).forEach(([field, meta]) => {
+            if (meta.quality === 'manual') delete cached[field];
+        });
+        const fallback = DataQuality.mergeSnapshots(
+            DataQuality.latestSnapshot(historyData, etfConfig),
+            cached,
+            DataStorage.getManualData(etfId)
+        );
+        return DataAPI.normalizeData(apiData, fallback, etfConfig);
+    }
+
     async function loadETFData(etfId, etfConfig) {
         updateDataSourceStatus('fetching');
-
-        if (!etfDataCache[etfId]) {
-            etfDataCache[etfId] = { loaded: false, historyData: null, currentSignal: null, lastApiData: null, currentData: null };
-        }
-
+        etfDataCache[etfId] = etfDataCache[etfId] || { loaded: false };
         try {
             const historyData = await loadHistoryData(etfId);
             etfDataCache[etfId].historyData = historyData;
-            initChartsForETF(etfConfig, historyData);
-
+            if (currentETFId === etfId) {
+                initChartsForETF(etfConfig, historyData);
+                applyData(etfId, etfConfig, resolveCurrentData(etfId, etfConfig, historyData), historyData, true);
+                updateTimestamp(etfId);
+                updateDataSourceStatus('fetching');
+                showLoading(false);
+            }
             const apiData = await DataAPI.fetchAllDataForETF(etfConfig);
             etfDataCache[etfId].lastApiData = apiData;
-
-            if (apiData.success) {
-                let savedManual = DataStorage.getCurrentData(etfId);
-                const fallback = historyData ? historyData.currentData : {};
-                const manualOverride = {};
-
-                // 辅助函数：安全取第一个有效数值（区分0和undefined/null）
-                const _pickValid = (...vals) => {
-                    for (const v of vals) {
-                        if (v !== null && v !== undefined && v !== '' && !isNaN(v)) return v;
-                    }
-                    return undefined;
-                };
-
-                // ========== 缓存数据合理性校验（防止旧缓存污染信号）==========
-                // 仅检查PE值偏差（PE是客观值，不受基准影响）
-                // 【方案B】移除pePercentile偏差检查：API和本地calcPercentile基准不同，差异是正常的
-                if (savedManual && fallback && fallback.pe > 0) {
-                    const cachedPE = savedManual.pe || 0;
-                    const presetPE = fallback.pe || 0;
-
-                    let cacheStale = false;
-                    // 检查PE偏差：如果缓存PE与预设PE差异>50%，判定为过期缓存
-                    if (cachedPE > 0 && presetPE > 0 && Math.abs(cachedPE - presetPE) / presetPE > 0.5) {
-                        console.warn(`⚠️ [${etfId}] localStorage缓存PE(${cachedPE.toFixed(1)})与JSON预设PE(${presetPE.toFixed(1)})偏差过大，清除旧缓存`);
-                        cacheStale = true;
-                    }
-
-                    if (cacheStale) {
-                        console.info(`🧹 [${etfId}] 清除过期localStorage缓存，使用JSON预设数据`);
-                        DataStorage.clearETFData(etfId);
-                        savedManual = null; // 不再使用旧缓存
-                    }
-                }
-
-                // 【方案B】API成功获取估值时，同步更新historyData中的currentData锚点
-                // 这样即使下次API不可用，回退到JSON预设时也能用到最新值
-                if (apiData.valuation && historyData && historyData.currentData) {
-                    const v = apiData.valuation;
-                    if (v.pe > 0) historyData.currentData.pe = v.pe;
-                    if (v.pePercentile > 0) historyData.currentData.pePercentile = v.pePercentile;
-                    if (v.pb > 0) historyData.currentData.pb = v.pb;
-                    if (v.pbPercentile > 0) historyData.currentData.pbPercentile = v.pbPercentile;
-                    if (v.dividendYield > 0) historyData.currentData.dividendYield = v.dividendYield;
-                    historyData.currentData.updateTime = new Date().toISOString().slice(0, 10);
-                    console.info(`🔄 [${etfId}] API估值已同步到historyData.currentData: PE=${v.pe}, pePercentile=${v.pePercentile}%`);
-                }
-
-                if (!apiData.valuation) {
-                    // 优先级调整：JSON预设(fallback) 优先于 localStorage缓存(savedManual)
-                    // 原因：JSON是开发者校准的基准数据，localStorage可能因切换ETF代码等原因残留旧值
-                    const dv = _pickValid(fallback && fallback.dividendYield, savedManual && savedManual.dividendYield);
-                    const pe = _pickValid(fallback && fallback.pe, savedManual && savedManual.pe);
-                    const pb = _pickValid(fallback && fallback.pb, savedManual && savedManual.pb);
-                    const pePct = _pickValid(fallback && fallback.pePercentile, savedManual && savedManual.pePercentile);
-                    const pbPct = _pickValid(fallback && fallback.pbPercentile, savedManual && savedManual.pbPercentile);
-                    if (dv !== undefined) manualOverride.dividendYield = dv;
-                    if (pe !== undefined) manualOverride.pe = pe;
-                    if (pb !== undefined) manualOverride.pb = pb;
-                    if (pePct !== undefined) manualOverride.pePercentile = pePct;
-                    if (pbPct !== undefined) manualOverride.pbPercentile = pbPct;
-                    console.info(`📊 [${etfId}] 估值数据来源: PE=${pe}, pePercentile=${pePct}% (来自${fallback && fallback.pe > 0 ? 'JSON预设' : 'localStorage缓存'})`);
-                }
-
-                const normalized = DataAPI.normalizeData(apiData, manualOverride);
-
-                // 合并手动保存的趋势分数 / ROE
-                if (savedManual) {
-                    // 市场温度：API自动获取优先，手动设置仅在API未获取时使用
-                    if (!normalized.marketTempAutoFetched && savedManual.marketTemp !== null && savedManual.marketTemp !== undefined) {
-                        normalized.marketTemp = savedManual.marketTemp;
-                    }
-                    if (savedManual.trendScore !== null && savedManual.trendScore !== undefined) normalized.trendScore = savedManual.trendScore;
-                    if (savedManual.roe) normalized.roe = savedManual.roe;
-                }
-
-                applyData(etfId, etfConfig, normalized, historyData);
-                updateDataSourceStatus('success', apiData);
-
-                const hasVal = apiData.valuation && (apiData.valuation.pe > 0 || apiData.valuation.dividendYield > 0);
-                const hasSentiment = (apiData.fearGreed && apiData.fearGreed.score !== null) || (apiData.aShareBreadth && apiData.aShareBreadth.score !== null);
-                let toastMsg = '实时数据已自动获取 ✅';
-                if (!hasVal && !hasSentiment) toastMsg = '行情已获取（估值/情绪使用预设值）';
-                else if (!hasVal) toastMsg = '行情+市场情绪已获取（估值使用预设值）';
-                else if (!hasSentiment) toastMsg = '行情+估值已获取（市场情绪使用预设值）';
-                showToast(toastMsg, 'success');
-            } else {
-                const savedData = DataStorage.getCurrentData(etfId);
-                if (savedData) applyData(etfId, etfConfig, savedData, historyData);
-                else if (historyData && historyData.currentData) applyData(etfId, etfConfig, historyData.currentData, historyData);
-                updateDataSourceStatus('error', apiData);
-                showToast('数据获取失败，显示缓存/预设数据', 'error');
-            }
-
+            const normalized = resolveCurrentData(etfId, etfConfig, historyData, apiData);
+            etfDataCache[etfId].currentData = normalized;
             etfDataCache[etfId].loaded = true;
+            if (currentETFId !== etfId) return;
+            applyData(etfId, etfConfig, normalized, historyData);
+            updateDataSourceStatus(apiData.success ? 'success' : 'error', apiData);
             updateTimestamp(etfId);
-
         } catch (e) {
             console.error(`加载 ${etfId} 数据失败:`, e);
-            showToast('数据加载异常: ' + e.message, 'error');
-            try {
-                const savedData = DataStorage.getCurrentData(etfId);
-                const historyData = etfDataCache[etfId].historyData;
-                if (savedData) applyData(etfId, etfConfig, savedData, historyData);
-                else if (historyData && historyData.currentData) applyData(etfId, etfConfig, historyData.currentData, historyData);
-            } catch (_) {}
+            if (currentETFId !== etfId) return;
+            const historyData = etfDataCache[etfId].historyData;
+            applyData(etfId, etfConfig, resolveCurrentData(etfId, etfConfig, historyData), historyData);
+            updateDataSourceStatus('error');
+            updateTimestamp(etfId);
+            showToast('获取失败，保留原观测日期；请核对数据状态', 'error');
         }
     }
 
@@ -841,102 +766,41 @@ const App = (() => {
     // ========== 数据应用（核心 — 多维度信号生成）==========
 
     function applyData(etfId, etfConfig, data, historyData, skipSave) {
-        const peAvailable = data.pe && data.pe > 0;
-        const dividendAvailable = data.dividendYield && data.dividendYield > 0;
-        const bondAvailable = data.bondYield && data.bondYield > 0;
-        const canCalcSpread = etfConfig.useBondSpread && dividendAvailable && bondAvailable;
-
-        const spread = canCalcSpread ? SignalEngine.calcSpread(data.dividendYield, data.bondYield) : 0;
-
-        // 计算分位数 — API优先，本地兜底
-        const spreadValues = (historyData && historyData.spreadHistory && historyData.spreadHistory.length >= 12) ? historyData.spreadHistory.map(d => d.value) : [];
-        const peValues = (historyData && historyData.peHistory && historyData.peHistory.length >= 12) ? historyData.peHistory.map(d => d.value) : [];
-
-        let spreadPercentile = null;
-        if (canCalcSpread) {
-            if (data.spreadPercentile !== null && data.spreadPercentile !== undefined && !isNaN(data.spreadPercentile)) spreadPercentile = data.spreadPercentile;
-            else if (spreadValues.length > 0) spreadPercentile = SignalEngine.calcPercentile(spread, spreadValues);
-        }
-
-        // 【方案B修正】PE分位计算：统一使用本地calcPercentile，与走势图同一基准
-        // 修正原因：之前实时信号用API pePercentile（十年全市场~81%），走势图用本地calcPercentile（JSON 76个PE点~28%），
-        //          导致同一天的估值分从19→72（差53分），总分从37→60（差23分），走势图和信号卡严重矛盾。
-        // 现在：信号计算统一用本地calcPercentile，API pePercentile仅作为参考显示在数据卡片上。
-        let pePercentile = null;
-        let apiPePercentile = null; // API返回的分位（仅用于数据卡片展示参考，不参与信号计算）
-        if (peAvailable) {
-            // 保存API分位（仅展示用）
-            if (data.pePercentile !== null && data.pePercentile !== undefined && !isNaN(data.pePercentile)) {
-                apiPePercentile = data.pePercentile;
-            }
-            // 信号计算统一用本地calcPercentile（与走势图同一基准）
-            if (peValues.length > 0) {
-                pePercentile = SignalEngine.calcPercentile(data.pe, peValues);
-            }
-            // 对比日志
-            if (apiPePercentile !== null && pePercentile !== null) {
-                const diff = Math.abs(apiPePercentile - pePercentile);
-                if (diff > 10) {
-                    console.info(`📊 [${etfId}] PE分位: 信号用本地=${pePercentile.toFixed(1)}% (JSON ${peValues.length}点), API参考=${apiPePercentile.toFixed(1)}% (十年全市场), 差${diff.toFixed(1)}pp`);
-                }
-            }
-        }
-
-        // 商品/黄金/债券类：趋势分数
-        let trendScore = null;
-        if (etfConfig.type === ETF_CONFIG.ETF_TYPE.COMMODITY || etfConfig.type === ETF_CONFIG.ETF_TYPE.GOLD || etfConfig.type === ETF_CONFIG.ETF_TYPE.BOND) {
-            trendScore = (data.trendScore !== null && data.trendScore !== undefined) ? data.trendScore : null;
-        }
-
-        // 构建多维度输入数据（NaN防护：确保所有数值字段有效）
-        const safeNum = (v) => (v !== null && v !== undefined && !isNaN(v)) ? v : null;
-        const safeNumOr0 = (v) => (v !== null && v !== undefined && !isNaN(v)) ? v : 0;
-
-        // 获取valuationAnchor（均值偏离度锚点）
-        const anchor = (historyData && historyData.valuationAnchor) || {};
-
-        const signalData = {
-            pePercentile: safeNum(pePercentile),
-            spreadPercentile: safeNum(spreadPercentile),
-            trendScore: safeNum(trendScore),
-            pe: safeNumOr0(data.pe),
-            pb: safeNumOr0(data.pb),
-            dividendYield: safeNumOr0(data.dividendYield),
-            bondYield: safeNumOr0(data.bondYield),
-            roe: safeNumOr0(data.roe),
-            marketTemp: safeNum(data.marketTemp),
-            // 巴菲特均值回归锚点
-            peMean: safeNum(anchor.peMean),
-            peStd: safeNum(anchor.peStd),
-        };
-
-        // 日志：输出实际用于信号计算的关键数据（方便调试信号与预期不符的问题）
-        console.info(`🎯 [${etfId}] 信号计算输入: PE=${signalData.pe}, pePercentile=${signalData.pePercentile !== null ? signalData.pePercentile.toFixed(1) + '%' : 'null'}, marketTemp=${signalData.marketTemp !== null ? signalData.marketTemp : 'null'}, roe=${signalData.roe}`);
-
-        // 生成多维度综合信号
-        const { signal: currentSignal, scores, total } = SignalEngine.generateMultiDimSignal(signalData, etfConfig);
-        console.info(`🎯 [${etfId}] 信号结果: 总分=${total.toFixed(1)}, 信号=${currentSignal.text}, 各维度=`, JSON.stringify(scores));
+        const rawHistory = historyData;
+        const analysis = SignalEngine.analyzeCurrent(data, etfConfig, rawHistory);
+        const { signal: currentSignal, scores, total, input: signalData, spread, canCalcSpread } = analysis;
+        historyData = analysis.context.history;
+        data = { ...data, quality: analysis.quality };
+        const peAvailable = DataQuality.valid('pe', data.pe);
+        const dividendAvailable = DataQuality.valid('dividendYield', data.dividendYield);
+        const pePercentile = signalData.pePercentile;
+        const spreadPercentile = signalData.spreadPercentile;
+        const apiPePercentile = DataQuality.valid('pePercentile', data.pePercentile) ? data.pePercentile : null;
+        const trendScore = signalData.trendScore;
 
         // 更新UI
         updateSignalDisplay(currentSignal, total);
         updateDataCardsValues(etfConfig, data, spread, spreadPercentile, pePercentile, peAvailable, dividendAvailable, canCalcSpread, trendScore, apiPePercentile);
-        updateGaugeValues(etfConfig, total, scores, trendScore);
+        updateGaugeValues(etfConfig, total, scores, trendScore, currentSignal.quality);
         updateDimScoresDisplay(etfConfig, scores);
         updatePriceDisplay(data, etfConfig);
 
-        // 刷新综合信号历史走势图（传入当前市场温度，使最新月份与实时信号一致）
-        // 【方案B增强】同时传入实时PE等估值数据，让走势图的当月数据能反映最新PE变化
-        // 关键判断：只有当PE确实来自API实时获取（data.valuationSource存在）时才注入
-        // 如果API失败、PE来自JSON预设值，注入后与JSON最后一个月PE相同，插值无差异，反而可能引起混淆
-        const hasRealtimePE = data.pe && data.pe > 0 && data.valuationSource;
+        data.quality = currentSignal.quality;
+        signalData.quality = currentSignal.quality;
+        const gauges = document.getElementById('gauges-section');
+        if (gauges) gauges.style.display = currentSignal.quality.calculable ? '' : 'none';
+        const hasRealtimePE = !DataQuality.isProxy(etfConfig) && !DataQuality.fieldIssue(data, 'pe', etfConfig);
         const realtimeValuation = hasRealtimePE ? {
             pe: data.pe,
-            dividendYield: data.dividendYield || 0,
-            bondYield: data.bondYield || 0,
+            asOf: DataQuality.metadata(data, 'pe').asOf,
+            dividendAsOf: DataQuality.metadata(data, 'dividendYield').asOf,
+            bondAsOf: DataQuality.metadata(data, 'bondYield').asOf,
+            dividendYield: DataQuality.fieldIssue(data, 'dividendYield', etfConfig) ? null : data.dividendYield,
+            bondYield: DataQuality.fieldIssue(data, 'bondYield', etfConfig) ? null : data.bondYield,
         } : null;
         if (historyData) {
             renderSignalHistoryChart(etfConfig, historyData, signalData.marketTemp, realtimeValuation);
-            renderScorePercentileChart(etfConfig, historyData, signalData.marketTemp, total, realtimeValuation);
+            renderScorePercentileChart(etfConfig, rawHistory, signalData.marketTemp, total, data);
             renderDailySignalHistoryChart(etfConfig, historyData, signalData.marketTemp, realtimeValuation);
             renderAlgoCompareChart(etfConfig, historyData, signalData.marketTemp, realtimeValuation);
         }
@@ -947,7 +811,9 @@ const App = (() => {
         // 更新信号方法标签
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
         const methodEl = document.getElementById('signal-method');
-        if (methodEl) methodEl.textContent = `📐 ${rules.name} | 综合评分: ${total.toFixed(1)}分`;
+        if (methodEl) methodEl.textContent = currentSignal.quality.calculable
+            ? `${analysis.context.basis.label} | ${currentSignal.quality.allowed ? '综合评分' : '参考评分'}: ${total.toFixed(1)}分 | 核心数据 ${currentSignal.quality.dateLabel}`
+            : `${rules.name} | 主估值或趋势数据不足`;
 
         // 更新芒格式智能解读区
         updateInterpretationDisplay(scores, etfConfig, signalData);
@@ -955,7 +821,7 @@ const App = (() => {
         // 缓存
         etfDataCache[etfId] = etfDataCache[etfId] || {};
         etfDataCache[etfId].currentSignal = currentSignal;
-        etfDataCache[etfId].currentData = { ...data, spread, spreadPercentile, pePercentile };
+        etfDataCache[etfId].currentData = { ...data, spread, spreadPercentile, localPePercentile: pePercentile };
         etfDataCache[etfId].scores = scores;
         etfDataCache[etfId].total = total;
 
@@ -966,7 +832,7 @@ const App = (() => {
 
         if (!skipSave) {
             DataStorage.saveCurrentData(etfId, {
-                ...data, spread, spreadPercentile, pePercentile,
+                ...data, spread, spreadPercentile, localPePercentile: pePercentile,
                 signal: currentSignal.text, compositeScore: total
             });
         }
@@ -991,7 +857,7 @@ const App = (() => {
         }
         if (signalAdvice) signalAdvice.textContent = signal.advice;
         if (signalPosition) {
-            signalPosition.textContent = `${signal.position} | 评分: ${total ? total.toFixed(1) : '--'}`;
+            signalPosition.textContent = `${signal.position} | 评分: ${signal.quality && signal.quality.calculable && Number.isFinite(total) ? total.toFixed(1) : '--'}`;
             signalPosition.style.backgroundColor = signal.bgColor + '33';
             signalPosition.style.color = signal.color;
             signalPosition.style.borderColor = signal.borderColor;
@@ -1005,6 +871,29 @@ const App = (() => {
     function updateInterpretationDisplay(scores, etfConfig, signalData) {
         const container = document.getElementById('signal-interpretation');
         if (!container) return;
+        if (signalData.quality && !signalData.quality.allowed) {
+            const quality = signalData.quality;
+            container.replaceChildren();
+            container.style.display = '';
+            const conclusion = document.createElement('p');
+            if (quality.calculable) {
+                const names = { valuation: '估值', safety: '安全边际', quality: '盈利质量', sentiment: '情绪/趋势' };
+                conclusion.textContent = quality.activeDimensions.map(dim => `${names[dim]} ${scores[dim].toFixed(1)}分`).join(' · ')
+                    + `。缺失维度未补成0，当前覆盖原权重${quality.coverage}%，因此不与全维度评分直接等同。`;
+            } else {
+                conclusion.textContent = '主数据不足，无法给出当前评分；独立估值历史与价格趋势仍可查看。';
+            }
+            const details = document.createElement('details');
+            const summary = document.createElement('summary');
+            summary.textContent = '数据日期、来源与使用限制';
+            summary.style.minHeight = '44px';
+            summary.style.cursor = 'pointer';
+            const note = document.createElement('p');
+            note.textContent = [...(quality.hardReasons || []), ...(quality.reasons || []), ...(quality.warnings || [])].join('；');
+            details.append(summary, note);
+            container.append(conclusion, details);
+            return;
+        }
 
         const interp = SignalEngine.generateInterpretation(
             scores, etfConfig.dimWeights || {}, signalData, etfConfig
@@ -1160,7 +1049,7 @@ const App = (() => {
         }
     }
 
-    function updateGaugeValues(etfConfig, total, scores, trendScore) {
+    function updateGaugeValues(etfConfig, total, scores, trendScore, quality) {
         if (etfConfig.type === ETF_CONFIG.ETF_TYPE.COMMODITY || etfConfig.type === ETF_CONFIG.ETF_TYPE.GOLD) {
             const g1 = ChartManager.getGaugeChart(1);
             if (trendScore !== null) {
@@ -1171,10 +1060,11 @@ const App = (() => {
         } else {
             // 综合评分仪表盘
             const g1 = ChartManager.getGaugeChart(1);
-            if (total > 0) {
-                ChartManager.updateGauge(g1, total.toFixed(1), '综合投资评分');
+            const label = quality && !quality.allowed ? '参考综合分' : '综合投资评分';
+            if (Number.isFinite(total) && (!quality || quality.calculable)) {
+                ChartManager.updateGauge(g1, total.toFixed(1), label);
             } else {
-                ChartManager.updateGaugePending(g1, '综合投资评分');
+                ChartManager.updateGaugePending(g1, label);
             }
 
             // 雷达图
@@ -1256,23 +1146,29 @@ const App = (() => {
         const priceCardEl = document.getElementById('val-price-card');
         const changeCardEl = document.getElementById('val-change-card');
 
-        const price = data.price || 0;
-        const change = data.priceChange || 0;
+        const price = DataQuality.number(data.price);
+        const change = DataQuality.number(data.priceChange);
+        const priceDate = DataQuality.metadata(data, 'price').asOf;
+        const changeDate = DataQuality.metadata(data, 'priceChange').asOf;
+        const hasChange = price > 0 && change !== null && priceDate === changeDate;
         const isHK = etfConfig && etfConfig.type === ETF_CONFIG.ETF_TYPE.HK_SHARE_INDEX;
         const currency = isHK ? 'HK$' : '¥';
-        const changeText = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
-        const changeClass = change >= 0 ? 'up' : 'down';
-        const changeColor = change >= 0 ? '#ef4444' : '#28a745';
+        const changeText = hasChange ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '--';
+        const changeClass = hasChange ? (change >= 0 ? 'up' : 'down') : '';
+        const changeColor = hasChange ? (change >= 0 ? '#ef4444' : '#28a745') : '';
 
-        if (priceEl) priceEl.textContent = price > 0 ? currency + price.toFixed(3) : '--';
+        if (priceEl) {
+            priceEl.textContent = price > 0 ? currency + price.toFixed(3) : '--';
+            priceEl.title = `价格观测: ${priceDate || '日期未知'}`;
+        }
         if (changeEl) {
-            changeEl.textContent = price > 0 ? changeText : '--';
-            changeEl.className = 'price-change ' + (price > 0 ? changeClass : '');
+            changeEl.textContent = changeText;
+            changeEl.className = 'price-change ' + changeClass;
         }
         if (priceCardEl) priceCardEl.textContent = price > 0 ? currency + price.toFixed(3) : '--';
         if (changeCardEl) {
-            changeCardEl.textContent = price > 0 ? '日涨跌幅: ' + changeText : '日涨跌幅: --';
-            if (price > 0) changeCardEl.style.color = changeColor;
+            changeCardEl.textContent = '日涨跌幅: ' + changeText;
+            changeCardEl.style.color = changeColor;
         }
     }
 
@@ -1305,65 +1201,37 @@ const App = (() => {
 
     function updateTimestamp(etfId) {
         const el = document.getElementById('update-time');
-        if (el) {
-            const saved = DataStorage.getCurrentData(etfId || currentETFId);
-            if (saved && saved.timestamp) {
-                const dataAge = Date.now() - new Date(saved.timestamp).getTime();
-                const hours = Math.floor(dataAge / 3600000);
-                const isStale = hours >= 24;
-                if (saved.updateTime) {
-                    el.textContent = '数据更新: ' + saved.updateTime + (isStale ? ` ⚠️(${hours}h前)` : '');
-                    el.style.color = isStale ? '#ffc107' : '';
-                } else {
-                    el.textContent = '数据更新: ' + formatDateTime(new Date());
-                }
-            } else {
-                el.textContent = '数据更新: ' + formatDateTime(new Date());
-            }
-        }
+        if (!el) return;
+        const id = etfId || currentETFId;
+        const saved = (etfDataCache[id] && etfDataCache[id].currentData) || DataStorage.getCurrentData(id);
+        const config = ETF_CONFIG.getETFById(id);
+        if (!saved || !config) { el.textContent = '观测日期未知'; return; }
+        const quality = saved.quality || DataQuality.assess(saved, config);
+        el.textContent = `核心数据: ${quality.dateLabel || quality.asOf || '日期未知'}${quality.allowed ? '' : ' · 参考'}`;
+        el.style.color = quality.allowed ? '' : '#ffc107';
+        el.title = (saved.dataSource || []).join('\n');
     }
 
     function updateDataSourceStatus(status, apiData) {
         const statusEl = document.getElementById('data-source-status');
         if (!statusEl) return;
-        switch (status) {
-            case 'fetching':
-                statusEl.innerHTML = '<span class="status-dot status-loading"></span> 正在获取数据...';
-                break;
-            case 'success':
-                const sources = [];
-                if (apiData && apiData.etf) sources.push('ETF行情✅');
-                if (apiData && apiData.bond) sources.push('国债收益率✅');
-                if (apiData && apiData.valuation) {
-                    const src = apiData.valuation.source ? `(${apiData.valuation.source})` : '';
-                    sources.push(`估值数据✅${src}`);
-                } else {
-                    sources.push('估值:预设值⚠️');
-                }
-                if (apiData && apiData.fearGreed) {
-                    sources.push(`市场温度✅(CNN F&G:${apiData.fearGreed.score.toFixed(0)}·美股)`);
-                } else if (apiData && apiData.aShareBreadth) {
-                    const cachedTag = apiData.aShareBreadth.isCachedFallback ? '📦缓存' : '';
-                    sources.push(`市场温度✅(A股广度:${apiData.aShareBreadth.score}${cachedTag}·涨${apiData.aShareBreadth.upCount}/跌${apiData.aShareBreadth.downCount})`);
-                } else if (apiData && apiData.fearGreedFallback) {
-                    sources.push(`市场温度✅(CNN F&G兜底:${apiData.fearGreedFallback.score.toFixed(0)}·A股广度不可用)`);
-                } else {
-                    sources.push('市场温度:默认⚠️');
-                }
-                statusEl.innerHTML = '<span class="status-dot status-ok"></span> ' + sources.join(' | ');
-                break;
-            case 'error':
-                const errMsg = apiData && apiData.errors ? apiData.errors.join('; ') : '获取失败';
-                statusEl.innerHTML = '<span class="status-dot status-err"></span> ' + errMsg;
-                break;
-            default:
-                statusEl.innerHTML = '';
-        }
+        if (status === 'fetching') { statusEl.textContent = '正在获取数据，观测日期以数据源为准…'; return; }
+        const cached = etfDataCache[currentETFId];
+        const current = cached && cached.currentData;
+        const quality = cached && cached.currentSignal && cached.currentSignal.quality;
+        const source = current && current.valuationSource;
+        const parts = [status === 'manual' ? '人工观测已保存' : status === 'error' ? '接口获取失败，保留原观测' : '接口获取完成'];
+        if (source) parts.push(source);
+        parts.push(quality && quality.allowed ? '正常评分' : quality && quality.calculable ? '参考评分可用，仓位需单独判断' : '主数据不足，仍可查看已有历史');
+        statusEl.textContent = parts.join(' | ');
+        statusEl.style.color = quality && quality.allowed ? '' : '#ffc107';
+        statusEl.title = current ? (current.dataSource || []).join('\n') : '';
     }
 
     // ========== 图表 ==========
 
     function initChartsForETF(etfConfig, historyData) {
+        historyData = SignalEngine.getComparableHistory(historyData, etfConfig);
         if (etfConfig.type === ETF_CONFIG.ETF_TYPE.COMMODITY || etfConfig.type === ETF_CONFIG.ETF_TYPE.GOLD) {
             ChartManager.initGauge('chart-gauge-1', '趋势强度', false);
             if (historyData && historyData.priceHistory) {
@@ -1484,16 +1352,9 @@ const App = (() => {
         const signals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp, realtimeData);
 
         if (titleEl) {
-            const dayCount = signals.length;
-            let timeRange;
-            if (dayCount >= 365) {
-                const years = (dayCount / 365).toFixed(1);
-                timeRange = years.endsWith('.0') ? `近${parseInt(years)}年` : `近${years}年`;
-            } else if (dayCount >= 30) {
-                timeRange = `近${Math.round(dayCount / 30)}个月`;
-            } else {
-                timeRange = `近${dayCount}天`;
-            }
+            const timeRange = signals.length
+                ? `${signals[0].date} 至 ${signals[signals.length - 1].date}`
+                : '无可比历史';
             titleEl.textContent = `综合信号日级别走势（${timeRange} · ${etfConfig.shortName}）`;
         }
 
@@ -1706,88 +1567,35 @@ const App = (() => {
      * @param {number|null} currentTotal - 当前实时综合评分（用于计算实时分位）
      * @param {Object|null} realtimeData - 实时估值数据 { pe, dividendYield, bondYield }
      */
-    function renderScorePercentileChart(etfConfig, historyData, currentMarketTemp, currentTotal, realtimeData) {
+    function renderScorePercentileChart(etfConfig, historyData, currentMarketTemp, currentTotal, currentData) {
         const section = document.getElementById('chart-section-score-percentile');
         const titleEl = document.getElementById('score-percentile-title');
         const summaryEl = document.getElementById('score-percentile-summary');
-
-        // 商品/黄金类不支持历史信号回算
         if (etfConfig.type === ETF_CONFIG.ETF_TYPE.COMMODITY || etfConfig.type === ETF_CONFIG.ETF_TYPE.GOLD) {
             if (section) section.style.display = 'none';
             return;
         }
-
         if (section) section.style.display = '';
-
-        if (!historyData) {
+        const data = currentData || DataQuality.latestSnapshot(historyData, etfConfig);
+        const baseline = SignalEngine.calcValuationBaseline(historyData, etfConfig, data);
+        const label = baseline.context.basis.label;
+        if (titleEl) titleEl.textContent = `估值历史位置 · ${label}${baseline.available ? `（${baseline.start} 至 ${baseline.end} · ${baseline.sampleCount}个月样本）` : ''}`;
+        if (!baseline.available) {
+            if (summaryEl) summaryEl.textContent = baseline.reason;
             ChartManager.initScorePercentileChart('chart-score-percentile', [], null, etfConfig.color);
-            if (summaryEl) summaryEl.innerHTML = '';
             return;
         }
-
-        // 使用尽可能长的历史（与算法对比图一致，追溯全量）
-        const days = 365 * 20;
-        const mktTemp = (currentMarketTemp !== null && currentMarketTemp !== undefined) ? currentMarketTemp : null;
-        // 【方案B增强】传入实时PE
-        const dailySignals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp, realtimeData);
-
-        if (dailySignals.length === 0) {
-            ChartManager.initScorePercentileChart('chart-score-percentile', [], null, etfConfig.color);
-            if (summaryEl) summaryEl.innerHTML = '';
-            return;
+        const current = baseline.current;
+        if (summaryEl) {
+            summaryEl.innerHTML = `<div class="score-pct-current">
+                <span class="score-pct-value" style="color:${current.zone.color}">${current.percentile.toFixed(1)}%</span>
+                <span class="score-pct-label">相对便宜程度<br/>越高越便宜，非安全概率</span>
+            </div><span class="score-pct-zone" style="color:${current.zone.color};border-color:${current.zone.color}"></span>
+            <span class="score-pct-desc"></span>`;
+            summaryEl.querySelector('.score-pct-zone').textContent = current.zone.text;
+            summaryEl.querySelector('.score-pct-desc').textContent = `${baseline.currentUsable ? '记录日期' : '最新历史'} ${current.asOf} · ${current.metric} ${current.value.toFixed(2)}${baseline.field === 'bondYield' ? '%' : ''} · 原值分位 ${current.rawPercentile.toFixed(1)}%。 ${baseline.notes.join('；')}`;
         }
-
-        // 计算分位走势序列（全部基于统一基准 marketTemp=50）
-        const percentileSeries = SignalEngine.calcScorePercentileSeries(dailySignals);
-
-        // 摘要和标记点使用图表同一基准的最后一个数据点
-        // 【重要】不使用 currentTotal（实时综合分），因为它含真实市场温度，
-        // 与图表中统一使用 marketTemp=50 的历史数据基准不同，混入会导致数据不可比
-        let currentPercentile = null;
-        const lastSignal = dailySignals[dailySignals.length - 1];
-        if (lastSignal) {
-            currentPercentile = SignalEngine.calcScoreHistoricalPercentile(lastSignal.score, dailySignals);
-        }
-
-        // 更新标题
-        if (titleEl) {
-            const dayCount = dailySignals.length;
-            let timeRange;
-            if (dayCount >= 365) {
-                const years = (dayCount / 365).toFixed(1);
-                timeRange = years.endsWith('.0') ? `近${parseInt(years)}年` : `近${years}年`;
-            } else if (dayCount >= 30) {
-                timeRange = `近${Math.round(dayCount / 30)}个月`;
-            } else {
-                timeRange = `近${dayCount}天`;
-            }
-            titleEl.textContent = `综合分历史分位（${timeRange} · ${etfConfig.shortName}）`;
-        }
-
-        // 更新摘要区域
-        if (summaryEl && currentPercentile) {
-            const pct = currentPercentile.percentile;
-            const zone = currentPercentile.zone;
-            // 获取图表基准下最后一天的综合分（与图表一致，统一使用 marketTemp=50 中性计算）
-            const lastScore = lastSignal ? lastSignal.score.toFixed(1) : '--';
-            summaryEl.innerHTML = `
-                <div class="score-pct-current">
-                    <span class="score-pct-value" style="color:${zone.color}">${pct.toFixed(1)}%</span>
-                    <span class="score-pct-label">历史分位<br/>（越高越安全）</span>
-                </div>
-                <span class="score-pct-zone" style="color:${zone.color};border-color:${zone.color}">
-                    ${zone.icon} ${zone.text}
-                </span>
-                <span class="score-pct-desc">${zone.desc}
-                    <br/><span style="font-size:11px;color:#718096;">估值基准分 ${lastScore}，历史 ${currentPercentile.totalDays} 个数据点中 ${currentPercentile.worseDays} 个（${pct.toFixed(0)}%）≤ 当前</span>
-                </span>
-            `;
-        } else if (summaryEl) {
-            summaryEl.innerHTML = '';
-        }
-
-        // 渲染图表
-        ChartManager.initScorePercentileChart('chart-score-percentile', percentileSeries, currentPercentile, etfConfig.color);
+        ChartManager.initScorePercentileChart('chart-score-percentile', baseline.series, current, etfConfig.color);
     }
 
     /**
@@ -1822,16 +1630,9 @@ const App = (() => {
         const signals = SignalEngine.calcDailyHistoricalSignals(historyData, etfConfig, days, mktTemp, realtimeData);
 
         if (titleEl) {
-            const dayCount = signals.length;
-            let timeRange;
-            if (dayCount >= 365) {
-                const years = (dayCount / 365).toFixed(1);
-                timeRange = years.endsWith('.0') ? `近${parseInt(years)}年` : `近${years}年`;
-            } else if (dayCount >= 30) {
-                timeRange = `近${Math.round(dayCount / 30)}个月`;
-            } else {
-                timeRange = `近${dayCount}天`;
-            }
+            const timeRange = signals.length
+                ? `${signals[0].date} 至 ${signals[signals.length - 1].date}`
+                : '无可比历史';
             titleEl.textContent = `估值算法对比 · ${timeRange}日级别走势（${etfConfig.shortName}）`;
         }
 
@@ -1846,6 +1647,7 @@ const App = (() => {
 
     async function refreshData() {
         if (!currentETFId) return;
+        if (typeof LegacyPriceRoc !== 'undefined') LegacyPriceRoc.refresh();
 
         // VIX仪表盘刷新
         if (ETF_CONFIG.isVIXDashboard(currentETFId)) {
@@ -1860,66 +1662,25 @@ const App = (() => {
         updateDataSourceStatus('fetching');
         showToast('正在获取最新数据...', 'info');
 
+        const etfId = etfConfig.id;
         try {
             const apiData = await DataAPI.fetchAllDataForETF(etfConfig);
-            if (etfDataCache[currentETFId]) etfDataCache[currentETFId].lastApiData = apiData;
-
-            if (apiData.success) {
-                const savedManual = DataStorage.getCurrentData(currentETFId);
-                const historyData = etfDataCache[currentETFId] ? etfDataCache[currentETFId].historyData : null;
-                const fallback = historyData ? historyData.currentData : {};
-                const manualOverride = {};
-
-                // 【方案B】API成功获取估值时，同步更新historyData中的currentData锚点
-                if (apiData.valuation && historyData && historyData.currentData) {
-                    const v = apiData.valuation;
-                    if (v.pe > 0) historyData.currentData.pe = v.pe;
-                    if (v.pePercentile > 0) historyData.currentData.pePercentile = v.pePercentile;
-                    if (v.pb > 0) historyData.currentData.pb = v.pb;
-                    if (v.pbPercentile > 0) historyData.currentData.pbPercentile = v.pbPercentile;
-                    if (v.dividendYield > 0) historyData.currentData.dividendYield = v.dividendYield;
-                    historyData.currentData.updateTime = new Date().toISOString().slice(0, 10);
-                }
-
-                if (!apiData.valuation) {
-                    const _pickValid2 = (...vals) => {
-                        for (const v of vals) {
-                            if (v !== null && v !== undefined && v !== '' && !isNaN(v)) return v;
-                        }
-                        return undefined;
-                    };
-                    // 优先级调整：JSON预设(fallback) 优先于 localStorage缓存(savedManual)
-                    const dv = _pickValid2(fallback && fallback.dividendYield, savedManual && savedManual.dividendYield);
-                    const pe = _pickValid2(fallback && fallback.pe, savedManual && savedManual.pe);
-                    const pb = _pickValid2(fallback && fallback.pb, savedManual && savedManual.pb);
-                    const pePct = _pickValid2(fallback && fallback.pePercentile, savedManual && savedManual.pePercentile);
-                    if (dv !== undefined) manualOverride.dividendYield = dv;
-                    if (pe !== undefined) manualOverride.pe = pe;
-                    if (pb !== undefined) manualOverride.pb = pb;
-                    if (pePct !== undefined) manualOverride.pePercentile = pePct;
-                }
-                const normalized = DataAPI.normalizeData(apiData, manualOverride);
-
-                // 保留手动数据（仅在API未自动获取时使用手动值）
-                if (savedManual) {
-                    if (!normalized.marketTempAutoFetched && savedManual.marketTemp !== null && savedManual.marketTemp !== undefined) {
-                        normalized.marketTemp = savedManual.marketTemp;
-                    }
-                    if (savedManual.trendScore !== null && savedManual.trendScore !== undefined) normalized.trendScore = savedManual.trendScore;
-                    if (savedManual.roe) normalized.roe = savedManual.roe;
-                }
-
-                applyData(currentETFId, etfConfig, normalized, historyData);
-                updateDataSourceStatus('success', apiData);
-                updateTimestamp(currentETFId);
-                showToast('数据已更新', 'success');
-            } else {
-                updateDataSourceStatus('error', apiData);
-                showToast('部分数据获取失败', 'error');
-            }
+            const cache = etfDataCache[etfId] || (etfDataCache[etfId] = {});
+            cache.lastApiData = apiData;
+            const normalized = resolveCurrentData(etfId, etfConfig, cache.historyData, apiData);
+            cache.currentData = normalized;
+            if (currentETFId !== etfId) return;
+            applyData(etfId, etfConfig, normalized, cache.historyData);
+            updateDataSourceStatus(apiData.success ? 'success' : 'error', apiData);
+            updateTimestamp(etfId);
+            showToast('获取完成，请以各字段观测日期和校验状态为准', 'info');
         } catch (e) {
+            if (currentETFId !== etfId) return;
+            const historyData = etfDataCache[etfId] && etfDataCache[etfId].historyData;
+            applyData(etfId, etfConfig, resolveCurrentData(etfId, etfConfig, historyData), historyData);
             updateDataSourceStatus('error');
-            showToast('数据获取异常: ' + e.message, 'error');
+            updateTimestamp(etfId);
+            showToast('获取失败，保留原观测日期', 'error');
         }
     }
 
@@ -2009,9 +1770,14 @@ const App = (() => {
                 💡 <strong>${etfConfig.name} (${etfConfig.code})</strong> 多维度数据补充
             </p>
             <form id="data-input-form">
+                <div class="form-group">
+                    <label class="form-label" for="input-as-of">本次填写数据的观测日期<span class="required">*</span></label>
+                    <input type="date" class="form-input" id="input-as-of" max="${DataQuality.today()}" required>
+                    <p class="form-hint">填写数据来源标注的日期，不是录入日期；留空的数值不会更新其观测时间。</p>
+                </div>
         `;
 
-        if (etfConfig.useBondSpread) {
+        if (etfConfig.useBondSpread && etfConfig.type !== ETF_CONFIG.ETF_TYPE.BOND) {
             formHtml += `
                 <div class="form-section-label">📌 估值数据</div>
                 <div class="form-row">
@@ -2121,6 +1887,13 @@ const App = (() => {
             `;
         }
 
+        if (DataQuality.requiredFields(etfConfig).includes('bondYield') && !formHtml.includes('id="input-bond-yield"')) {
+            formHtml += `<div class="form-group">
+                <label class="form-label" for="input-bond-yield">${{ cn: '中国', us: '美国', jp: '日本' }[DataQuality.bondMarket(etfConfig)]}10年期国债收益率 (%)</label>
+                <input type="number" step="0.01" min="-5" max="30" class="form-input" id="input-bond-yield" placeholder="填写同市场、注明观测日期的收益率">
+            </div>`;
+        }
+
         // 非商品/非黄金ETF都有市场温度输入（改为可选覆盖）
         if (etfConfig.type !== ETF_CONFIG.ETF_TYPE.COMMODITY && etfConfig.type !== ETF_CONFIG.ETF_TYPE.GOLD) {
             const tempConfig = getMarketTempConfig(etfConfig);
@@ -2165,10 +1938,11 @@ const App = (() => {
 
         body.innerHTML = formHtml;
 
-        // 预填已有数据
-        const saved = DataStorage.getCurrentData(currentETFId);
+        // 只预填用户曾确认的数据，不把旧自动缓存一键重标为新观测。
+        const saved = DataStorage.getManualData(currentETFId);
         if (saved) {
-            const fill = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+            const fill = (id, val) => { const el = document.getElementById(id); if (el && val !== null && val !== undefined) el.value = val; };
+            fill('input-as-of', saved.updateTime);
             fill('input-dividend-yield', saved.dividendYield);
             fill('input-pe', saved.pe);
             fill('input-pb', saved.pb);
@@ -2198,39 +1972,24 @@ const App = (() => {
         const etfConfig = ETF_CONFIG.getETFById(currentETFId);
         if (!etfConfig) return;
 
-        const cached = DataStorage.getCurrentData(currentETFId) || {};
-        const getVal = (id) => { const el = document.getElementById(id); return el ? parseFloat(el.value) : NaN; };
-
-        // 安全取值函数：区分"用户输入了0"和"用户没填"（NaN）
-        const safeGetVal = (id, fallback) => {
-            const v = getVal(id);
-            return !isNaN(v) ? v : (fallback !== undefined && fallback !== null ? fallback : 0);
-        };
-
-        const data = {
-            dividendYield: safeGetVal('input-dividend-yield', cached.dividendYield),
-            bondYield: safeGetVal('input-bond-yield', cached.bondYield),
-            pe: safeGetVal('input-pe', cached.pe),
-            pb: safeGetVal('input-pb', cached.pb),
-            price: safeGetVal('input-price', cached.price),
-            priceChange: safeGetVal('input-price-change', cached.priceChange),
-            pePercentile: safeGetVal('input-pe-percentile', 0),
-            roe: safeGetVal('input-roe', cached.roe),
-            updateTime: formatDateTime(new Date())
-        };
-
-        // 市场温度（特殊处理：NaN → null）
-        const marketTempVal = getVal('input-market-temp');
-        data.marketTemp = !isNaN(marketTempVal) ? marketTempVal : (cached.marketTemp !== undefined ? cached.marketTemp : null);
-
-        // 趋势分数
-        const trendVal = getVal('input-trend-score');
-        data.trendScore = !isNaN(trendVal) ? trendVal : (cached.trendScore !== undefined ? cached.trendScore : null);
-
+        const date = DataQuality.asOf(document.getElementById('input-as-of').value);
+        if (!date || date > DataQuality.today()) { showToast('请填写有效的真实观测日期', 'error'); return; }
+        const ids = { pe: 'input-pe', pb: 'input-pb', pePercentile: 'input-pe-percentile', roe: 'input-roe', dividendYield: 'input-dividend-yield', bondYield: 'input-bond-yield', price: 'input-price', priceChange: 'input-price-change', marketTemp: 'input-market-temp', trendScore: 'input-trend-score' };
+        const values = {};
+        for (const [field, id] of Object.entries(ids)) {
+            const el = document.getElementById(id);
+            if (!el || el.value.trim() === '') continue;
+            if (!DataQuality.valid(field, el.value)) { showToast(`请检查${field}的数值范围`, 'error'); return; }
+            values[field] = DataQuality.number(el.value);
+        }
+        if (!DataStorage.saveManualData(currentETFId, DataQuality.manualSnapshot(values, etfConfig, date))) {
+            showToast('保存失败，请检查浏览器存储权限', 'error'); return;
+        }
         const historyData = etfDataCache[currentETFId] ? etfDataCache[currentETFId].historyData : null;
-        applyData(currentETFId, etfConfig, data, historyData);
+        applyData(currentETFId, etfConfig, resolveCurrentData(currentETFId, etfConfig, historyData), historyData);
+        updateDataSourceStatus('manual');
         hideInputModal();
-        showToast('数据已更新，多维度信号已重新计算', 'success');
+        showToast('人工观测已保存，已重新校验信号', 'success');
         updateTimestamp(currentETFId);
     }
 

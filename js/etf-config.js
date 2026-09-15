@@ -130,7 +130,9 @@ const ETF_CONFIG = (() => {
                 code: '931643',
                 danjuanCode: 'SZ399006',   // 蛋卷无科创创业50(931643)，用创业板指(399006)做代理
                 danjuanName: '创业板',      // 科创创业50=科创25+创业板25，与创业板指走势高相关
-                // 直接使用蛋卷创业板指的全部估值数据（PE/PB/股息率/分位），数据源统一
+                isProxy: true,
+                proxyHistoryFrom: '2026-04-28', // 从该日起旧采样切换为创业板指，之前保留为目标历史
+                proxyName: '创业板指',
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
             useBondSpread: false,
@@ -157,7 +159,9 @@ const ETF_CONFIG = (() => {
                 code: '399673',
                 danjuanCode: 'SZ399006',    // 蛋卷无创业板50(399673)，用创业板指(399006)做代理
                 danjuanName: '创业板',      // 创业板50是创业板指的子集(前50只)，走势高度相关
-                // 直接使用蛋卷创业板指的全部估值数据（PE/PB/股息率/分位），数据源统一
+                isProxy: true,
+                proxyHistoryFrom: '2026-04-28', // 从该日起旧采样切换为创业板指，之前保留为目标历史
+                proxyName: '创业板指',
             },
             valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
             useBondSpread: false,
@@ -777,7 +781,7 @@ const ETF_CONFIG = (() => {
 
                 // 维度B: 安全边际（股息率 - 国债收益率）
                 // 修正：引入利率环境因子，低利率时利差天然偏大，需适度压缩避免虚高
-                if (data.dividendYield > 0 && data.bondYield > 0) {
+                if (DataQuality.valid('dividendYield', data.dividendYield) && DataQuality.valid('bondYield', data.bondYield)) {
                     const spread = data.dividendYield - data.bondYield;
                     // 利率调节因子：国债收益率<2%时压缩系数0.7，>3%时系数1.0
                     const rateAdj = Math.max(0.7, Math.min(1.0, (data.bondYield - 1.0) * 0.3 + 0.7));
@@ -930,9 +934,9 @@ const ETF_CONFIG = (() => {
                 scores.valuation = SignalEngine.calcHybridValuationScore(data.pe, data.peMean, data.peStd, data.pePercentile);
 
                 // 盈利收益率(E/P) vs 美债
-                if (data.pe > 0) {
+                if (data.pe > 0 && DataQuality.valid('bondYield', data.bondYield)) {
                     const earningsYield = (1 / data.pe) * 100;
-                    const bondY = data.bondYield || 4.2;
+                    const bondY = data.bondYield;
                     const gap = earningsYield - bondY;
                     scores.safety = Math.max(0, Math.min(100, 50 + gap * 15));
                 } else {
@@ -1148,7 +1152,7 @@ const ETF_CONFIG = (() => {
                 // 维度B: 股息安全边际（高股息特色：股息率 - 国债收益率）
                 // 港股央企红利股息率通常5-7%，远高于国债，安全边际极强
                 // 引入利率环境因子：低利率时利差天然偏大，需适度压缩
-                if (data.dividendYield > 0 && data.bondYield > 0) {
+                if (DataQuality.valid('dividendYield', data.dividendYield) && DataQuality.valid('bondYield', data.bondYield)) {
                     const spread = data.dividendYield - data.bondYield;
                     const rateAdj = Math.max(0.7, Math.min(1.0, (data.bondYield - 1.0) * 0.3 + 0.7));
                     // 港股央企红利利差通常3-5%，比A股红利低波更高
@@ -1242,9 +1246,9 @@ const ETF_CONFIG = (() => {
 
                 // 维度B: 盈利收益率(E/P) vs 日债
                 // 日本10Y国债收益率很低（约0.5-1.5%），E/P约4-6%，利差天然大
-                if (data.pe > 0) {
+                if (data.pe > 0 && DataQuality.valid('bondYield', data.bondYield)) {
                     const earningsYield = (1 / data.pe) * 100;
-                    const bondY = data.bondYield || 1.0; // 日债默认约1.0%
+                    const bondY = data.bondYield;
                     const gap = earningsYield - bondY;
                     // 日股E/P-日债利差通常2-5%，比美股宽
                     scores.safety = Math.max(0, Math.min(100, 40 + gap * 12));
@@ -1320,7 +1324,7 @@ const ETF_CONFIG = (() => {
 
                 // 维度B: 股债利差（股息率 - 国债收益率）
                 // 修正：引入利率环境因子，低利率时适度压缩
-                if (data.dividendYield > 0 && data.bondYield > 0) {
+                if (DataQuality.valid('dividendYield', data.dividendYield) && DataQuality.valid('bondYield', data.bondYield)) {
                     const spread = data.dividendYield - data.bondYield;
                     // 沪深300股息率约2-3%，国债约1.5-2.5%
                     const rateAdj = Math.max(0.7, Math.min(1.0, (data.bondYield - 1.0) * 0.3 + 0.7));
@@ -1626,7 +1630,7 @@ const ETF_CONFIG = (() => {
                     const gap = earningsYield - data.bondYield;
                     // Gap 5%→80分, 3%→60, 1%→40, -1%→25, -3%→10
                     scores.safety = Math.max(0, Math.min(100, 40 + gap * 12));
-                } else if (data.dividendYield > 0 && data.bondYield > 0) {
+                } else if (DataQuality.valid('dividendYield', data.dividendYield) && DataQuality.valid('bondYield', data.bondYield)) {
                     // 次选：股息率-国债利差
                     const spread = data.dividendYield - data.bondYield;
                     scores.safety = Math.max(0, Math.min(100, 40 + spread * 20));

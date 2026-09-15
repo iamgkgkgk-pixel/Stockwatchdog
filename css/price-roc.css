@@ -1,0 +1,51 @@
+.price-roc-panel { scroll-margin-top: 220px; }
+.price-roc-panel .card { padding: 24px; }
+.price-roc-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.price-roc-eyebrow { display: block; color: var(--text-muted, #8da3aa); font-size: 11px; letter-spacing: 1px; margin-bottom: 6px; }
+.price-roc-panel h2 { font-size: 21px; color: var(--text-primary, #e7efed); font-weight: 600; margin: 0; }
+.price-roc-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.price-roc-panel button, .price-roc-panel select, .price-roc-panel input { font: inherit; font-size: 12px; min-height: 44px; padding: 8px 12px; color: var(--text-primary, #e7efed); background: var(--bg-secondary, #16232a); border: 1px solid var(--border-color, #2b3d44); border-radius: 6px; }
+.price-roc-panel button, .price-roc-panel select, .price-roc-panel summary { cursor: pointer; }
+.price-roc-panel button:disabled { opacity: .55; cursor: wait; }
+.price-roc-panel button:hover { border-color: var(--accent-color, #8eb7cd); }
+.price-roc-panel :focus-visible, .strategy-page-switch:focus-visible { outline: 2px solid var(--accent-color, #8eb7cd); outline-offset: 3px; }
+.price-roc-ranges { display: flex; border: 1px solid var(--border-color, #2b3d44); border-radius: 6px; overflow: hidden; }
+.price-roc-ranges button { border: 0; border-radius: 0; }
+.price-roc-ranges button[aria-pressed="true"] { background: #3b505a; color: #fff; }
+.price-roc-readout { display: flex; flex-wrap: wrap; gap: 8px 25px; color: var(--text-secondary, #a5b5b9); font-size: 12px; margin-top: 18px; font-variant-numeric: tabular-nums; }
+#legacy-roc-chart { width: 100%; height: 500px; margin: 10px 0; }
+.price-roc-empty { display: grid; place-items: center; min-height: 260px; padding: 35px 15px; text-align: center; color: var(--text-muted, #a5b5b9); }
+.price-roc-panel [hidden] { display: none !important; }
+.price-roc-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; color: var(--text-muted, #8da3aa); font-size: 10px; }
+.price-roc-line { display: inline-block; width: 18px; margin: 0 5px 3px 12px; border-top: 2px solid; }
+.price-roc-line:first-child { margin-left: 0; }
+.price-roc-raw { color: #8eb7cd; }
+.price-roc-average { color: #d7be8c; }
+.price-roc-band { color: #8da3aa; border-top-style: dashed; }
+.price-roc-status { min-height: 16px; font-size: 11px; color: var(--text-muted, #8da3aa); margin: 10px 0; }
+.price-roc-settings { border-top: 1px solid var(--border-color, #2b3d44); margin-top: 10px; }
+.price-roc-settings summary { min-height: 44px; padding: 12px 0; font-size: 12px; color: var(--text-secondary, #a5b5b9); }
+.price-roc-settings form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 8px 0 15px; }
+.price-roc-settings label { font-size: 12px; color: var(--text-secondary, #a5b5b9); }
+.price-roc-settings input { display: block; width: 115px; margin-top: 6px; }
+.price-roc-settings p { color: var(--text-muted, #8da3aa); font-size: 11px; line-height: 1.8; }
+.price-roc-table { overflow-x: auto; margin: 14px 0; }
+.price-roc-table table { width: 100%; border-collapse: collapse; white-space: nowrap; font-size: 11px; }
+.price-roc-table th, .price-roc-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border-color, #2b3d44); color: var(--text-secondary, #a5b5b9); }
+.price-roc-table th { color: var(--text-muted, #8da3aa); font-weight: 400; }
+.price-roc-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); }
+.strategy-page-switch { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; gap: 6px; border: 1px solid #746745; border-radius: 6px; color: #d7be8c; background: transparent; text-decoration: none; white-space: nowrap; font-size: 13px; }
+.strategy-page-switch:hover { background: #d7be8c16; text-decoration: none; }
+.strategy-return-note { margin: 8px 0; color: #a5b5b9; font-size: 11px; }
+@media (max-width: 576px) {
+    .price-roc-panel .card { padding: 16px 12px; }
+    .price-roc-panel h2 { font-size: 19px; }
+    .price-roc-controls { width: 100%; justify-content: space-between; gap: 5px; }
+    .price-roc-controls button, .price-roc-controls select { padding-inline: 9px; font-size: 11px; }
+    .price-roc-readout { font-size: 11px; gap: 6px 14px; }
+    #legacy-roc-chart { height: 430px; }
+    .price-roc-settings form { gap: 10px; }
+    .price-roc-settings label { flex: 1 1 80px; }
+    .price-roc-settings input { width: 100%; }
+    .strategy-page-switch { font-size: 12px; }
+}

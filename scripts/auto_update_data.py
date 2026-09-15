@@ -6,7 +6,7 @@ ETF择时助手 - 自动数据更新脚本
 数据源：
 1. 蛋卷基金 API (PE/PB/股息率/百分位/ROE) - 主数据源（覆盖部分指数）
 2. 东方财富 push2 API (国债收益率、ETF行情) - 辅助数据源
-3. 对于无API覆盖的ETF，基于历史趋势外推
+3. 无API覆盖或观测无效时保留缺失，不使用历史趋势外推填充
 
 使用方法：
   python3 scripts/auto_update_data.py          # 正常更新
@@ -24,16 +24,9 @@ import urllib.request
 import urllib.error
 from datetime import datetime, timedelta
 from pathlib import Path
+from observations import parse_valuation, quote_observation, update_equity, update_price, today, usable
 
-# macOS Python可能缺少系统CA证书，创建不验证SSL的context作为后备
-try:
-    _DEFAULT_SSL_CTX = ssl.create_default_context()
-except Exception:
-    _DEFAULT_SSL_CTX = None
-
-_NOVERIFY_SSL_CTX = ssl.create_default_context()
-_NOVERIFY_SSL_CTX.check_hostname = False
-_NOVERIFY_SSL_CTX.verify_mode = ssl.CERT_NONE
+_DEFAULT_SSL_CTX = ssl.create_default_context()
 
 # ========== 配置 ==========
 
@@ -41,9 +34,8 @@ SCRIPT_DIR = Path(__file__).parent
 DATA_DIR = SCRIPT_DIR.parent / "data"
 
 # 当前年月
-NOW = datetime.now()
-CURRENT_MONTH = NOW.strftime("%Y-%m")  # e.g. "2026-05"
-TODAY = NOW.strftime("%Y-%m-%d")       # e.g. "2026-05-01"
+TODAY = today()
+CURRENT_MONTH = TODAY[:7]
 
 # API超时
 API_TIMEOUT = 15  # 秒
@@ -288,14 +280,16 @@ ETF_CONFIGS = [
 ]
 
 
+for config in ETF_CONFIGS:
+    if config["id"] in ("gem-50", "sci-tech-50"):
+        config["isProxy"] = True
+
+
 # ========== API请求工具 ==========
 
 def _urlopen_with_ssl_fallback(req, timeout=API_TIMEOUT):
-    """尝试正常SSL连接，失败则用不验证的context（兼容macOS证书问题）"""
-    try:
-        return urllib.request.urlopen(req, timeout=timeout, context=_DEFAULT_SSL_CTX)
-    except (ssl.SSLError, urllib.error.URLError):
-        return urllib.request.urlopen(req, timeout=timeout, context=_NOVERIFY_SSL_CTX)
+    """证书验证失败直接报告失败，不降级为未验证连接。"""
+    return urllib.request.urlopen(req, timeout=timeout, context=_DEFAULT_SSL_CTX)
 
 
 def fetch_json(url, headers=None, timeout=API_TIMEOUT):
@@ -362,113 +356,45 @@ def fetch_danjuan_all():
 
 
 def get_danjuan_valuation(danjuan_code):
-    """从蛋卷基金获取指定指数的估值数据"""
-    if not danjuan_code:
-        return None
-    
-    all_data = fetch_danjuan_all()
-    item = all_data.get(danjuan_code)
-    if not item:
-        # 尝试模糊匹配
-        for code, v in all_data.items():
-            if danjuan_code in code or code in danjuan_code:
-                item = v
-                break
-    
-    if not item:
-        return None
-    
-    # 解析数据
-    raw_yield = float(item.get("yeild") or item.get("dy") or 0)
-    raw_pe_pct = float(item.get("pe_percentile") or 0)
-    raw_pb_pct = float(item.get("pb_percentile") or 0)
-    raw_roe = float(item.get("roe") or 0)
-    
-    return {
-        "pe": float(item.get("pe") or 0),
-        "pb": float(item.get("pb") or 0),
-        "dividendYield": raw_yield * 100 if raw_yield < 1 else raw_yield,
-        "pePercentile": raw_pe_pct * 100 if raw_pe_pct < 1 else raw_pe_pct,
-        "pbPercentile": raw_pb_pct * 100 if raw_pb_pct < 1 else raw_pb_pct,
-        "roe": raw_roe * 100 if raw_roe < 1 else raw_roe,
-        "name": item.get("name", ""),
-    }
+    return parse_valuation(fetch_danjuan_all().values(), danjuan_code) if danjuan_code else None
 
 
-# 缓存：国债收益率
 _bond_yields = {}
 
-def fetch_cn_bond_yield():
-    """获取中国10年期国债收益率"""
-    if "cn" in _bond_yields:
-        return _bond_yields["cn"]
-    
-    print("🏦 获取中国10年期国债收益率...")
+
+def fetch_bond_yield(market):
+    if market in _bond_yields:
+        return _bond_yields[market]
+    secid = {"cn": "171.CN10Y", "us": "171.ZCUS10Y", "jp": "171.ZCJP10Y"}.get(market)
+    if not secid:
+        return None
     data = fetch_jsonp(EASTMONEY_QUOTE, {
-        "secid": "171.CN10Y",
-        "fields": "f43,f57,f58,f60,f170",
-        "invt": "2", "fltt": "2",
-        "ut": "fa5fd1943c7b386f172d6893dbbd2"
+        "secid": secid, "fields": "f43,f57,f58,f60,f124,f170",
+        "invt": "2", "fltt": "2", "ut": "fa5fd1943c7b386f172d6893dbbd2"
     })
-    
-    if data and data.get("data"):
-        yield_val = data["data"].get("f43")
-        if yield_val and yield_val != "-":
-            val = round(float(yield_val), 2)
-            _bond_yields["cn"] = val
-            print(f"  ✅ 中国10Y国债: {val}%")
-            return val
-    
-    print("  ❌ 中国10Y国债收益率获取失败，使用默认值1.82%")
-    _bond_yields["cn"] = 1.82
-    return 1.82
+    result = quote_observation(data.get("data") if data else None, market, secid)
+    _bond_yields[market] = result
+    return result
+
+
+def fetch_cn_bond_yield():
+    return fetch_bond_yield("cn")
 
 
 def fetch_us_bond_yield():
-    """获取美国10年期国债收益率（通过东方财富）"""
-    if "us" in _bond_yields:
-        return _bond_yields["us"]
-    
-    print("🏦 获取美国10年期国债收益率...")
-    data = fetch_jsonp(EASTMONEY_QUOTE, {
-        "secid": "171.ZCUS10Y",
-        "fields": "f43,f57,f58,f60,f170",
-        "invt": "2", "fltt": "2",
-        "ut": "fa5fd1943c7b386f172d6893dbbd2"
-    })
-    
-    if data and data.get("data"):
-        yield_val = data["data"].get("f43")
-        if yield_val and yield_val != "-":
-            val = round(float(yield_val), 2)
-            _bond_yields["us"] = val
-            print(f"  ✅ 美国10Y国债: {val}%")
-            return val
-    
-    print("  ⚠️  美国10Y国债收益率获取失败，使用默认值4.31%")
-    _bond_yields["us"] = 4.31
-    return 4.31
+    return fetch_bond_yield("us")
+
+
+def fetch_jp_bond_yield():
+    return fetch_bond_yield("jp")
 
 
 def fetch_etf_price(secid):
-    """获取ETF最新价格"""
     data = fetch_jsonp(EASTMONEY_QUOTE, {
-        "secid": secid,
-        "fields": "f43,f57,f58,f60,f170",
-        "invt": "2", "fltt": "2",
-        "ut": "fa5fd1943c7b386f172d6893dbbd2"
+        "secid": secid, "fields": "f43,f57,f58,f60,f124,f170",
+        "invt": "2", "fltt": "2", "ut": "fa5fd1943c7b386f172d6893dbbd2"
     })
-    
-    if data and data.get("data"):
-        d = data["data"]
-        price = d.get("f43")
-        change = d.get("f170")
-        if price and price != "-":
-            return {
-                "price": float(price),
-                "priceChange": float(change) if change and change != "-" else 0,
-            }
-    return None
+    return quote_observation(data.get("data") if data else None, instrument_id=secid)
 
 
 # ========== 数据趋势外推 ==========
@@ -526,186 +452,23 @@ def has_month_data(history_array, month):
     return any(entry.get("date") == month for entry in history_array)
 
 
-def update_standard_equity(data, config, api_data, cn_bond, us_bond):
-    """
-    更新标准权益类ETF（A股价值/宽基/成长/港股/医药等）
-    数据格式：peHistory + dividendYieldHistory + bondYieldHistory [+ spreadHistory] + currentData
-    """
-    updated = False
-    
-    # PE数据
-    if "peHistory" in data:
-        if not has_month_data(data["peHistory"], CURRENT_MONTH):
-            pe_val = None
-            pe_pct = None
-            
-            if api_data:
-                pe_val = api_data.get("pe")
-                pe_pct = api_data.get("pePercentile")
-            
-            if not pe_val:
-                pe_val = extrapolate_value(data["peHistory"])
-            if not pe_pct:
-                pe_pct = extrapolate_percentile(data["peHistory"])
-            
-            if pe_val:
-                entry = {"date": CURRENT_MONTH, "value": round(pe_val, 2), "percentile": round(pe_pct or 50, 1)}
-                data["peHistory"].append(entry)
-                updated = True
-                print(f"    PE: {pe_val} ({pe_pct}%tile)")
-    
-    # 股息率
-    if "dividendYieldHistory" in data:
-        if not has_month_data(data["dividendYieldHistory"], CURRENT_MONTH):
-            dy_val = None
-            if api_data:
-                dy_val = api_data.get("dividendYield")
-            if not dy_val:
-                dy_val = extrapolate_value(data["dividendYieldHistory"])
-            
-            if dy_val:
-                data["dividendYieldHistory"].append({"date": CURRENT_MONTH, "value": round(dy_val, 2)})
-                updated = True
-                print(f"    股息率: {dy_val}%")
-    
-    # 国债收益率
-    if "bondYieldHistory" in data:
-        if not has_month_data(data["bondYieldHistory"], CURRENT_MONTH):
-            bond_val = cn_bond if config["bondType"] == "cn" else us_bond
-            if bond_val:
-                data["bondYieldHistory"].append({"date": CURRENT_MONTH, "value": round(bond_val, 2)})
-                updated = True
-                print(f"    国债收益率: {bond_val}%")
-    
-    # 利差（spreadHistory）
-    if "spreadHistory" in data:
-        if not has_month_data(data["spreadHistory"], CURRENT_MONTH):
-            # 利差 = 股息率 - 国债收益率
-            dy = None
-            bond = cn_bond if config["bondType"] == "cn" else us_bond
-            
-            if api_data and api_data.get("dividendYield"):
-                dy = api_data["dividendYield"]
-            elif "dividendYieldHistory" in data and data["dividendYieldHistory"]:
-                dy = data["dividendYieldHistory"][-1].get("value")
-            
-            if dy and bond:
-                spread = round(dy - bond, 2)
-                data["spreadHistory"].append({"date": CURRENT_MONTH, "value": spread})
-                updated = True
-                print(f"    利差: {spread}%")
-    
-    # 更新currentData
-    if "currentData" in data and updated:
-        cd = data["currentData"]
-        if api_data:
-            if api_data.get("pe"): cd["pe"] = round(api_data["pe"], 2)
-            if api_data.get("pePercentile"): cd["pePercentile"] = round(api_data["pePercentile"], 2)
-            if api_data.get("pb"): cd["pb"] = round(api_data["pb"], 2)
-            if api_data.get("pbPercentile"): cd["pbPercentile"] = round(api_data["pbPercentile"], 2)
-            if api_data.get("dividendYield"): cd["dividendYield"] = round(api_data["dividendYield"], 2)
-        
-        bond = cn_bond if config["bondType"] == "cn" else us_bond
-        if bond: cd["bondYield"] = round(bond, 2)
-        
-        if cd.get("dividendYield") and cd.get("bondYield"):
-            cd["spread"] = round(cd["dividendYield"] - cd["bondYield"], 2)
-        
-        cd["updateTime"] = TODAY
-    
-    return updated
+def update_standard_equity(data, config, api_data, cn_bond, us_bond, jp_bond=None, force=False):
+    return update_equity(data, config, api_data, {"cn": cn_bond, "us": us_bond, "jp": jp_bond}, "monthly", force)
 
 
-def update_new_growth(data, config, api_data, cn_bond):
-    """
-    更新新型成长行业ETF（energy-storage, pcb）
-    数据格式：peHistory + dividendHistory（非dividendYieldHistory） + bondYieldHistory，无currentData
-    """
-    updated = False
-    
-    # PE数据
-    if "peHistory" in data:
-        if not has_month_data(data["peHistory"], CURRENT_MONTH):
-            pe_val = extrapolate_value(data["peHistory"])
-            pe_pct = extrapolate_percentile(data["peHistory"])
-            
-            if pe_val:
-                data["peHistory"].append({"date": CURRENT_MONTH, "value": round(pe_val, 1), "percentile": round(pe_pct or 50, 1)})
-                updated = True
-                print(f"    PE: {pe_val} ({pe_pct}%tile)")
-    
-    # dividendHistory（注意不是dividendYieldHistory）
-    if "dividendHistory" in data:
-        if not has_month_data(data["dividendHistory"], CURRENT_MONTH):
-            dh_val = extrapolate_value(data["dividendHistory"])
-            if dh_val:
-                data["dividendHistory"].append({"date": CURRENT_MONTH, "value": round(dh_val, 2)})
-                updated = True
-                print(f"    股息: {dh_val}")
-    
-    # bondYieldHistory
-    if "bondYieldHistory" in data:
-        if not has_month_data(data["bondYieldHistory"], CURRENT_MONTH):
-            data["bondYieldHistory"].append({"date": CURRENT_MONTH, "value": round(cn_bond, 2)})
-            updated = True
-            print(f"    国债收益率: {cn_bond}%")
-    
-    return updated
+def update_new_growth(data, config, api_data, cn_bond, force=False):
+    return update_equity(data, config, api_data, {"cn": cn_bond}, "monthly", force)
 
 
-def update_commodity(data, config):
-    """
-    更新商品ETF（黄金、豆粕）
-    数据格式：priceHistory + currentData
-    """
-    updated = False
-    
-    if "priceHistory" in data:
-        if not has_month_data(data["priceHistory"], CURRENT_MONTH):
-            # 尝试获取实时价格
-            price_data = fetch_etf_price(config["secid"])
-            price = None
-            change = 0
-            
-            if price_data:
-                price = price_data["price"]
-                change = price_data["priceChange"]
-            else:
-                price = extrapolate_value(data["priceHistory"])
-            
-            if price:
-                data["priceHistory"].append({"date": CURRENT_MONTH, "value": round(price, 2)})
-                updated = True
-                print(f"    价格: {price}")
-                
-                # 更新currentData
-                if "currentData" in data:
-                    data["currentData"]["price"] = round(price, 2)
-                    data["currentData"]["priceChange"] = round(change, 2)
-                    data["currentData"]["updateTime"] = TODAY
-    
-    return updated
+def update_commodity(data, config, force=False):
+    quote = fetch_etf_price(config["secid"])
+    if not usable(quote):
+        raise ValueError("未取得带观测日期的ETF价格，未更新历史")
+    return update_price(data, config, quote, "monthly", force)
 
 
-def update_bond(data, config, cn_bond):
-    """
-    更新债券ETF
-    数据格式：bondYieldHistory + currentData
-    """
-    updated = False
-    
-    if "bondYieldHistory" in data:
-        if not has_month_data(data["bondYieldHistory"], CURRENT_MONTH):
-            data["bondYieldHistory"].append({"date": CURRENT_MONTH, "value": round(cn_bond, 2)})
-            updated = True
-            print(f"    国债收益率: {cn_bond}%")
-            
-            # 更新currentData
-            if "currentData" in data:
-                data["currentData"]["bondYield"] = round(cn_bond, 2)
-                data["currentData"]["updateTime"] = TODAY
-    
-    return updated
+def update_bond(data, config, cn_bond, force=False):
+    return update_equity(data, config, None, {"cn": cn_bond}, "monthly", force)
 
 
 # ========== 主流程 ==========
@@ -727,14 +490,13 @@ def main():
     # 1. 获取实时国债收益率
     cn_bond = fetch_cn_bond_yield()
     us_bond = fetch_us_bond_yield()
-    
-    # 2. 获取蛋卷基金全量数据（一次请求）
+    jp_bond = fetch_jp_bond_yield()
+
     fetch_danjuan_all()
-    
-    # 3. 逐个更新ETF数据文件
+
     updated_count = 0
     skipped_count = 0
-    error_count = 0
+    error_count = sum(not usable(value) for value in (cn_bond, us_bond, jp_bond))
     
     for config in ETF_CONFIGS:
         file_path = DATA_DIR / config["file"]
@@ -756,28 +518,15 @@ def main():
             error_count += 1
             continue
         
-        # 检查是否已更新到当前月
-        if not force:
-            last_update = data.get("lastUpdate", "")
-            if last_update and last_update >= CURRENT_MONTH[:7]:
-                # 检查各数组是否都已有当月数据
-                all_arrays_updated = True
-                for key in ["peHistory", "priceHistory", "bondYieldHistory"]:
-                    if key in data and not has_month_data(data[key], CURRENT_MONTH):
-                        all_arrays_updated = False
-                        break
-                
-                if all_arrays_updated:
-                    print(f"  ⏭️  已是最新 (lastUpdate={last_update})")
-                    skipped_count += 1
-                    continue
-        
         # 获取蛋卷基金估值数据
         api_data = None
         if config.get("danjuanCode"):
             api_data = get_danjuan_valuation(config["danjuanCode"])
-            if api_data:
-                print(f"  📊 蛋卷数据: PE={api_data.get('pe')}, 百分位={api_data.get('pePercentile')}%, 股息率={api_data.get('dividendYield')}%")
+            if usable(api_data):
+                print(f"  估值观测: PE={api_data.get('pe')}，日期={api_data.get('asOf')}")
+            else:
+                error_count += 1
+                print(f"  估值源失败或已过期: {config['danjuanCode']}，不外推填充")
         
         # 根据类型调用不同的更新函数
         updated = False
@@ -785,13 +534,13 @@ def main():
             etf_type = config["type"]
             
             if etf_type in ("a_value", "a_broad", "a_growth", "a_pharma", "hk_stock", "hk_dividend", "us_stock", "jp_stock"):
-                updated = update_standard_equity(data, config, api_data, cn_bond, us_bond)
+                updated = update_standard_equity(data, config, api_data, cn_bond, us_bond, jp_bond, force)
             elif etf_type == "a_growth_new":
-                updated = update_new_growth(data, config, api_data, cn_bond)
+                updated = update_new_growth(data, config, api_data, cn_bond, force)
             elif etf_type == "commodity":
-                updated = update_commodity(data, config)
+                updated = update_commodity(data, config, force)
             elif etf_type == "bond":
-                updated = update_bond(data, config, cn_bond)
+                updated = update_bond(data, config, cn_bond, force)
             else:
                 print(f"  ⚠️  未知类型: {etf_type}")
                 
