@@ -750,7 +750,7 @@ const DataAPI = (() => {
      * @param {Object} etfConfig - ETF配置对象
      * @returns {Object} 聚合后的数据对象
      */
-    async function fetchAllDataForETF(etfConfig) {
+    async function fetchAllDataForETF(etfConfig, onProgress) {
         const results = {
             success: false,
             etf: null,
@@ -803,17 +803,29 @@ const DataAPI = (() => {
             promiseLabels.push('aShareBreadth');
         }
 
-        const settled = await Promise.allSettled(promises);
-
-        settled.forEach((result, i) => {
-            const label = promiseLabels[i];
-            if (result.status === 'fulfilled' && result.value) {
-                results[label] = result.value;
-                if (result.value.isCachedFallback) results.errors.push(`${label}更新失败，使用历史观测`);
-            } else {
-                results.errors.push(`${label}获取失败`);
+        const pending = new Set(promiseLabels);
+        const notify = () => {
+            results.pending = [...pending];
+            results.success = promiseLabels.some(label => results[label] && !results[label].isCachedFallback);
+            if (typeof onProgress === 'function') {
+                try { onProgress({ ...results, pending: [...pending], errors: [...results.errors] }); }
+                catch (error) { console.warn('局部更新失败:', error); }
             }
-        });
+        };
+        notify();
+        await Promise.all(promises.map(async (promise, i) => {
+            const label = promiseLabels[i];
+            try {
+                const value = await promise;
+                if (value) {
+                    results[label] = value;
+                    if (value.isCachedFallback) results.errors.push(`${label}更新失败，使用历史观测`);
+                } else results.errors.push(`${label}获取失败`);
+            } catch (_) { results.errors.push(`${label}获取失败`); }
+            pending.delete(label);
+            if (label === 'aShareBreadth' && !results.aShareBreadth) pending.add('fearGreedFallback');
+            notify();
+        }));
 
         // ========== A股市场温度兜底：当A股广度获取失败时，用CNN Fear & Greed替代 ==========
         // 逻辑：A股非交易时段（夜间/周末/节假日）涨跌家数为0且无缓存 → aShareBreadth为null
@@ -839,6 +851,8 @@ const DataAPI = (() => {
             }
         }
 
+        pending.delete('fearGreedFallback');
+        notify();
         results.success = [results.etf, results.bond, results.valuation, results.fearGreed, results.aShareBreadth, results.fearGreedFallback]
             .some(value => value && !value.isCachedFallback);
         return results;
@@ -1189,7 +1203,7 @@ const DataAPI = (() => {
      * 获取VIX仪表盘的聚合数据（VIX实时 + CNN F&G + VIX K线）
      * @returns {Object} { vix, fearGreed, kline, success }
      */
-    async function fetchVIXDashboardData() {
+    async function fetchVIXDashboardData(onProgress) {
         const results = {
             vix: null,
             fearGreed: null,
@@ -1199,17 +1213,22 @@ const DataAPI = (() => {
         };
 
         // 并行请求：VIX实时 + CNN F&G + VIX K线
-        const [vixResult, fgResult, klineResult] = await Promise.allSettled([
-            fetchVIXIndex(true),
-            fetchFearGreedIndex(true),
-            fetchVIXKline(365),
-        ]);
-
-        if (vixResult.status === 'fulfilled' && vixResult.value) results.vix = vixResult.value;
-        if (fgResult.status === 'fulfilled' && fgResult.value) results.fearGreed = fgResult.value;
-        if (klineResult.status === 'fulfilled' && klineResult.value) results.kline = klineResult.value;
-
-        results.success = !!(results.vix);
+        const keys = ['vix', 'fearGreed', 'kline'];
+        const pending = new Set(keys);
+        const notify = () => {
+            results.pending = [...pending];
+            results.success = !!results.vix;
+            if (typeof onProgress === 'function') {
+                try { onProgress({ ...results, pending: [...pending] }); } catch (error) { console.warn('VIX局部更新失败:', error); }
+            }
+        };
+        notify();
+        await Promise.all([fetchVIXIndex(true), fetchFearGreedIndex(true), fetchVIXKline(365)].map(async (promise, index) => {
+            const key = keys[index];
+            try { const value = await promise; if (value) results[key] = value; } catch (_) {}
+            pending.delete(key);
+            notify();
+        }));
         return results;
     }
 

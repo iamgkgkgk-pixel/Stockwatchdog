@@ -15,7 +15,7 @@ const App = (() => {
     // ========== 初始化 ==========
 
     async function init() {
-        showLoading(true);
+        showLoading(false);
         try {
             renderTabBar();
             bindGlobalEvents();
@@ -662,52 +662,123 @@ const App = (() => {
             cached,
             DataStorage.getManualData(etfId)
         );
+        const sourceFields = { etf: ['price', 'priceChange'], valuation: ['pe', 'pb', 'roe', 'dividendYield', 'pePercentile', 'pbPercentile'],
+            bond: ['bondYield'], aShareBreadth: ['marketTemp'], fearGreed: ['marketTemp'], fearGreedFallback: ['marketTemp'] };
+        for (const source of apiData.pending || []) {
+            for (const field of sourceFields[source] || []) {
+                delete fallback[field];
+                delete fallback.fieldMeta[field];
+            }
+        }
         return DataAPI.normalizeData(apiData, fallback, etfConfig);
+    }
+
+    function resetPendingSignal() {
+        setText('signal-text', '正在更新');
+        setTextColor('signal-text', 'var(--text-secondary)');
+        setText('signal-icon', '—');
+        setText('signal-position', '等待必要数据');
+        setText('signal-advice', '已返回的数据先展示；其余卡片独立更新，可继续切换标的。');
+        setText('signal-method', '未完成的请求不会被当作已更新数据');
+        const hero = document.getElementById('hero-section');
+        if (hero) { hero.style.background = ''; hero.style.borderColor = ''; }
+        const position = document.getElementById('signal-position');
+        if (position) { position.style.color = ''; position.style.backgroundColor = ''; position.style.borderColor = ''; }
+        const interpretation = document.getElementById('signal-interpretation');
+        if (interpretation) interpretation.replaceChildren();
+        const hint = document.getElementById('position-hint-bar');
+        if (hint) hint.style.display = 'none';
+    }
+
+    function resetETFView() {
+        resetPendingSignal();
+        for (const id of ['val-price', 'val-price-change', 'update-time', 'score-percentile-summary', 'trend-strength-summary', 'trend-strength-badge']) setText(id, '等待更新');
+        for (const id of ['chart-line-1', 'chart-line-2', 'chart-signal-history', 'chart-score-percentile',
+            'chart-daily-signal-history', 'chart-algo-compare', 'chart-trend-drawdown']) {
+            const node = document.getElementById(id);
+            if (!node) continue;
+            if (typeof echarts !== 'undefined') echarts.getInstanceByDom(node)?.dispose();
+            node.innerHTML = '<div class="async-placeholder">正在获取该图表数据…</div>';
+        }
+    }
+
+    function updatePendingSections(pending = [], historyPending = false) {
+        const busy = (id, value, card = false) => {
+            const node = document.getElementById(id);
+            const target = card ? node?.closest('.data-item') : node;
+            if (target) target.setAttribute('aria-busy', String(value));
+            if (card && value && node) node.textContent = '更新中…';
+        };
+        const valuation = pending.includes('valuation'), bond = pending.includes('bond');
+        for (const id of ['val-pe', 'val-pb', 'val-dividend-yield']) busy(id, valuation, true);
+        busy('val-bond-yield', bond, true);
+        busy('val-spread', valuation || bond, true);
+        busy('val-price-card', pending.includes('etf'), true);
+        busy('val-market-temp', pending.some(key => ['aShareBreadth', 'fearGreed', 'fearGreedFallback'].includes(key)), true);
+        busy('hero-section', pending.length > 0 || historyPending);
+        busy('data-source-status', pending.length > 0 || historyPending);
     }
 
     async function loadETFData(etfId, etfConfig) {
         const token = ++dataRequestId;
         const active = () => token === dataRequestId && currentETFId === etfId;
+        const cache = etfDataCache[etfId] || (etfDataCache[etfId] = { loaded: false });
+        cache.loading = true;
+        resetETFView();
+        showLoading(false);
+        let historyData = getDefaultHistoryData(), historyPending = true, chartSignature = '';
+        let apiData = { pending: ['etf', 'valuation', 'bond', 'aShareBreadth'], errors: [], success: false };
+        const publish = (final = false) => {
+            if (!active()) return;
+            const normalized = resolveCurrentData(etfId, etfConfig, historyData, apiData);
+            const signature = JSON.stringify([historyPending, ...['pe', 'pb', 'roe', 'dividendYield', 'bondYield', 'marketTemp'].map(field =>
+                [normalized[field], DataQuality.metadata(normalized, field).asOf])]);
+            const progress = { pending: apiData.pending || [], historyPending, refreshCharts: signature !== chartSignature };
+            chartSignature = signature;
+            cache.progress = progress;
+            cache.lastApiData = apiData;
+            applyData(etfId, etfConfig, normalized, historyData, !final, progress);
+            updatePendingSections(progress.pending, historyPending);
+            updateTimestamp(etfId);
+            if (progress.pending.includes('valuation') || DataQuality.primaryField(etfConfig) === 'bondYield' && progress.pending.includes('bond')) setText('update-time', '核心数据更新中');
+            if (progress.pending.length || historyPending) {
+                const names = { etf: '行情', valuation: '估值', bond: '国债', aShareBreadth: '情绪', fearGreed: '情绪', fearGreedFallback: '情绪备用源' };
+                setText('data-source-status', `后台获取中：${progress.pending.map(key => names[key] || key).concat(historyPending ? ['历史图表'] : []).join('、')} · 已返回卡片可先查看`);
+            } else updateDataSourceStatus(apiData.success ? 'success' : 'error', apiData);
+        };
         updateDataSourceStatus('fetching');
-        showLoading(true);
-        etfDataCache[etfId] = etfDataCache[etfId] || { loaded: false };
-        etfDataCache[etfId].loading = true;
+        updatePendingSections(apiData.pending, true);
+        renderTrendStrengthCard(etfConfig, token).catch(error => console.warn('趋势卡更新失败:', error));
         try {
-            const [live, history] = await Promise.allSettled([
-                DataAPI.fetchAllDataForETF(etfConfig),
-                loadHistoryData(etfId)
+            await Promise.all([
+                DataAPI.fetchAllDataForETF(etfConfig, partial => { apiData = partial; publish(); })
+                    .then(value => { apiData = value || { success: false, errors: ['实时请求失败'] }; })
+                    .catch(() => { apiData = { success: false, errors: ['实时请求失败'] }; })
+                    .then(() => { apiData = { ...apiData, pending: [] }; publish(); }),
+                loadHistoryData(etfId).then(value => {
+                    historyData = value;
+                    historyPending = false;
+                    if (active()) { cache.historyData = value; DataStorage.saveHistoryData(etfId, value); }
+                    publish();
+                })
             ]);
             if (!active()) return;
-            const cache = etfDataCache[etfId];
-            const historyData = history.status === 'fulfilled' ? history.value : cache.historyData || getDefaultHistoryData();
-            const apiData = live.status === 'fulfilled' && live.value ? live.value : { success: false, errors: ['实时请求失败'] };
-            cache.historyData = historyData;
-            DataStorage.saveHistoryData(etfId, historyData);
-            cache.lastApiData = apiData;
-            const normalized = resolveCurrentData(etfId, etfConfig, historyData, apiData);
-            applyData(etfId, etfConfig, normalized, historyData);
+            publish(true);
             cache.loaded = true;
-            updateDataSourceStatus(apiData.success ? 'success' : 'error', apiData);
-            updateTimestamp(etfId);
-            if (!apiData.success) showToast('获取失败，保留历史观测及原日期；无历史则显示缺失', 'error');
         } catch (e) {
             if (!active()) return;
             console.error(`加载 ${etfId} 数据失败:`, e);
             updateDataSourceStatus('error');
-            showToast('数据处理失败，请重试', 'error');
         } finally {
-            if (active()) {
-                etfDataCache[etfId].loading = false;
-                showLoading(false);
-            }
+            if (active()) { cache.loading = false; updatePendingSections(); }
         }
     }
 
     function displayCachedData(etfId, etfConfig) {
         const cache = etfDataCache[etfId];
-        if (!cache || cache.loading) return;
-        if (cache.currentData) applyData(etfId, etfConfig, cache.currentData, cache.historyData, true);
-        if (cache.lastApiData) updateDataSourceStatus(cache.lastApiData.success ? 'success' : 'error', cache.lastApiData);
+        if (!cache) return;
+        if (cache.currentData) applyData(etfId, etfConfig, cache.currentData, cache.historyData, true, { ...cache.progress, refreshCharts: true });
+        if (!cache.loading && cache.lastApiData) updateDataSourceStatus(cache.lastApiData.success ? 'success' : 'error', cache.lastApiData);
         updateTimestamp(etfId);
     }
 
@@ -758,7 +829,7 @@ const App = (() => {
 
     // ========== 数据应用（核心 — 多维度信号生成）==========
 
-    function applyData(etfId, etfConfig, data, historyData, skipSave) {
+    function applyData(etfId, etfConfig, data, historyData, skipSave, progress = {}) {
         const rawHistory = historyData;
         const analysis = SignalEngine.analyzeCurrent(data, etfConfig, rawHistory);
         const { signal: currentSignal, scores, total, input: signalData, spread, canCalcSpread } = analysis;
@@ -771,7 +842,8 @@ const App = (() => {
         const apiPePercentile = DataQuality.valid('pePercentile', data.pePercentile) ? data.pePercentile : null;
         const trendScore = signalData.trendScore;
 
-        initChartsForETF(etfConfig, DataQuality.withLatestObservations(historyData, data, etfConfig));
+        const refreshCharts = !progress.historyPending && progress.refreshCharts !== false;
+        if (refreshCharts) initChartsForETF(etfConfig, DataQuality.withLatestObservations(historyData, data, etfConfig));
 
         // 更新UI
         updateSignalDisplay(currentSignal, total);
@@ -793,16 +865,12 @@ const App = (() => {
             dividendYield: DataQuality.fieldIssue(data, 'dividendYield', etfConfig) ? null : data.dividendYield,
             bondYield: DataQuality.fieldIssue(data, 'bondYield', etfConfig) ? null : data.bondYield,
         } : null;
-        if (historyData) {
+        if (historyData && refreshCharts) {
             renderSignalHistoryChart(etfConfig, historyData, signalData.marketTemp, realtimeValuation);
             renderScorePercentileChart(etfConfig, rawHistory, signalData.marketTemp, total, data);
             renderDailySignalHistoryChart(etfConfig, historyData, signalData.marketTemp, realtimeValuation);
             renderAlgoCompareChart(etfConfig, historyData, signalData.marketTemp, realtimeValuation);
         }
-
-        // 异步渲染趋势强度卡片（延迟800ms避免与applyData里的jsonp并发，减少东财限流概率）
-        const token = dataRequestId;
-        setTimeout(() => renderTrendStrengthCard(etfConfig, token), 800);
 
         // 更新信号方法标签
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
@@ -823,6 +891,7 @@ const App = (() => {
 
         // 更新 header 的"当前仓位建议"摘要（基于综合信号 × 全局档位）
         updatePositionHint(etfConfig, currentSignal);
+        if (progress.pending?.length || progress.historyPending) resetPendingSignal();
 
         updateTabDot(etfId, currentSignal.color);
 
@@ -1257,19 +1326,6 @@ const App = (() => {
             }
         }
 
-        // ========== 综合信号历史走势图 ==========
-        renderSignalHistoryChart(etfConfig, historyData);
-
-        // ========== 综合分历史分位图表（安全度量化）==========
-        renderScorePercentileChart(etfConfig, historyData);
-
-        // ========== 日级别综合信号历史走势图 ==========
-        renderDailySignalHistoryChart(etfConfig, historyData);
-
-        // ========== 算法对比图表（混合模型 vs 纯PE分位）==========
-        renderAlgoCompareChart(etfConfig, historyData);
-
-        // 注：趋势强度卡片不在此调用（需要实时K线），由 applyData 成功后触发
     }
 
     /**
@@ -2110,49 +2166,36 @@ const App = (() => {
     async function loadVIXDashboardData() {
         const token = ++dataRequestId;
         const active = () => token === dataRequestId && ETF_CONFIG.isVIXDashboard(currentETFId);
-        showLoading(true);
-        try {
-            const data = await DataAPI.fetchVIXDashboardData();
+        const previous = _vixDashboardData;
+        setText('val-price', '—'); setText('val-price-change', '—');
+        const hint = document.getElementById('position-hint-bar');
+        if (hint) hint.style.display = 'none';
+        const publish = partial => {
             if (!active()) return;
-            _vixDashboardData = data;
-
-            if (data.success) {
-                renderVIXDashboard(data);
-                // 更新数据来源状态
-                const statusEl = document.getElementById('data-source-status');
-                if (statusEl) {
-                    let sources = [`VIX实时✅(${data.vix.vix.toFixed(2)})`];
-                    if (data.fearGreed) sources.push(`CNN F&G✅(${data.fearGreed.score.toFixed(0)})`);
-                    else sources.push('CNN F&G❌');
-                    sources.push(`K线✅(${data.kline.length}天)`);
-                    statusEl.innerHTML = '<span class="status-dot status-ok"></span> ' + sources.join(' | ');
-                }
-                showToast(`VIX恐惧指数: ${data.vix.vix.toFixed(2)}`, 'success');
-            } else {
-                showToast('VIX数据获取失败', 'error');
-                const statusEl = document.getElementById('data-source-status');
-                if (statusEl) statusEl.innerHTML = '<span class="status-dot status-err"></span> VIX数据获取失败';
+            const data = { ...partial }, pending = data.pending || [];
+            const sources = { vix: 'VIX', fearGreed: 'CNN情绪', kline: '历史曲线' };
+            const labels = [];
+            for (const [key, name] of Object.entries(sources)) {
+                const available = key === 'kline' ? data.kline?.length > 0 : !!data[key];
+                if (!pending.includes(key) && !available) data[key] = previous?.[key] || (key === 'kline' ? [] : null);
+                labels.push(`${name}：${pending.includes(key) ? '更新中' : available ? '已返回' : '失败，保留原观测'}`);
             }
-
-            // 更新价格栏
+            renderVIXDashboard(data);
+            setText('data-source-status', labels.join(' | '));
+            document.getElementById('data-source-status')?.setAttribute('aria-busy', String(pending.length > 0));
             if (data.vix) {
-                const priceEl = document.getElementById('val-price');
-                const changeEl = document.getElementById('val-price-change');
-                if (priceEl) priceEl.textContent = data.vix.vix.toFixed(2);
-                if (changeEl) {
-                    const ch = data.vix.change;
-                    changeEl.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
-                    changeEl.className = 'price-change ' + (ch >= 0 ? 'up' : 'down');
-                }
+                setText('val-price', data.vix.vix.toFixed(2));
+                setText('val-price-change', (data.vix.change >= 0 ? '+' : '') + data.vix.change.toFixed(2) + '%');
             }
-
-            updateTimestamp(currentETFId);
+            setText('update-time', data.kline?.length ? `历史截至 ${data.kline.at(-1).date}` : '观测日期待返回');
+            if (!pending.length) _vixDashboardData = data;
+        };
+        publish({ pending: ['vix', 'fearGreed', 'kline'], kline: [] });
+        try {
+            const data = await DataAPI.fetchVIXDashboardData(publish);
+            publish(data);
         } catch (e) {
-            if (!active()) return;
-            console.error('VIX仪表盘加载失败:', e);
-            showToast('VIX仪表盘加载异常: ' + e.message, 'error');
-        } finally {
-            if (active()) showLoading(false);
+            publish({ pending: [], kline: [] });
         }
     }
 
@@ -2239,7 +2282,16 @@ const App = (() => {
         const kline = data.kline || [];
 
         if (!vix) {
-            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">VIX数据获取失败，请稍后重试</div>';
+            container.replaceChildren();
+            const placeholder = document.createElement('div');
+            placeholder.className = 'async-placeholder';
+            placeholder.textContent = data.pending?.includes('vix') ? 'VIX独立更新中，可继续查看或切换其他标的…' : 'VIX数据获取失败，请稍后重试';
+            container.appendChild(placeholder);
+            if (fg) {
+                const summary = document.createElement('p');
+                summary.textContent = `CNN情绪已返回：${fg.score.toFixed(0)} · ${fg.timestamp || '日期未知'}`;
+                container.appendChild(summary);
+            }
             return;
         }
 

@@ -97,9 +97,11 @@ test('newer unadjusted response is not stitched into an adjusted history', async
     const env = dataEnvironment({ bundle: { assets: { [asset.id]: price(asset) } }, transport: async () => ({ ok: true,
         json: async () => ({ code: 0, data: { sh512890: { day: [['2026-09-16', '2', '3', '3', '2']] } } }) }) });
     const result = await env.api.loadPrice(asset);
-    assert.equal(result.price.adjustment, 'qfq');
-    assert.equal(result.price.asOf, '2026-09-14');
-    assert.match(result.error, /未取得最新前复权/);
+    assert.equal(result.price.adjustment, 'raw');
+    assert.equal(result.price.asOf, '2026-09-16');
+    assert.equal(result.price.bars.length, 1);
+    assert.equal(result.price.bars[0].close, 3);
+    assert.equal(result.error, null);
 });
 
 test('GPT opening refreshes price, valuation and sentiment independently despite bundled values', async () => {
@@ -310,4 +312,192 @@ test('cached CNN sentiment cannot make a fully failed live refresh report succes
     const result = await env.DataAPI.fetchAllDataForETF({ type: 'a_share_index', signalRules: 'buffett_growth', trackIndex: {} });
     assert.ok(attempts > 0);
     assert.equal(result.success, false);
+});
+
+test('legacy renders fast quote before slow valuation settles without a full-page overlay', async () => {
+    const env = appEnvironment(), final = deferred();
+    let progress;
+    let trendRequests = 0;
+    env.DataAPI.fetchKlineBySecid = async () => { trendRequests++; return []; };
+    env.DataAPI.fetchAllDataForETF = (_config, onProgress) => { progress = onProgress; return final.promise; };
+    const pending = env.App.switchETF('csi300');
+    await tick();
+    const quote = { price: 5, priceChange: 1, asOf: '2026-09-16', source: 'fixture' };
+    progress({ etf: quote, pending: ['valuation', 'fearGreed'], errors: [], success: true });
+    assert.equal(env.element('val-price').textContent, '¥5.000');
+    assert.match(env.element('val-pe').textContent, /更新中/);
+    assert.equal(env.element('hero-section').attrs['aria-busy'], 'true');
+    assert.equal(env.element('loading').style.display, 'none');
+    assert.equal(env.DataStorage.getCurrentData('csi300'), null);
+    progress({ etf: quote, pending: ['fearGreed'], errors: ['valuation失败'], success: true });
+    assert.equal(env.element('val-pe').textContent, '8.00');
+    assert.equal(env.element('val-price').textContent, '¥5.000');
+    final.resolve({ etf: quote, success: true, errors: ['valuation失败'], pending: [] });
+    await pending;
+    assert.equal(env.element('hero-section').attrs['aria-busy'], 'false');
+    assert.equal(trendRequests, 1);
+    assert.equal(env.errors.length, 0, JSON.stringify(env.errors));
+    assert.ok(!read('index.html').includes('id="loading"'));
+});
+
+test('a delayed history file cannot hold back a live quote card', async () => {
+    const env = appEnvironment(), history = deferred(), final = deferred();
+    let progress;
+    env.context.fetch = () => history.promise;
+    env.DataAPI.fetchKlineBySecid = async () => [];
+    env.DataAPI.fetchAllDataForETF = (_config, update) => { progress = update; return final.promise; };
+    const pending = env.App.switchETF('csi300');
+    progress({ etf: { price: 6, asOf: '2026-09-16' }, pending: ['valuation'], errors: [], success: true });
+    assert.equal(env.element('val-price').textContent, '¥6.000');
+    assert.match(env.element('data-source-status').textContent, /历史图表/);
+    history.resolve({ ok: true, json: async () => ({ peHistory: [] }) });
+    final.resolve({ success: true, etf: { price: 6, asOf: '2026-09-16' } });
+    await pending;
+    assert.equal(env.errors.length, 0, JSON.stringify(env.errors));
+});
+
+test('late progressive callbacks cannot change the current asset after a tab switch', async () => {
+    const env = appEnvironment(), first = deferred();
+    let oldProgress;
+    env.DataAPI.fetchKlineBySecid = async () => [];
+    env.DataAPI.fetchAllDataForETF = (_config, update) => { oldProgress = update; return first.promise; };
+    const pending = env.App.switchETF('csi300');
+    env.DataAPI.fetchAllDataForETF = async cfg => liveQuote(cfg, 12);
+    await env.App.switchETF('sse50');
+    const before = env.element('val-pe').textContent;
+    oldProgress({ valuation: { pe: 999, tradeDate: '2026-09-16' }, pending: [], errors: [], success: true });
+    assert.equal(env.element('val-pe').textContent, before);
+    first.resolve({ success: false });
+    await pending;
+    assert.equal(env.element('val-pe').textContent, before);
+});
+
+test('aggregate API publishes quote progress while valuation request is still outstanding', async () => {
+    const env = appEnvironment(), valuation = deferred(), updates = [];
+    env.context.fetch = () => valuation.promise;
+    env.context.document.head = { appendChild(script) {
+        const url = new URL(script.src), code = url.searchParams.get('secid').split('.')[1];
+        queueMicrotask(() => env.context.window[url.searchParams.get('cb')]({ data: { f57: code, f43: 5, f124: Date.parse('2026-09-16T15:00:00+08:00') / 1000 } }));
+    }, removeChild() {} };
+    let done = false;
+    const pending = env.DataAPI.fetchAllDataForETF({ secid: '1.510300', type: 'commodity', trackIndex: { danjuanCode: 'SH000300' } },
+        value => updates.push(value)).then(value => { done = true; return value; });
+    await tick();
+    assert.equal(done, false);
+    assert.ok(updates.some(value => value.etf?.price === 5 && value.pending.includes('valuation')));
+    assert.equal(updates[0].etf, null);
+    valuation.resolve({ ok: true, json: async () => ({ data: { items: [{ index_code: 'SH000300', pe: 13, date: '2026-09-16' }] } }) });
+    const result = await pending;
+    assert.equal(result.pending.length, 0);
+    assert.equal(result.valuation.pe, 13);
+});
+
+test('GPT price callback does not wait for valuation and keeps pending valuation empty', async () => {
+    const valuation = deferred(), updates = [], asset = E.ASSETS[0];
+    const env = dataEnvironment({ response: marketResponse, bundle: { valuations: { [asset.id]: { pe: 7, asOf: '2026-09-14' } } },
+        transport: () => valuation.promise });
+    let done = false;
+    const pending = env.api.load(asset, true, null, value => updates.push(value)).then(value => { done = true; return value; });
+    await tick();
+    assert.equal(done, false);
+    const partial = updates.find(value => value.price?.asOf === '2026-09-16');
+    assert.ok(partial);
+    assert.equal(partial.observation, null);
+    assert.ok(partial.pending.includes('valuation'));
+    valuation.resolve({ ok: true, json: async () => ({ data: { items: [{ index_code: asset.trackIndex.danjuanCode, pe: 9, ts: Date.parse('2026-09-16T00:00:00+08:00') }] } }) });
+    const result = await pending;
+    assert.equal(result.pending.length, 0);
+    assert.equal(result.observation.pe, 9);
+    assert.equal(partial.observation, null);
+});
+
+test('GPT view renders a progress price while keeping the decision pending', async () => {
+    const { element, document } = dom(), final = deferred();
+    let progress;
+    const context = vm.createContext({ Date: FixedDate, GptStrategyEngine: E, StrategyNavigation: Nav,
+        ETF_CONFIG: appEnvironment().ETF_CONFIG, document, window: { addEventListener() {} },
+        location: { hash: '', search: '' }, history: { replaceState() {} },
+        GptStrategyData: { loadPreferences: () => ({}), savePreferences: () => true,
+            load(_asset, _refresh, _previous, update) { progress = update; return final.promise; } }
+    });
+    vm.runInContext(read('js/gpt-strategy-app.js'), context);
+    const partial = { price: price(E.ASSETS[0], '2026-09-16', 5.5), points: [], observation: null,
+        sentiment: null, errors: [], pending: ['valuation'], mode: 'fixture' };
+    progress(partial);
+    assert.match(element('price-readout').textContent, /5.500/);
+    assert.match(element('pe-value').textContent, /更新中/);
+    assert.equal(element('decision').dataset.action, 'LOADING');
+    assert.match(element('status-message').textContent, /估值/);
+    final.resolve({ ...partial, pending: [] });
+    await tick();
+    assert.equal(element('refresh').disabled, false);
+});
+
+test('VIX value can render before slow CNN and history requests complete', async () => {
+    const env = appEnvironment(), final = deferred();
+    let progress;
+    env.DataAPI.fetchVIXDashboardData = update => { progress = update; return final.promise; };
+    const pending = env.App.switchETF('vix-dashboard');
+    const partial = { vix: { vix: 18, change: 1, prevClose: 17, high: 19, low: 16, open: 17 }, kline: [], pending: ['fearGreed', 'kline'], success: true };
+    progress(partial);
+    assert.equal(env.element('val-price').textContent, '18.00');
+    assert.match(env.element('data-source-status').textContent, /CNN情绪：更新中/);
+    assert.equal(env.element('loading').style.display, 'none');
+    final.resolve({ ...partial, pending: [] });
+    await pending;
+    assert.equal(env.element('data-source-status').attrs['aria-busy'], 'false');
+});
+
+test('same-day adjusted history still beats a raw response even when raw was fetched later', async () => {
+    const asset = E.ASSETS[0], adjusted = price(asset, '2026-09-16', 1.5);
+    const env = dataEnvironment({ bundle: { assets: { [asset.id]: adjusted } }, transport: async () => ({ ok: true,
+        json: async () => ({ code: 0, data: { sh512890: { day: [['2026-09-16', '2', '3', '3', '2']] } } }) }) });
+    const result = await env.api.loadPrice(asset);
+    assert.equal(result.price.adjustment, 'qfq');
+    assert.equal(result.price.asOf, '2026-09-16');
+    assert.equal(result.price.bars[0].close, 1.5);
+});
+
+test('latest adjusted data replaces the entire raw cache and never keeps its older bars', async () => {
+    const asset = E.ASSETS[0], raw = { ...price(asset, '2026-09-15', 900), adjustment: 'raw' };
+    const env = dataEnvironment({ bundle: { assets: { [asset.id]: raw } }, response: marketResponse });
+    const result = await env.api.loadPrice(asset);
+    assert.equal(result.price.adjustment, 'qfq');
+    assert.equal(result.price.asOf, '2026-09-16');
+    assert.equal(result.price.bars.length, 1);
+    assert.equal(result.price.bars[0].close, 3);
+});
+
+test('GPT accepts a newer complete raw sequence rather than discarding it for old adjusted prices', async () => {
+    const asset = E.ASSETS.find(item => item.id === 'sci-tech-50');
+    const env = dataEnvironment({ bundle: { assets: { [asset.id]: price(asset) } }, transport: async url => {
+        if (!url.includes('gtimg')) throw new Error('offline');
+        return { ok: true, json: async () => ({ code: 0, data: { sh588300: { day: [['2026-09-15', '1', '1.1', '1.2', '1'], ['2026-09-16', '1.1', '1.2', '1.3', '1']] } } }) };
+    } });
+    const result = await env.api.load(asset);
+    assert.equal(result.price.adjustment, 'raw');
+    assert.equal(result.price.asOf, '2026-09-16');
+    assert.equal(result.price.bars.length, 2);
+    assert.equal(result.mode, '本次接口获取');
+});
+
+test('GPT displays unadjusted prices honestly and suppresses tactical signals without changing the main decision', async () => {
+    const { element, document } = dom(), final = deferred(), renders = [];
+    const asset = E.ASSETS[0];
+    const context = vm.createContext({ Date: FixedDate, GptStrategyEngine: E, StrategyNavigation: Nav,
+        ETF_CONFIG: appEnvironment().ETF_CONFIG, document, window: { addEventListener() {} }, echarts: {},
+        PriceRocChart: { create: () => ({ render: (model, label) => renders.push({ model, label }), setRange() {}, clear() {} }) },
+        location: { hash: '#' + asset.id, search: '' }, history: { replaceState() {} },
+        GptStrategyData: { loadPreferences: () => ({}), savePreferences: () => true, load: () => final.promise }
+    });
+    vm.runInContext(read('js/gpt-strategy-app.js'), context);
+    final.resolve({ price: { ...price(asset, '2026-09-16', 1.2), adjustment: 'raw' }, points: [], observation: null,
+        sentiment: null, errors: [], pending: [], mode: 'fixture' });
+    await tick();
+    assert.match(element('price-readout').textContent, /未复权收盘 1.200.*2026-09-16/);
+    assert.match(element('price-source').textContent, /整段使用未复权日线/);
+    assert.match(element('tactical-title').textContent, /复权待确认/);
+    assert.equal(renders.at(-1).label, '未复权价格');
+    assert.equal(renders.at(-1).model.events.length, 0);
+    assert.equal(element('decision').dataset.action, E.primaryDecision(asset, E.valuationModel([], null), 'unknown', E.sentimentModel(null, asset)).action);
 });

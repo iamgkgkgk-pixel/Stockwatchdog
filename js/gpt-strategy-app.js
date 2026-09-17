@@ -147,7 +147,7 @@
         if (!events.length) {
             const row = document.createElement('tr'), cell = document.createElement('td');
             cell.colSpan = 4;
-            cell.textContent = '当前样本尚未形成已确认的ROC均线转折。';
+            cell.textContent = data.price?.adjustment === 'raw' ? '复权未确认，暂停峰谷标记。' : '当前样本尚未形成已确认的ROC均线转折。';
             row.appendChild(cell); body.appendChild(row);
         }
         events.forEach(event => {
@@ -174,10 +174,11 @@
         $('strategy-chart').hidden = !available;
         $('chart-empty').hidden = available;
         text('chart-title', asset.name + ' · 价格与 ROC');
-        text('price-readout', `前复权收盘 ${fmt(model.last?.close, 3)}${model.last ? ' / ' + model.last.date : ''}`);
+        const raw = data.price?.adjustment === 'raw';
+        text('price-readout', `${raw ? '未复权收盘' : '前复权收盘'} ${fmt(model.last?.close, 3)}${model.last ? ' / ' + model.last.date : ''}`);
         text('roc-readout', `ROC(${options.length}) ${signed(model.last?.roc)} · MA(${options.smoothing}) ${signed(model.last?.smooth)}`);
         text('rank-readout', `动量分位 ${pct(model.last?.rank)}`);
-        text('price-source', data.price ? `${data.mode} · ${data.price.source} · 仅完整${options.timeframe === 'week' ? '周' : '交易日'}` : '没有真实价格，不生成模拟行情');
+        text('price-source', data.price ? `${data.mode} · ${data.price.source} · 仅完整${options.timeframe === 'week' ? '周' : '交易日'}${raw ? '。整段使用未复权日线，ROC可能受分红除权影响，暂停峰谷及波段交易提示。' : ''}` : '没有真实价格，不生成模拟行情');
         if (!available) { chart?.clear(); return; }
         if (typeof echarts === 'undefined') {
             $('strategy-chart').hidden = true;
@@ -186,7 +187,7 @@
             return;
         }
         if (!chart) chart = PriceRocChart.create($('strategy-chart'));
-        chart.render(model);
+        chart.render(model, raw ? '未复权价格' : '前复权价格');
         zoomRange();
     }
 
@@ -194,13 +195,32 @@
         renderContext();
         if (!data) return;
         model = E.rocModel(data.price?.bars || [], options);
+        const raw = data.price?.adjustment === 'raw';
+        if (raw) model = { ...model, events: [], recent: null };
         const valuation = E.valuationModel(data.points, data.observation, manuals[asset.id]);
         const sentiment = E.sentimentModel(data.sentiment, asset);
-        const result = E.decision(asset, valuation, model, regime, sentiment);
-        renderDecision(result, valuation, sentiment);
+        const result = E.decision(asset, valuation, raw ? null : model, regime, sentiment);
+        if (raw) result.tactical = { title: '复权待确认，仅看图形', detail: '整段采用未复权日线，ROC可能受分红除权影响；暂停峰谷及波段交易提示，不改变估值主判断。' };
+        const pending = data.pending || [];
+        if (pending.some(key => ['valuation', 'history', 'sentiment'].includes(key))) {
+            resetDecision();
+            text('decision-reason', '数据按卡片独立更新，已返回的价格和估值可先查看。');
+            if (!pending.includes('sentiment')) text('sentiment-summary', `恐慌参考：${sentiment.label}${sentiment.asOf ? ' · ' + sentiment.asOf : ''}`);
+        } else renderDecision(result, valuation, sentiment);
         renderValuation(valuation);
+        if (pending.includes('valuation')) {
+            text('pe-value', '估值更新中…');
+            text('valuation-band', '等待最新观测');
+            text('valuation-note', '估值请求独立进行，不影响价格图表。');
+        }
         renderEvents();
         renderChart();
+        if (pending.includes('price')) {
+            text('chart-empty', '价格更新中，其他卡片可继续查看…');
+            text('price-source', '正在获取最新完整交易日价格');
+        }
+        $('strategy-chart').setAttribute('aria-busy', String(pending.includes('price')));
+        $('pe-value').setAttribute('aria-busy', String(pending.includes('valuation')));
     }
 
     async function load(refresh = true) {
@@ -210,7 +230,13 @@
         text('refresh', refresh ? '更新中…' : '读取中…');
         if (!data) resetDecision();
         try {
-            const next = await D.load(selected, refresh, loaded.get(selected.id));
+            const next = await D.load(selected, refresh, loaded.get(selected.id), partial => {
+                if (token !== requestId || selected.id !== asset.id) return;
+                data = partial;
+                render();
+                const names = { price: '价格', valuation: '估值', history: '历史基准', sentiment: '情绪' };
+                status([(partial.pending || []).length ? '后台更新：' + partial.pending.map(key => names[key]).join('、') : '', ...partial.errors].filter(Boolean).join(' '));
+            });
             if (token !== requestId) return;
             loaded.set(selected.id, next);
             data = next;
