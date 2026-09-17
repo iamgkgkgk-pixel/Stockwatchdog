@@ -165,6 +165,20 @@ const GptStrategyData = (() => {
         });
     }
 
+    async function fetchValuations() {
+        const urls = [VALUATIONS,
+            'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(VALUATIONS),
+            'https://api.allorigins.win/raw?url=' + encodeURIComponent(VALUATIONS)];
+        for (const url of urls) {
+            try {
+                const response = await json(url, url === VALUATIONS ? 7000 : 12000);
+                const payload = typeof response?.body === 'string' ? JSON.parse(response.body) : response;
+                if (Array.isArray(payload?.data?.items)) return parseValuations(payload);
+            } catch (_) {}
+        }
+        throw new Error('估值接口及备用通道均不可用');
+    }
+
     function loadBundle(refresh = false) {
         if (refresh || !bundlePromise) bundlePromise = json('data/gpt-strategy-market.json').catch(() => ({ assets: {}, valuations: {} }));
         return bundlePromise;
@@ -175,25 +189,25 @@ const GptStrategyData = (() => {
         return histories.get(asset.id);
     }
 
-    function loadPriceBundle() {
-        if (!priceBundlePromise) priceBundlePromise = json('data/price-roc-history.json').catch(() => ({ assets: {} }));
+    function loadPriceBundle(refresh = false) {
+        if (refresh || !priceBundlePromise) priceBundlePromise = json('data/price-roc-history.json').catch(() => ({ assets: {} }));
         return priceBundlePromise;
     }
 
-    async function loadSentiment(asset, refresh = false, previous = null) {
+    async function loadSentiment(asset, refresh = true, previous = null) {
         const market = E.marketFor(asset);
+        const live = Promise.allSettled([market === 'cn'
+            ? jsonp(benchmarkURL()).then(payload => parseBenchmark(payload))
+            : json(VIX_HISTORY, 7000, 'text').then(content => parseVixHistory(content))]);
         if (refresh || !sentimentPromise) sentimentPromise = json('data/gpt-strategy-sentiment.json').catch(() => ({ snapshots: {} }));
-        const bundle = await sentimentPromise;
+        const [bundle, [response]] = await Promise.all([sentimentPromise, live]);
         const candidates = [bundle.snapshots?.[market], marketCache.get(market), previous].filter(value => E.marketBars(value, asset));
         let snapshot = candidates.sort((a, b) => b.asOf.localeCompare(a.asOf) || b.fetchedAt.localeCompare(a.fetchedAt))[0] || null;
         let error = null;
-        if (refresh || !snapshot) {
-            try {
-                const latest = market === 'cn' ? parseBenchmark(await jsonp(benchmarkURL())) : parseVixHistory(await json(VIX_HISTORY, 7000, 'text'));
-                if (!snapshot || latest.asOf >= snapshot.asOf) snapshot = latest;
-                else error = '恐慌参考接口返回旧观测，保留较新的原日期。';
-            } catch (_) { error = '恐慌参考未更新，保留原日期；超过7天不参与判断。'; }
-        }
+        if (response.status === 'fulfilled' && E.marketBars(response.value, asset)) {
+            if (!snapshot || response.value.asOf >= snapshot.asOf) snapshot = response.value;
+            else error = '恐慌参考接口返回旧观测，保留较新的原日期。';
+        } else error = '恐慌参考更新失败，保留原日期；超过7天不参与判断。';
         if (snapshot) marketCache.set(market, snapshot);
         return { snapshot, error };
     }
@@ -206,7 +220,7 @@ const GptStrategyData = (() => {
         return bars.length ? { ...value, bars, asOf: bars.at(-1).date, completedOnly: true, fetchedAt: capturedAt.toISOString() } : null;
     }
 
-    function loadPrice(asset, refresh = false, previous = null) {
+    function loadPrice(asset, refresh = true, previous = null) {
         const isVix = asset.id === 'vix-dashboard';
         const key = `${asset.secid}|${isVix ? 'none' : 'prefer-qfq'}|history`;
         if (priceRequests.has(key)) return priceRequests.get(key);
@@ -220,8 +234,8 @@ const GptStrategyData = (() => {
             }
             const memo = priceCache.get(key);
             const previousPrice = cachedPrice(previous?.price, asset, previous?.price?.fetchedAt, true);
-            if (memo && !refresh && E.age(memo.price.asOf, E.clock(new Date(), priceMarket(asset)).today) <= 7) return memo;
-            const [bundle, extended] = await Promise.all([loadBundle(), loadPriceBundle()]);
+            const live = Promise.allSettled([fetchPrice(asset)]);
+            const [bundle, extended, [response]] = await Promise.all([loadBundle(refresh), loadPriceBundle(refresh), live]);
             const packed = cachedPrice(bundle.assets?.[asset.id], asset, bundle.fetchedAt);
             const extendedPrice = cachedPrice(extended.assets?.[asset.id], asset, extended.fetchedAt, true);
             const today = E.clock(new Date(), priceMarket(asset)).today;
@@ -233,14 +247,15 @@ const GptStrategyData = (() => {
             let price = candidates[0] || null;
             let mode = price === packed || price === extendedPrice ? '只读价格快照' : '已缓存价格';
             let error = null;
-            if (refresh || !price || E.age(price.asOf, E.clock(new Date(), priceMarket(asset)).today) > 7) {
-                try {
-                    const latest = await fetchPrice(asset);
-                    const selected = [price, latest].filter(Boolean).sort(newest)[0];
-                    if (selected === latest) { price = latest; mode = '本次行情获取'; }
-                    else error = '接口未提供更新或更完整的同口径行情，保留已有观测。';
-                } catch (_) { error = price ? '价格更新失败，保留原观测日期。' : '暂未取得该标的真实价格，请重试。'; }
-            }
+            if (response.status === 'fulfilled') {
+                const latest = response.value;
+                if (price && recentAdjusted(price) && latest.adjustment !== 'qfq') {
+                    error = '未取得最新前复权行情，保留原日期；不把未复权价格拼入前复权历史。';
+                } else if (!price || latest.asOf >= price.asOf) {
+                    price = latest;
+                    mode = '本次行情获取';
+                } else error = '行情接口返回较旧观测，保留已有数据及原日期。';
+            } else error = price ? '价格更新失败，保留原观测日期。' : '暂未取得该标的真实价格，请重试。';
             const result = { price, mode, error };
             if (price) priceCache.set(key, result);
             return result;
@@ -279,8 +294,17 @@ const GptStrategyData = (() => {
         return { points, observation };
     }
 
-    async function load(asset, refresh = false, previous = null) {
-        const [bundle, history, sentiment] = await Promise.all([loadBundle(refresh), loadHistory(asset, refresh), loadSentiment(asset, refresh, previous?.sentiment)]);
+    async function load(asset, refresh = true, previous = null) {
+        const live = Promise.allSettled([
+            fetchPrice(asset).then(price => {
+                if (price.adjustment !== 'qfq') throw new Error('未取得可比的前复权行情');
+                return price;
+            }),
+            fetchValuations()
+        ]);
+        const [bundle, history, sentiment, [priceResult, valuationResult]] = await Promise.all([
+            loadBundle(refresh), loadHistory(asset, refresh), loadSentiment(asset, refresh, previous?.sentiment), live
+        ]);
         const bundled = cachedPrice(bundle.assets?.[asset.id], asset, bundle.fetchedAt);
         const prior = cachedPrice(previous?.price, asset, previous?.bundledAt);
         const keepPrior = prior && (!bundled || prior.asOf >= bundled.asOf);
@@ -289,18 +313,15 @@ const GptStrategyData = (() => {
         if (previous?.observation && (!observation || previous.observation.asOf >= observation.asOf)) observation = previous.observation;
         let mode = keepPrior ? previous.mode : price ? '随页只读快照' : '暂无数据';
         const errors = [];
-        if (refresh || !price) {
-            const [priceResult, valuationResult] = await Promise.allSettled([
-                jsonp(priceURL(asset)).then(payload => parseEastmoney(payload, asset)),
-                json(VALUATIONS).then(payload => parseValuations(payload)),
-            ]);
-            if (priceResult.status === 'fulfilled' && (!price || priceResult.value.asOf >= price.asOf)) {
-                price = priceResult.value; mode = '本次接口获取';
-            } else errors.push('价格未取得更新观测，保留最近数据和原日期。');
-            const nextObservation = valuationResult.status === 'fulfilled' && valuationResult.value[asset.id];
-            if (nextObservation && (!observation || nextObservation.asOf >= observation.asOf)) observation = nextObservation;
-            else errors.push('没有取得新的同指数估值；不会用代理或抓取时间替代。');
+        if (priceResult.status === 'fulfilled' && (!price || priceResult.value.asOf >= price.asOf)) {
+            price = priceResult.value; mode = '本次接口获取';
+        } else {
+            mode = price ? '失败回退 · 原日期快照' : '暂无数据';
+            errors.push('未取得更新的前复权行情，保留最近同口径数据和原日期。');
         }
+        const nextObservation = valuationResult.status === 'fulfilled' && valuationResult.value[asset.id];
+        if (nextObservation && (!observation || nextObservation.asOf >= observation.asOf)) observation = nextObservation;
+        else errors.push('没有取得新的同指数估值；不会用代理或抓取时间替代。');
         const valuation = valuationInputs(asset, history, observation);
         if (!history && previous) {
             valuation.points = previous.points || [];

@@ -271,11 +271,11 @@ const DataAPI = (() => {
     async function fetchViaCorsProxy(targetUrl, timeout = 12000) {
         for (let i = 0; i < CORS_PROXIES.length; i++) {
             const proxyUrl = CORS_PROXIES[i](targetUrl);
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeout);
             try {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), timeout);
                 const resp = await fetch(proxyUrl, {
-                    signal: controller.signal,
+                    cache: 'no-store', signal: controller.signal,
                     redirect: 'follow',
                     headers: { 'Accept': 'application/json' }
                 });
@@ -296,6 +296,8 @@ const DataAPI = (() => {
                 }
             } catch (e) {
                 console.warn(`CORS代理 #${i + 1} 失败:`, e.message);
+            } finally {
+                clearTimeout(timer);
             }
         }
         return null;
@@ -484,9 +486,9 @@ const DataAPI = (() => {
      * 非交易时段（涨跌家数为0）时，自动回退到最近一个交易日的缓存数据
      * @returns {Object|null} { score, upCount, downCount, flatCount, ratio, rating, source }
      */
-    async function fetchAShareMarketBreadth() {
+    async function fetchAShareMarketBreadth(refresh = false) {
         // 检查内存缓存
-        if (_aShareBreadthCache.value !== null && (Date.now() - _aShareBreadthCache.fetchTime) < A_SHARE_BREADTH_CACHE_TTL) {
+        if (!refresh && _aShareBreadthCache.value !== null && (Date.now() - _aShareBreadthCache.fetchTime) < A_SHARE_BREADTH_CACHE_TTL) {
             console.info('A股市场广度: 使用内存缓存', _aShareBreadthCache.value.score);
             return _aShareBreadthCache.value;
         }
@@ -644,9 +646,9 @@ const DataAPI = (() => {
      * 返回 0-100 分，0=极度恐惧，100=极度贪婪
      * @returns {Object|null} { score, rating, previous, oneWeekAgo, oneMonthAgo, source }
      */
-    async function fetchFearGreedIndex() {
+    async function fetchFearGreedIndex(refresh = false) {
         // 检查缓存
-        if (_marketTempCache.value !== null && (Date.now() - _marketTempCache.fetchTime) < MARKET_TEMP_CACHE_TTL) {
+        if (!refresh && _marketTempCache.value !== null && (Date.now() - _marketTempCache.fetchTime) < MARKET_TEMP_CACHE_TTL) {
             console.info('CNN恐惧贪婪指数: 使用缓存', _marketTempCache.value);
             return _marketTempCache.value;
         }
@@ -791,13 +793,13 @@ const DataAPI = (() => {
             // 纯趋势跟踪，不需要情绪指标
         } else if (etfConfig.type === 'us_share_index' || etfConfig.type === 'hk_share_index') {
             // 美股/港股 → CNN Fear & Greed
-            promises.push(fetchFearGreedIndex());
+            promises.push(fetchFearGreedIndex(true));
             promiseLabels.push('fearGreed');
         } else if (etfConfig.signalRules === 'buffett_jp') {
             // 无同市场自动情绪源，保留缺失，不使用A股广度替代。
         } else {
             // A股相关（a_share_index, smart_beta, bond）→ A股市场广度
-            promises.push(fetchAShareMarketBreadth());
+            promises.push(fetchAShareMarketBreadth(true));
             promiseLabels.push('aShareBreadth');
         }
 
@@ -807,6 +809,7 @@ const DataAPI = (() => {
             const label = promiseLabels[i];
             if (result.status === 'fulfilled' && result.value) {
                 results[label] = result.value;
+                if (result.value.isCachedFallback) results.errors.push(`${label}更新失败，使用历史观测`);
             } else {
                 results.errors.push(`${label}获取失败`);
             }
@@ -819,7 +822,7 @@ const DataAPI = (() => {
         if (promiseLabels.includes('aShareBreadth') && !results.aShareBreadth) {
             console.info('A股市场广度不可用，尝试CNN Fear & Greed兜底...');
             try {
-                const fgResult = await fetchFearGreedIndex();
+                const fgResult = await fetchFearGreedIndex(true);
                 if (fgResult && fgResult.score !== null && !isNaN(fgResult.score)) {
                     // 标记为CNN兜底数据
                     results.fearGreedFallback = {
@@ -836,7 +839,8 @@ const DataAPI = (() => {
             }
         }
 
-        results.success = !!(results.etf || results.bond || results.valuation || results.fearGreed || results.aShareBreadth || results.fearGreedFallback);
+        results.success = [results.etf, results.bond, results.valuation, results.fearGreed, results.aShareBreadth, results.fearGreedFallback]
+            .some(value => value && !value.isCachedFallback);
         return results;
     }
 
@@ -909,7 +913,12 @@ const DataAPI = (() => {
      */
     async function fetchDanjuanValuationByIndex(indexCode, indexName) {
         try {
-            const data = await fetchViaCorsProxy(DANJUAN_API);
+            let data = null;
+            try {
+                const response = await fetchWithTimeout(DANJUAN_API, { cache: 'no-store' }, 8000);
+                if (response.ok) data = await response.json();
+            } catch (_) {}
+            if (!Array.isArray(data?.data?.items)) data = await fetchViaCorsProxy(DANJUAN_API);
             let payload = data;
             if (data && data.body) {
                 try { payload = JSON.parse(data.body); } catch (_) { payload = data; }
@@ -934,7 +943,7 @@ const DataAPI = (() => {
                 pbPercentile: percent(target.pb_percentile),
                 roe: percent(target.roe),
                 instrumentId: DataQuality.indexKey(target.index_code),
-                tradeDate: DataQuality.asOf(target.date),
+                tradeDate: DataQuality.asOf(target.date) || DataQuality.asOf(target.ts),
                 evaluationStatus: target.eva_type || '',
                 source: `蛋卷基金-${target.name}`,
                 fetchTime: new Date().toISOString()
@@ -1081,9 +1090,9 @@ const DataAPI = (() => {
      * 数据源：东方财富美股指数 secid=100.VIX
      * @returns {Object|null} { vix, prevClose, change, changePercent, high, low, source, fetchTime }
      */
-    async function fetchVIXIndex() {
+    async function fetchVIXIndex(refresh = false) {
         // 检查缓存
-        if (_vixCache.value !== null && (Date.now() - _vixCache.fetchTime) < VIX_CACHE_TTL) {
+        if (!refresh && _vixCache.value !== null && (Date.now() - _vixCache.fetchTime) < VIX_CACHE_TTL) {
             console.info('VIX: 使用缓存', _vixCache.value.vix);
             return _vixCache.value;
         }
@@ -1191,8 +1200,8 @@ const DataAPI = (() => {
 
         // 并行请求：VIX实时 + CNN F&G + VIX K线
         const [vixResult, fgResult, klineResult] = await Promise.allSettled([
-            fetchVIXIndex(),
-            fetchFearGreedIndex(),
+            fetchVIXIndex(true),
+            fetchFearGreedIndex(true),
             fetchVIXKline(365),
         ]);
 

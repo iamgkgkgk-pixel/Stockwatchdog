@@ -203,14 +203,14 @@
         renderChart();
     }
 
-    async function load(refresh = false) {
+    async function load(refresh = true) {
         const token = ++requestId;
         const selected = asset;
         $('refresh').disabled = true;
         text('refresh', refresh ? '更新中…' : '读取中…');
         if (!data) resetDecision();
         try {
-            const next = !refresh && loaded.has(selected.id) ? loaded.get(selected.id) : await D.load(selected, refresh, loaded.get(selected.id));
+            const next = await D.load(selected, refresh, loaded.get(selected.id));
             if (token !== requestId) return;
             loaded.set(selected.id, next);
             data = next;
@@ -218,9 +218,9 @@
             status(next.errors.join(' '));
         } catch (_) {
             if (token !== requestId) return;
-            data = { price: null, points: [], observation: null, mode: '读取失败', errors: [] };
+            data = { ...(loaded.get(selected.id) || { price: null, points: [], observation: null, errors: [] }), mode: '失败回退' };
             render();
-            status('数据读取失败。请通过本地HTTP服务打开本页后重试；未使用模拟或默认行情。');
+            status('最新数据获取失败；有历史记录时保留原观测日期，否则显示暂无数据。');
         } finally {
             if (token === requestId) { $('refresh').disabled = false; text('refresh', '更新数据'); }
         }
@@ -228,7 +228,7 @@
 
     function switchAsset(next) {
         asset = next;
-        data = loaded.get(asset.id) || null;
+        data = null;
         $('decision-details').open = false;
         if (!data) {
             model = null;

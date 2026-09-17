@@ -10,24 +10,13 @@ const App = (() => {
     let currentETFId = null;
     let etfDataCache = {};
     let autoRefreshTimer = null;
+    let dataRequestId = 0;
 
     // ========== 初始化 ==========
 
     async function init() {
         showLoading(true);
         try {
-            // 等待ECharts加载完成（多级CDN fallback + 本地兜底，最多~10秒）
-            // 即使最终失败也不阻塞，让checkECharts显示友好提示
-            if (window.__echartsReady) {
-                try {
-                    await Promise.race([
-                        window.__echartsReady,
-                        new Promise(function(resolve) { setTimeout(resolve, 10000); })
-                    ]);
-                } catch (e) {
-                    console.warn('[init] ECharts加载超时或失败，继续初始化', e);
-                }
-            }
             renderTabBar();
             bindGlobalEvents();
             initRegimeSwitcher();
@@ -38,7 +27,6 @@ const App = (() => {
         } catch (e) {
             console.error('初始化失败:', e);
             showError('初始化失败，请刷新页面重试');
-        } finally {
             showLoading(false);
         }
     }
@@ -248,6 +236,8 @@ const App = (() => {
     async function switchETF(etfId) {
         // VIX 恐惧仪表盘特殊处理
         if (ETF_CONFIG.isVIXDashboard(etfId)) {
+            ++dataRequestId;
+            showLoading(false);
             currentETFId = etfId;
             window.location.hash = etfId;
 
@@ -286,11 +276,7 @@ const App = (() => {
         updateChartTitles(etfConfig);
         if (typeof LegacyPriceRoc !== 'undefined') LegacyPriceRoc.showETF(etfConfig);
 
-        if (etfDataCache[etfId] && etfDataCache[etfId].loaded) {
-            displayCachedData(etfId, etfConfig);
-        } else {
-            await loadETFData(etfId, etfConfig);
-        }
+        await loadETFData(etfId, etfConfig);
     }
 
     function updateHeader(etfConfig) {
@@ -680,50 +666,56 @@ const App = (() => {
     }
 
     async function loadETFData(etfId, etfConfig) {
+        const token = ++dataRequestId;
+        const active = () => token === dataRequestId && currentETFId === etfId;
         updateDataSourceStatus('fetching');
+        showLoading(true);
         etfDataCache[etfId] = etfDataCache[etfId] || { loaded: false };
+        etfDataCache[etfId].loading = true;
         try {
-            const historyData = await loadHistoryData(etfId);
-            etfDataCache[etfId].historyData = historyData;
-            if (currentETFId === etfId) {
-                initChartsForETF(etfConfig, historyData);
-                applyData(etfId, etfConfig, resolveCurrentData(etfId, etfConfig, historyData), historyData, true);
-                updateTimestamp(etfId);
-                updateDataSourceStatus('fetching');
-                showLoading(false);
-            }
-            const apiData = await DataAPI.fetchAllDataForETF(etfConfig);
-            etfDataCache[etfId].lastApiData = apiData;
+            const [live, history] = await Promise.allSettled([
+                DataAPI.fetchAllDataForETF(etfConfig),
+                loadHistoryData(etfId)
+            ]);
+            if (!active()) return;
+            const cache = etfDataCache[etfId];
+            const historyData = history.status === 'fulfilled' ? history.value : cache.historyData || getDefaultHistoryData();
+            const apiData = live.status === 'fulfilled' && live.value ? live.value : { success: false, errors: ['实时请求失败'] };
+            cache.historyData = historyData;
+            DataStorage.saveHistoryData(etfId, historyData);
+            cache.lastApiData = apiData;
             const normalized = resolveCurrentData(etfId, etfConfig, historyData, apiData);
-            etfDataCache[etfId].currentData = normalized;
-            etfDataCache[etfId].loaded = true;
-            if (currentETFId !== etfId) return;
             applyData(etfId, etfConfig, normalized, historyData);
+            cache.loaded = true;
             updateDataSourceStatus(apiData.success ? 'success' : 'error', apiData);
             updateTimestamp(etfId);
+            if (!apiData.success) showToast('获取失败，保留历史观测及原日期；无历史则显示缺失', 'error');
         } catch (e) {
+            if (!active()) return;
             console.error(`加载 ${etfId} 数据失败:`, e);
-            if (currentETFId !== etfId) return;
-            const historyData = etfDataCache[etfId].historyData;
-            applyData(etfId, etfConfig, resolveCurrentData(etfId, etfConfig, historyData), historyData);
             updateDataSourceStatus('error');
-            updateTimestamp(etfId);
-            showToast('获取失败，保留原观测日期；请核对数据状态', 'error');
+            showToast('数据处理失败，请重试', 'error');
+        } finally {
+            if (active()) {
+                etfDataCache[etfId].loading = false;
+                showLoading(false);
+            }
         }
     }
 
     function displayCachedData(etfId, etfConfig) {
         const cache = etfDataCache[etfId];
-        if (!cache) return;
-        initChartsForETF(etfConfig, cache.historyData);
+        if (!cache || cache.loading) return;
         if (cache.currentData) applyData(etfId, etfConfig, cache.currentData, cache.historyData, true);
-        if (cache.lastApiData) updateDataSourceStatus('success', cache.lastApiData);
+        if (cache.lastApiData) updateDataSourceStatus(cache.lastApiData.success ? 'success' : 'error', cache.lastApiData);
         updateTimestamp(etfId);
     }
 
     async function loadHistoryData(etfId) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 7000);
         try {
-            const resp = await fetch(`data/${etfId}.json`);
+            const resp = await fetch(`data/${etfId}.json`, { cache: 'no-store', signal: controller.signal });
             if (resp.ok) {
                 const data = await resp.json();
                 console.log(`[loadHistoryData] ${etfId}: 加载成功`, {
@@ -733,13 +725,14 @@ const App = (() => {
                     dividendYieldHistory: data.dividendYieldHistory ? data.dividendYieldHistory.length : 0,
                     priceHistory: data.priceHistory ? data.priceHistory.length : 0,
                 });
-                DataStorage.saveHistoryData(etfId, data);
                 return data;
             } else {
                 console.warn(`[loadHistoryData] ${etfId}: fetch返回 ${resp.status}`);
             }
         } catch (e) {
             console.warn(`[loadHistoryData] ${etfId}: fetch失败`, e.message);
+        } finally {
+            clearTimeout(timer);
         }
 
         const cached = DataStorage.getHistoryData(etfId);
@@ -778,6 +771,8 @@ const App = (() => {
         const apiPePercentile = DataQuality.valid('pePercentile', data.pePercentile) ? data.pePercentile : null;
         const trendScore = signalData.trendScore;
 
+        initChartsForETF(etfConfig, DataQuality.withLatestObservations(historyData, data, etfConfig));
+
         // 更新UI
         updateSignalDisplay(currentSignal, total);
         updateDataCardsValues(etfConfig, data, spread, spreadPercentile, pePercentile, peAvailable, dividendAvailable, canCalcSpread, trendScore, apiPePercentile);
@@ -806,7 +801,8 @@ const App = (() => {
         }
 
         // 异步渲染趋势强度卡片（延迟800ms避免与applyData里的jsonp并发，减少东财限流概率）
-        setTimeout(() => renderTrendStrengthCard(etfConfig), 800);
+        const token = dataRequestId;
+        setTimeout(() => renderTrendStrengthCard(etfConfig, token), 800);
 
         // 更新信号方法标签
         const rules = ETF_CONFIG.getSignalRules(etfConfig.signalRules);
@@ -1220,7 +1216,8 @@ const App = (() => {
         const current = cached && cached.currentData;
         const quality = cached && cached.currentSignal && cached.currentSignal.quality;
         const source = current && current.valuationSource;
-        const parts = [status === 'manual' ? '人工观测已保存' : status === 'error' ? '接口获取失败，保留原观测' : '接口获取完成'];
+        const parts = [status === 'manual' ? '人工观测已保存' : status === 'error' ? '接口获取失败，保留原观测'
+            : apiData?.errors?.length ? '部分接口失败，未更新字段保留原日期' : '接口获取完成'];
         if (source) parts.push(source);
         parts.push(quality && quality.allowed ? '正常评分' : quality && quality.calculable ? '参考评分可用，仓位需单独判断' : '主数据不足，仍可查看已有历史');
         statusEl.textContent = parts.join(' | ');
@@ -1379,7 +1376,8 @@ const App = (() => {
      *
      * @param {Object} etfConfig
      */
-    async function renderTrendStrengthCard(etfConfig) {
+    async function renderTrendStrengthCard(etfConfig, token = dataRequestId) {
+        if (token !== dataRequestId || currentETFId !== etfConfig.id) return;
         const section = document.getElementById('chart-section-trend-strength');
         const summaryEl = document.getElementById('trend-strength-summary');
         const chartDom = document.getElementById('chart-trend-drawdown');
@@ -1405,6 +1403,7 @@ const App = (() => {
         } catch (e) {
             kline = [];
         }
+        if (token !== dataRequestId || currentETFId !== etfConfig.id) return;
         if (!kline || kline.length < 10) {
             const diag = (window.__klineDiag || {});
             const respSummary = diag.resp ? JSON.stringify(diag.resp) : '(未收到响应)';
@@ -1659,29 +1658,8 @@ const App = (() => {
         const etfConfig = ETF_CONFIG.getETFById(currentETFId);
         if (!etfConfig) return;
 
-        updateDataSourceStatus('fetching');
         showToast('正在获取最新数据...', 'info');
-
-        const etfId = etfConfig.id;
-        try {
-            const apiData = await DataAPI.fetchAllDataForETF(etfConfig);
-            const cache = etfDataCache[etfId] || (etfDataCache[etfId] = {});
-            cache.lastApiData = apiData;
-            const normalized = resolveCurrentData(etfId, etfConfig, cache.historyData, apiData);
-            cache.currentData = normalized;
-            if (currentETFId !== etfId) return;
-            applyData(etfId, etfConfig, normalized, cache.historyData);
-            updateDataSourceStatus(apiData.success ? 'success' : 'error', apiData);
-            updateTimestamp(etfId);
-            showToast('获取完成，请以各字段观测日期和校验状态为准', 'info');
-        } catch (e) {
-            if (currentETFId !== etfId) return;
-            const historyData = etfDataCache[etfId] && etfDataCache[etfId].historyData;
-            applyData(etfId, etfConfig, resolveCurrentData(etfId, etfConfig, historyData), historyData);
-            updateDataSourceStatus('error');
-            updateTimestamp(etfId);
-            showToast('获取失败，保留原观测日期', 'error');
-        }
+        await loadETFData(etfConfig.id, etfConfig);
     }
 
     function isTradingHours() {
@@ -1710,9 +1688,9 @@ const App = (() => {
             if (echartsReadyHandled) return;
             echartsReadyHandled = true;
             console.info('[ECharts] 加载完成，自动重新渲染当前ETF');
-            if (currentETFId) {
-                switchETF(currentETFId).catch(function(e) { console.error('ECharts就绪后重渲染失败:', e); });
-            }
+            const config = ETF_CONFIG.getETFById(currentETFId);
+            if (config) displayCachedData(currentETFId, config);
+            else if (ETF_CONFIG.isVIXDashboard(currentETFId) && _vixDashboardData) renderVIXDashboard(_vixDashboardData);
         });
 
         let refreshCooldown = false;
@@ -2130,9 +2108,12 @@ const App = (() => {
      * 加载VIX仪表盘数据
      */
     async function loadVIXDashboardData() {
+        const token = ++dataRequestId;
+        const active = () => token === dataRequestId && ETF_CONFIG.isVIXDashboard(currentETFId);
         showLoading(true);
         try {
             const data = await DataAPI.fetchVIXDashboardData();
+            if (!active()) return;
             _vixDashboardData = data;
 
             if (data.success) {
@@ -2167,10 +2148,11 @@ const App = (() => {
 
             updateTimestamp(currentETFId);
         } catch (e) {
+            if (!active()) return;
             console.error('VIX仪表盘加载失败:', e);
             showToast('VIX仪表盘加载异常: ' + e.message, 'error');
         } finally {
-            showLoading(false);
+            if (active()) showLoading(false);
         }
     }
 

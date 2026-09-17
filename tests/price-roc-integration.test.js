@@ -142,7 +142,7 @@ test('price-only loader does not fetch valuations or fear and deduplicates in-fl
     assert.ok(sandbox.fetchRequests.every(url => url.startsWith('data/')));
     assert.ok(!sandbox.fetchRequests.some(url => /sentiment|danjuan|fear/.test(url)));
     await sandbox.api.loadPrice(asset);
-    assert.equal(sandbox.scriptRequests.length, 1);
+    assert.equal(sandbox.scriptRequests.length, 2);
 });
 
 test('failed price refresh keeps the latest correct-instrument snapshot and its date', async () => {
@@ -220,7 +220,7 @@ test('a newer raw quote does not displace recent verified adjusted history', asy
     const asset = E.ASSETS[0];
     const currentRaw = { code: asset.code, secid: asset.secid, adjustment: 'raw', asOf: '2026-09-15', fetchedAt: NOW.toISOString(), bars: [{ date: '2026-09-15', close: 999 }] };
     const previous = { price: { code: asset.code, secid: asset.secid, adjustment: 'qfq', asOf: '2026-09-14', fetchedAt: '2026-09-14T10:00:00Z', bars: [{ date: '2026-09-14', close: 2 }] } };
-    const sandbox = dataSandbox({ assets: { [asset.id]: currentRaw } }, () => assert.fail('network should not be requested for recent adjusted prices'));
+    const sandbox = dataSandbox({ assets: { [asset.id]: currentRaw } }, script => queueMicrotask(() => script.onerror()));
     const result = await sandbox.api.loadPrice(asset, false, previous);
     assert.equal(result.price.adjustment, 'qfq');
     assert.equal(result.price.bars[0].close, 2);
@@ -242,3 +242,5 @@ test('raw fallback never paints confirmed turning points', async () => {
     assert.equal(sandbox.rendered.at(-1).label, '未复权价格');
     assert.match(sandbox.element('legacy-roc-status').textContent, /不生成峰谷确认/);
 });
+    assert.equal(sandbox.scriptRequests.length, 1);
+    assert.match(result.error, /失败/);

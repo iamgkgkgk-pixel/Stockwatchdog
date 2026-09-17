@@ -116,14 +116,15 @@ const LegacyPriceRoc = (() => {
         text('legacy-roc-refresh', '读取中…');
         try {
             const next = await D.loadPrice(selected, force, cache.get(selected.id));
-            cache.set(selected.id, next);
             if (token !== request || selected.id !== asset?.id) return;
+            cache.set(selected.id, next);
             result = next;
             root.dataset.state = next.price ? 'ready' : 'unavailable';
             render();
         } catch (_) {
             if (token !== request || selected.id !== asset?.id) return;
-            result = cache.get(selected.id) || { price: null, mode: '', error: '图表价格读取失败，原评分不受影响。' };
+            result = { ...(cache.get(selected.id) || { price: null }), mode: '失败回退', error: '价格更新失败，保留历史观测及原日期。' };
+            root.dataset.state = result.price ? 'ready' : 'unavailable';
             render();
         } finally {
             if (token === request) {
@@ -136,7 +137,7 @@ const LegacyPriceRoc = (() => {
         if (!initialize()) return Promise.resolve();
         if (asset?.id === config.id && result) { navigation(); return Promise.resolve(); }
         asset = { ...config };
-        result = cache.get(asset.id) || null;
+        result = null;
         model = null;
         const root = $('chart-section-price-roc');
         root.dataset.assetId = asset.id;
@@ -146,8 +147,8 @@ const LegacyPriceRoc = (() => {
         text('legacy-roc-price', '价格 —'); text('legacy-roc-value', 'ROC —'); text('legacy-roc-rank', '动量分位 —');
         text('legacy-roc-source', ''); text('legacy-roc-status', '');
         $('legacy-roc-turns').replaceChildren();
-        if (result) render(); else empty('正在读取当前标的的真实价格…');
-        return fetchCurrent();
+        empty('正在获取当前标的最新价格，失败时才使用历史记录…');
+        return fetchCurrent(true);
     }
 
     function refresh() { return initialized && asset ? fetchCurrent(true) : Promise.resolve(); }

@@ -270,6 +270,26 @@ const DataQuality = (() => {
         return mergeSnapshots(snapshot);
     }
 
+    function withLatestObservations(history, snapshot, config) {
+        const result = { ...(history || {}) };
+        const append = (key, value, meta) => {
+            const point = { ...meta, date: meta.asOf, value };
+            result[key] = [...(result[key] || []).filter(item => item.date !== point.date), point]
+                .sort((a, b) => a.date.localeCompare(b.date));
+        };
+        const available = field => metadata(snapshot, field).quality === 'observed' && !fieldIssue(snapshot, field, config);
+        for (const field of ['pe', 'dividendYield', 'bondYield']) {
+            if (available(field)) append(SERIES[field], number(snapshot[field]), metadata(snapshot, field));
+        }
+        const dividend = metadata(snapshot, 'dividendYield'), bond = metadata(snapshot, 'bondYield');
+        if (config.useBondSpread && available('dividendYield') && available('bondYield') && dividend.asOf === bond.asOf) {
+            append('spreadHistory', number(snapshot.dividendYield) - number(snapshot.bondYield), {
+                ...dividend, market: bond.market, source: `${dividend.source} − ${bond.source}`
+            });
+        }
+        return result;
+    }
+
     return { FIELDS, number, today, asOf, indexKey, isProxy, valuationIndex, bondMarket, valid, primaryField, requiredFields, metadata, fieldIssue, referenceUsable, assess,
-        mergeSnapshots, latestSnapshot, manualSnapshot, comparableHistory, valuationContext, monthlyHistory, monthlyPoints, referenceValues };
+        mergeSnapshots, latestSnapshot, manualSnapshot, comparableHistory, valuationContext, monthlyHistory, monthlyPoints, referenceValues, withLatestObservations };
 })();
