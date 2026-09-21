@@ -750,7 +750,13 @@ const DataAPI = (() => {
      * @param {Object} etfConfig - ETF配置对象
      * @returns {Object} 聚合后的数据对象
      */
-    async function fetchAllDataForETF(etfConfig, onProgress) {
+    function batchRequest(cache, key, fetcher) {
+        if (!cache) return fetcher();
+        if (!cache.has(key)) cache.set(key, Promise.resolve().then(fetcher));
+        return cache.get(key);
+    }
+
+    async function fetchAllDataForETF(etfConfig, onProgress, requestCache = null) {
         const results = {
             success: false,
             etf: null,
@@ -775,13 +781,14 @@ const DataAPI = (() => {
 
         // 与该标的估值规则匹配的无风险利率。
         if (DataQuality.requiredFields(etfConfig).includes('bondYield')) {
-            promises.push(fetchBondYield(DataQuality.bondMarket(etfConfig)));
+            const market = DataQuality.bondMarket(etfConfig);
+            promises.push(batchRequest(requestCache, `bond:${market}`, () => fetchBondYield(market)));
             promiseLabels.push('bond');
         }
 
         // 3. 蛋卷基金估值（如果该ETF的跟踪指数在蛋卷有数据）
         if (etfConfig.trackIndex && (etfConfig.trackIndex.danjuanCode || etfConfig.trackIndex.danjuanName)) {
-            promises.push(fetchDanjuanValuationByIndex(etfConfig.trackIndex.danjuanCode, etfConfig.trackIndex.danjuanName));
+            promises.push(fetchDanjuanValuationByIndex(etfConfig.trackIndex.danjuanCode, etfConfig.trackIndex.danjuanName, requestCache));
             promiseLabels.push('valuation');
         }
 
@@ -793,13 +800,13 @@ const DataAPI = (() => {
             // 纯趋势跟踪，不需要情绪指标
         } else if (etfConfig.type === 'us_share_index' || etfConfig.type === 'hk_share_index') {
             // 美股/港股 → CNN Fear & Greed
-            promises.push(fetchFearGreedIndex(true));
+            promises.push(batchRequest(requestCache, 'sentiment:cnn', () => fetchFearGreedIndex(true)));
             promiseLabels.push('fearGreed');
         } else if (etfConfig.signalRules === 'buffett_jp') {
             // 无同市场自动情绪源，保留缺失，不使用A股广度替代。
         } else {
             // A股相关（a_share_index, smart_beta, bond）→ A股市场广度
-            promises.push(fetchAShareMarketBreadth(true));
+            promises.push(batchRequest(requestCache, 'sentiment:cn', () => fetchAShareMarketBreadth(true)));
             promiseLabels.push('aShareBreadth');
         }
 
@@ -834,7 +841,7 @@ const DataAPI = (() => {
         if (promiseLabels.includes('aShareBreadth') && !results.aShareBreadth) {
             console.info('A股市场广度不可用，尝试CNN Fear & Greed兜底...');
             try {
-                const fgResult = await fetchFearGreedIndex(true);
+                const fgResult = await batchRequest(requestCache, 'sentiment:cnn', () => fetchFearGreedIndex(true));
                 if (fgResult && fgResult.score !== null && !isNaN(fgResult.score)) {
                     // 标记为CNN兜底数据
                     results.fearGreedFallback = {
@@ -925,14 +932,16 @@ const DataAPI = (() => {
     /**
      * 通过蛋卷基金代码/名称查找估值数据
      */
-    async function fetchDanjuanValuationByIndex(indexCode, indexName) {
+    async function fetchDanjuanValuationByIndex(indexCode, indexName, requestCache = null) {
         try {
-            let data = null;
-            try {
-                const response = await fetchWithTimeout(DANJUAN_API, { cache: 'no-store' }, 8000);
-                if (response.ok) data = await response.json();
-            } catch (_) {}
-            if (!Array.isArray(data?.data?.items)) data = await fetchViaCorsProxy(DANJUAN_API);
+            const data = await batchRequest(requestCache, 'valuation:danjuan', async () => {
+                let payload = null;
+                try {
+                    const response = await fetchWithTimeout(DANJUAN_API, { cache: 'no-store' }, 8000);
+                    if (response.ok) payload = await response.json();
+                } catch (_) {}
+                return Array.isArray(payload?.data?.items) ? payload : fetchViaCorsProxy(DANJUAN_API);
+            });
             let payload = data;
             if (data && data.body) {
                 try { payload = JSON.parse(data.body); } catch (_) { payload = data; }

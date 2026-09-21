@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>市场总览 · ETF择时助手</title>
+    <link rel="stylesheet" href="css/overview.css?v=20260921b">
+    <script defer src="js/etf-config.js?v=20260921a"></script>
+    <script defer src="js/data-quality.js?v=20260917b"></script>
+    <script defer src="js/signal.js?v=20260915a"></script>
+    <script defer src="js/storage.js?v=20260915a"></script>
+    <script defer src="js/api.js?v=20260921a"></script>
+    <script defer src="js/gpt-strategy-engine.js?v=20260915d"></script>
+    <script defer src="js/gpt-strategy-data.js?v=20260917c"></script>
+    <script defer src="js/overview-model.js?v=20260921b"></script>
+    <script defer src="js/overview-data.js?v=20260921a"></script>
+    <script defer src="js/overview-app.js?v=20260921b"></script>
+</head>
+<body>
+    <a class="skip" href="#board">跳到标的总览</a>
+    <div class="shell">
+        <header class="topbar">
+            <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">观</span><span>ETF择时助手<small>MARKET OBSERVATORY</small></span></a>
+            <nav aria-label="工具导航"><a href="index.html">单标的详情 ↗</a><a href="gpt-strategy.html">GPT策略 ↗</a></nav>
+        </header>
+        <section class="intro" aria-labelledby="page-title">
+            <div><p class="eyebrow">全市场观察 / 三项交叉参考</p><h1 id="page-title">先看全局，再看机会<span class="title-dot">.</span></h1><p class="intro-note">ROC区间、综合信号、历史PE均值，放在同一张观察表。</p></div>
+            <div class="intro-actions"><span id="clock" class="clock"></span><button id="refresh-all" type="button" class="primary">刷新全部 <span aria-hidden="true">↻</span></button></div>
+        </section>
+        <section class="refresh-strip" aria-label="刷新进度">
+            <div class="progress-head"><span class="live-dot" aria-hidden="true"></span><strong id="progress-text" role="status" aria-live="polite">准备异步刷新</strong><span id="progress-detail">每个标的独立返回，不阻塞页面</span><button id="retry-failed" type="button" disabled>重试失败项</button></div>
+            <progress id="progress" max="1" value="0" aria-label="已完成标的数"></progress>
+        </section>
+        <div class="controls">
+            <div class="filters" role="group" aria-label="标的分组"><button type="button" data-group="all" aria-pressed="true">全部标的</button><button type="button" data-group="FORTRESS" aria-pressed="false">基石</button><button type="button" data-group="ATTACK" aria-pressed="false">进攻</button><button type="button" data-group="HEDGE" aria-pressed="false">避险</button></div>
+            <label class="search"><span>搜索</span><input id="search" type="search" placeholder="标的名称 / 代码" autocomplete="off"></label>
+            <label class="errors-only"><input type="checkbox" id="issues-only"> 仅待判定 / 异常</label>
+        </div>
+        <details class="rules"><summary>归类规则与口径 <span>可展开核对，不是交易指令</span></summary><div class="rules-content">
+            <p><strong>ROC优先约束：</strong>历史分位 ≥80% 不买入、不加仓；≤20% 不卖出、不减仓。即使综合信号绿色，也不能突破“不买”约束；即使信号红色，也不能突破“不卖”约束。边界按原始分位数判断，不按显示的四舍五入值判断。</p>
+            <p><strong>低估 / 买入观察：</strong>综合信号绿色，且可用PE不在均上；或者ROC ≤20%、PE均下且无红灯。两者都必须通过“不买”约束。<strong>风险 / 减仓观察：</strong>综合信号红色；或者ROC ≥80%、PE均上且无绿灯。两者都必须通过“不卖”约束。</p>
+            <p><strong>正常 / 继续观察：</strong>未形成方向、指标分歧，或被ROC约束暂缓。被ROC阻止买卖时，原来的估值或风险依据仍会展示，并不表示风险消失。只有ROC时，只给节奏提醒，不单凭超卖认定低估。</p>
+            <p><strong>ROC：</strong><span id="roc-policy">日线ROC(12)、MA(6)，使用此前252期平滑ROC计算当前历史分位，至少126期样本，20%和80%包含在约束内。</span>未复权日线的ROC保留参考标记，需核对分红除权影响，不生成峰谷交易提示。</p>
+            <p><strong>综合信号：</strong>复用详情评分，绿色偏低、黄色中性、橙色至红色偏高；参考信号继续标注“参考”，不修改原评分。<strong>历史PE可选：</strong>与详情PE图同口径；少于5个月、接口失败后无有效记录、过期或不适用时显示“已忽略”，不要求补齐三项。PE被忽略后按ROC与综合信号判断；若综合信号也缺失，按ROC作正常节奏观察，不虚构信号。</p>
+            <p>ROC不可用时暂缓买卖方向判断，不用PE或红绿灯替代ROC约束。数据错误与档位分开显示，每项保留真实观测日；“买入观察 / 减仓观察”不是自动交易指令。所有标的异步刷新，失败才回退，最多3个标的并发，支持独立重试。</p>
+        </div></details>
+        <main id="board" class="board" aria-label="三档总览">
+            <section class="lane low" aria-labelledby="low-title"><header class="lane-head"><div><span class="lane-kicker">VALUE WATCH</span><h2 id="low-title"><i></i>低估 <b id="count-low">0</b></h2><p>买入观察 · ROC高位不买</p></div><span class="lane-symbol" aria-hidden="true">↓</span></header><div class="lane-cards" id="lane-low"></div><p class="empty" id="empty-low">暂未发现满足条件的标的</p></section>
+            <section class="lane risk" aria-labelledby="risk-title"><header class="lane-head"><div><span class="lane-kicker">RISK WATCH</span><h2 id="risk-title"><i></i>风险 <b id="count-risk">0</b></h2><p>减仓观察 · ROC低位不卖</p></div><span class="lane-symbol" aria-hidden="true">↑</span></header><div class="lane-cards" id="lane-risk"></div><p class="empty" id="empty-risk">暂未发现满足条件的标的</p></section>
+            <section class="lane normal" aria-labelledby="normal-title"><header class="lane-head"><div><span class="lane-kicker">BALANCED WATCH</span><h2 id="normal-title"><i></i>正常 <b id="count-normal">0</b></h2><p>继续观察 / ROC暂缓买卖，不等于无风险</p></div><span class="lane-symbol" aria-hidden="true">→</span></header><div class="lane-cards" id="lane-normal"></div><p class="empty" id="empty-normal">等待有效数据完成归档</p></section>
+        </main>
+        <section class="pending-section" aria-labelledby="pending-title"><header><div><h2 id="pending-title">待判定 <b id="count-pending">0</b></h2><p>正在加载或ROC不可用时暂缓方向判断；仅历史PE缺失不会进入这里。</p></div><span id="visible-count"></span></header><div id="lane-pending" class="pending-grid"></div><p class="empty" id="empty-pending">当前筛选下没有待判定标的</p></section>
+        <footer>仅作市场观察与投资学习参考，不构成投资建议。低估是多指标参考标签，不保证价格上涨。</footer>
+    </div>
+    <noscript>请启用JavaScript以异步获取标的数据；也可返回单标的详情。</noscript>
+</body>
+</html>
