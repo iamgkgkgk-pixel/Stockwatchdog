@@ -1,0 +1,46 @@
+{
+  "description": "机床ETF华夏(159663)，跟踪中证机床指数(931866)",
+  "lastUpdate": "2026-09-16",
+  "peHistory": [],
+  "pbHistory": [],
+  "roeHistory": [],
+  "dividendYieldHistory": [],
+  "bondYieldHistory": [],
+  "spreadHistory": [],
+  "etfPriceHistory": [],
+  "currentData": {
+    "pe": null,
+    "pb": null,
+    "roe": null,
+    "pePercentile": null,
+    "pbPercentile": null,
+    "dividendYield": null,
+    "price": 0.973,
+    "priceChange": 1.78,
+    "updateTime": null,
+    "fieldMeta": {
+      "price": {
+        "asOf": "2026-09-16",
+        "observedAt": "2026-09-16T11:17:00+08:00",
+        "fetchedAt": "2026-09-16T03:17:02.920Z",
+        "source": "腾讯行情 · ETF成交价",
+        "quality": "observed",
+        "instrumentId": "0.159663"
+      },
+      "priceChange": {
+        "asOf": "2026-09-16",
+        "observedAt": "2026-09-16T11:17:00+08:00",
+        "fetchedAt": "2026-09-16T03:17:02.920Z",
+        "source": "腾讯行情 · ETF成交价",
+        "quality": "observed",
+        "instrumentId": "0.159663"
+      }
+    },
+    "note": "尚未取得可核验的中证机床指数估值与可比历史。ETF行情及价格ROC独立追踪；不以其他指数或价格涨跌估造PE。"
+  },
+  "valuationAnchor": null,
+  "sources": {
+    "fund": "https://www.chinaamc.com/fund/159663/index.shtml",
+    "index": "https://www.csindex.com.cn/#/indices/family/detail?indexCode=931866"
+  }
+}

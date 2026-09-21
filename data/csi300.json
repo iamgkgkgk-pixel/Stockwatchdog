@@ -1,6 +1,6 @@
 {
   "description": "沪深300ETF历史数据",
-  "lastUpdate": "2026-09-15",
+  "lastUpdate": "2026-09-21",
   "spreadHistory": [
     {
       "date": "2021-01",
@@ -1071,6 +1071,42 @@
       "date": "2026-09-14",
       "value": 13.5,
       "percentile": 67.4
+    },
+    {
+      "date": "2026-09-15",
+      "value": 13.35,
+      "asOf": "2026-09-15",
+      "source": "蛋卷基金-沪深300",
+      "quality": "observed",
+      "instrumentId": "000300",
+      "percentile": 64.48
+    },
+    {
+      "date": "2026-09-16",
+      "value": 13.37,
+      "asOf": "2026-09-16",
+      "source": "蛋卷基金-沪深300",
+      "quality": "observed",
+      "instrumentId": "000300",
+      "percentile": 64.92
+    },
+    {
+      "date": "2026-09-17",
+      "value": 13.31,
+      "asOf": "2026-09-17",
+      "source": "蛋卷基金-沪深300",
+      "quality": "observed",
+      "instrumentId": "000300",
+      "percentile": 63.76
+    },
+    {
+      "date": "2026-09-18",
+      "value": 13.38,
+      "asOf": "2026-09-18",
+      "source": "蛋卷基金-沪深300",
+      "quality": "observed",
+      "instrumentId": "000300",
+      "percentile": 65.08
     }
   ],
   "dividendYieldHistory": [
@@ -1413,6 +1449,38 @@
     {
       "date": "2026-09-14",
       "value": 2.63
+    },
+    {
+      "date": "2026-09-15",
+      "value": 2.65,
+      "asOf": "2026-09-15",
+      "source": "蛋卷基金-沪深300",
+      "quality": "observed",
+      "instrumentId": "000300"
+    },
+    {
+      "date": "2026-09-16",
+      "value": 2.73,
+      "asOf": "2026-09-16",
+      "source": "蛋卷基金-沪深300",
+      "quality": "observed",
+      "instrumentId": "000300"
+    },
+    {
+      "date": "2026-09-17",
+      "value": 2.74,
+      "asOf": "2026-09-17",
+      "source": "蛋卷基金-沪深300",
+      "quality": "observed",
+      "instrumentId": "000300"
+    },
+    {
+      "date": "2026-09-18",
+      "value": 2.66,
+      "asOf": "2026-09-18",
+      "source": "蛋卷基金-沪深300",
+      "quality": "observed",
+      "instrumentId": "000300"
     }
   ],
   "bondYieldHistory": [
@@ -1682,45 +1750,45 @@
     }
   ],
   "currentData": {
-    "dividendYield": 2.62,
+    "dividendYield": 2.66,
     "bondYield": 1.73,
     "spread": 1,
     "spreadPercentile": 32.5,
-    "pe": 13.45,
-    "pePercentile": 66.56,
-    "pb": 1.42,
-    "pbPercentile": 39.72,
+    "pe": 13.38,
+    "pePercentile": 65.08,
+    "pb": 1.41,
+    "pbPercentile": 38.28,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-09-14",
+    "updateTime": "2026-09-18",
     "note": "沪深300指数估值数据",
     "fieldMeta": {
       "pe": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-沪深300",
         "quality": "observed",
         "instrumentId": "000300"
       },
       "pb": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-沪深300",
         "quality": "observed",
         "instrumentId": "000300"
       },
       "pePercentile": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-沪深300",
         "quality": "observed",
         "instrumentId": "000300"
       },
       "pbPercentile": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-沪深300",
         "quality": "observed",
         "instrumentId": "000300"
       },
       "dividendYield": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-沪深300",
         "quality": "observed",
         "instrumentId": "000300"
@@ -1736,15 +1804,15 @@
         "source": "旧版快照（来源待核验）"
       },
       "roe": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-沪深300",
         "quality": "observed",
         "instrumentId": "000300"
       }
     },
-    "valuationAsOf": "2026-09-14",
+    "valuationAsOf": "2026-09-18",
     "valuationSource": "蛋卷基金-沪深300",
-    "roe": 10.55
+    "roe": 10.57
   },
   "valuationAnchor": {
     "peMean": 12.45,

@@ -348,17 +348,46 @@ test('undated ambiguous proxy snapshots are not silently treated as target valua
     assert.equal(dated.quality.allowed, false);
 });
 
-test('actual repository coverage: every equity and bond has usable analysis and history', () => {
+test('machine tool price and panic inputs cannot manufacture missing valuation or positions', () => {
+    const config = C.getETFById('machine-tool');
+    const h = JSON.parse(fs.readFileSync(path.join(root, 'data/machine-tool.json'), 'utf8'));
+    assert.equal(h.valuationAnchor, null);
+    assert.equal(h.peHistory.length, 0);
+    assert.equal(h.currentData.pe, null);
+    const data = A.normalizeData({ etf: { price: 1, priceChange: -8, source: 'fixture', asOf: '2026-09-14' } }, {}, config);
+    data.marketTemp = 0;
+    const result = S.analyzeCurrent(data, config, h);
+    assert.equal(data.price, 1);
+    assert.equal(Q.valid('pe', data.pe), false);
+    assert.equal(result.signal.level, 'DATA_INCOMPLETE');
+    assert.equal(result.quality.allowed, false);
+    assert.equal(result.quality.calculable, false);
+    assert.equal(S.calcValuationBaseline(h, config, data).available, false);
+    for (const mode of ['NORMAL', 'CAUTIOUS', 'DEFENSIVE', 'RETREAT']) {
+        assert.equal(P.translateSignalToPosition(result.signal, mode).pct, null);
+    }
+});
+
+test('actual repository coverage preserves existing analysis and explicitly handles the new valuation gap', () => {
     for (const config of C.ETF_LIST.filter(item => !['gold', 'commodity'].includes(item.type))) {
-        const h = JSON.parse(fs.readFileSync(path.join(root, 'data', `${config.id}.json`), 'utf8'));
+        const h = config.history === null ? { peHistory: [], currentData: {} }
+            : JSON.parse(fs.readFileSync(path.join(root, 'data', `${config.id}.json`), 'utf8'));
         const before = JSON.stringify(h);
         const data = Q.latestSnapshot(h, config);
         const analysis = S.analyzeCurrent(data, config, h);
         const baseline = S.calcValuationBaseline(h, config, data);
-        assert.equal(analysis.quality.calculable, true, config.id);
-        assert.ok(Number.isFinite(analysis.total), config.id);
-        assert.equal(baseline.available, true, config.id);
-        assert.ok(baseline.sampleCount >= 5, config.id);
+        if (config.id === 'machine-tool' || config.priceOnly) {
+            assert.equal(analysis.quality.calculable, false, config.id);
+            assert.equal(analysis.signal.level, 'DATA_INCOMPLETE', config.id);
+            assert.equal(analysis.quality.allowed, false, config.id);
+            assert.equal(baseline.available, false, config.id);
+            assert.equal(P.translateSignalToPosition(analysis.signal, 'NORMAL').pct, null);
+        } else {
+            assert.equal(analysis.quality.calculable, true, config.id);
+            assert.ok(Number.isFinite(analysis.total), config.id);
+            assert.equal(baseline.available, true, config.id);
+            assert.ok(baseline.sampleCount >= 5, config.id);
+        }
         assert.equal(JSON.stringify(h), before, config.id);
     }
 });

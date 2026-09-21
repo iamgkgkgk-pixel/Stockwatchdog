@@ -783,6 +783,9 @@ const App = (() => {
     }
 
     async function loadHistoryData(etfId) {
+        if (ETF_CONFIG.getETFById(etfId)?.history === null) {
+            return { spreadHistory: [], peHistory: [], dividendYieldHistory: [], bondYieldHistory: [], currentData: {} };
+        }
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 7000);
         try {

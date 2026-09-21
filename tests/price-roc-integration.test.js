@@ -39,8 +39,48 @@ test('both pages load the shared chart but the legacy page does not load the GPT
     assert.ok(read('index.html').indexOf('src="js/legacy-price-roc.js') < read('index.html').indexOf('src="js/main.js'));
 });
 
+test('machine tool and electronic ETFs are uniquely registered in the legacy attack group', () => {
+    assert.equal(new Set(assets.map(asset => asset.code)).size, assets.length);
+    assert.equal(new Set(assets.map(asset => asset.id)).size, assets.length);
+    for (const [id, code, name, index, secid] of [
+        ['machine-tool', '159663', '机床ETF华夏', '931866', '0.159663'],
+        ['pcb', '515260', '电子ETF华宝', '931461', '1.515260'],
+    ]) {
+        const asset = assets.find(item => item.id === id);
+        assert.equal(asset.code, code);
+        assert.equal(asset.name, name);
+        assert.equal(asset.shortName, name);
+        assert.equal(asset.trackIndex.code, index);
+        assert.equal(asset.secid, secid);
+        assert.equal(asset.group, 'ATTACK');
+        assert.equal(asset.signalRules, 'buffett_growth');
+        assert.equal(asset.trackIndex.danjuanCode, null);
+        assert.equal(E.ASSETS.some(item => item.code === code), false);
+        assert.ok(fs.existsSync(path.join(__dirname, '..', 'data', id + '.json')));
+    }
+    assert.equal(assets.some(asset => asset.code === '159780'), false);
+});
+
+test('newly tracked ETFs have distinct, dated forward-adjusted price snapshots', () => {
+    const bundle = JSON.parse(read('data/price-roc-history.json'));
+    for (const id of ['machine-tool', 'pcb']) {
+        const asset = assets.find(item => item.id === id), price = bundle.assets[id];
+        assert.equal(price.code, asset.code);
+        assert.equal(price.secid, asset.secid);
+        assert.equal(price.adjustment, 'qfq');
+        assert.equal(price.market, 'cn');
+        assert.equal(price.completedOnly, true);
+        assert.ok(price.bars.length >= 300);
+        assert.equal(price.asOf, price.bars.at(-1).date);
+        assert.equal(new Set(price.bars.map(bar => bar.date)).size, price.bars.length);
+        assert.ok(price.bars.every((bar, i) => bar.close > 0 && (!i || bar.date > price.bars[i - 1].date)));
+        assert.equal(E.completedBars(price.bars, new Date(price.fetchedAt), 'cn').length, price.bars.length);
+    }
+});
+
 test('all original assets can select a correct forward-adjusted price identity', () => {
-    assert.equal(assets.length, 25);
+    assert.equal(assets.length, 38);
+    assert.equal(new Set(assets.map(asset => asset.code)).size, assets.length);
     for (const asset of assets) {
         const url = new URL(D.priceURL(asset, NOW));
         assert.equal(url.searchParams.get('secid'), asset.secid);

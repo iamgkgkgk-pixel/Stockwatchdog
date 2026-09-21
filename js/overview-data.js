@@ -68,7 +68,7 @@ const OverviewData = (() => {
                     record.issues.price = ['价格更新超时或失败，保留原日期']; emit(record);
                 })
             ];
-            if (record.asset.id === 'vix-dashboard') {
+            if (record.asset.id === 'vix-dashboard' || record.asset.priceOnly) {
                 record.api = { pending: [] }; record.parts.api = 'na';
             } else jobs.push(deadline(Promise.resolve().then(() => apiLoader(record.asset, partial => {
                 if (!live() || record.parts.api !== 'loading') return;

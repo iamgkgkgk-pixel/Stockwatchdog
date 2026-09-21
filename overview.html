@@ -5,27 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark">
     <title>市场总览 · ETF择时助手</title>
-    <link rel="stylesheet" href="css/overview.css?v=20260921b">
-    <script defer src="js/etf-config.js?v=20260921a"></script>
+    <link rel="stylesheet" href="css/overview.css?v=20260921h">
+    <script defer src="js/etf-config.js?v=20260921c"></script>
     <script defer src="js/data-quality.js?v=20260917b"></script>
     <script defer src="js/signal.js?v=20260915a"></script>
     <script defer src="js/storage.js?v=20260915a"></script>
     <script defer src="js/api.js?v=20260921a"></script>
     <script defer src="js/gpt-strategy-engine.js?v=20260915d"></script>
     <script defer src="js/gpt-strategy-data.js?v=20260917c"></script>
-    <script defer src="js/overview-model.js?v=20260921b"></script>
-    <script defer src="js/overview-data.js?v=20260921a"></script>
-    <script defer src="js/overview-app.js?v=20260921b"></script>
+    <script defer src="js/bottom-screener.js?v=20260921g"></script>
+    <script defer src="js/overview-model.js?v=20260921h"></script>
+    <script defer src="js/overview-data.js?v=20260921c"></script>
+    <script defer src="js/candidate-view.js?v=20260921h"></script>
+    <script defer src="js/overview-app.js?v=20260921h"></script>
 </head>
-<body>
-    <a class="skip" href="#board">跳到标的总览</a>
+<body data-view="scan">
+    <a class="skip" href="#candidate-panel">跳到标的总览</a>
     <div class="shell">
         <header class="topbar">
             <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">观</span><span>ETF择时助手<small>MARKET OBSERVATORY</small></span></a>
             <nav aria-label="工具导航"><a href="index.html">单标的详情 ↗</a><a href="gpt-strategy.html">GPT策略 ↗</a></nav>
         </header>
         <section class="intro" aria-labelledby="page-title">
-            <div><p class="eyebrow">全市场观察 / 三项交叉参考</p><h1 id="page-title">先看全局，再看机会<span class="title-dot">.</span></h1><p class="intro-note">ROC区间、综合信号、历史PE均值，放在同一张观察表。</p></div>
+            <div><p class="eyebrow">MARKET WATCH / 机会与风险</p><h1 id="page-title">先看变化，再做判断<span class="title-dot">.</span></h1><p class="intro-note">找机会：价格低位与动量回调都看，优先研究下跌缓和的；查持仓：关注高位转弱。线索不是买卖指令。</p></div>
             <div class="intro-actions"><span id="clock" class="clock"></span><button id="refresh-all" type="button" class="primary">刷新全部 <span aria-hidden="true">↻</span></button></div>
         </section>
         <section class="refresh-strip" aria-label="刷新进度">
@@ -45,7 +47,61 @@
             <p><strong>综合信号：</strong>复用详情评分，绿色偏低、黄色中性、橙色至红色偏高；参考信号继续标注“参考”，不修改原评分。<strong>历史PE可选：</strong>与详情PE图同口径；少于5个月、接口失败后无有效记录、过期或不适用时显示“已忽略”，不要求补齐三项。PE被忽略后按ROC与综合信号判断；若综合信号也缺失，按ROC作正常节奏观察，不虚构信号。</p>
             <p>ROC不可用时暂缓买卖方向判断，不用PE或红绿灯替代ROC约束。数据错误与档位分开显示，每项保留真实观测日；“买入观察 / 减仓观察”不是自动交易指令。所有标的异步刷新，失败才回退，最多3个标的并发，支持独立重试。</p>
         </div></details>
-        <main id="board" class="board" aria-label="三档总览">
+        <div class="view-switch" role="group" aria-label="总览视图">
+            <button type="button" data-view="scan" aria-pressed="true">机会与风险扫描</button><button type="button" data-view="tiers" aria-pressed="false">原三档总览</button>
+            <span>发现方向，不预言底部</span>
+        </div>
+        <section id="candidate-panel" tabindex="-1" aria-label="机会与高位风险扫描" data-mode="low">
+            <div class="decision-brief" aria-label="先看什么，统计当前搜索与行业范围">
+                <button type="button" class="brief-opportunity" data-scan-filter="opportunities"><span class="brief-kicker">想找机会</span><strong>先看：下跌开始缓和 <b id="scan-opportunity">0</b></strong><small id="opportunity-summary">等待价格返回，不用跌幅代替改善信号。</small><span class="brief-link">查看优先研究对象 →</span></button>
+                <button type="button" class="brief-risk" data-scan-filter="risk-alerts"><span class="brief-kicker">如果已持仓</span><strong>先查：高位开始转弱 <b id="scan-alerts">0</b></strong><small id="risk-summary">等待价格返回，预警不等于立即卖出。</small><span class="brief-link">检查风险对象 →</span></button>
+            </div>
+            <div class="scan-modes" role="group" aria-label="扫描方向">
+                <button type="button" data-mode="low" aria-pressed="true">找机会 <span id="scan-low-total">0</span></button>
+                <button type="button" data-mode="high" aria-pressed="false">查高位风险 <span id="scan-high-total">0</span></button>
+                <button type="button" data-mode="all" aria-pressed="false">全部标的</button>
+                <button type="button" class="scan-problems" data-scan-filter="pending">数据待处理 <span id="scan-pending">0</span></button>
+            </div>
+            <p class="watch-intro" id="attention-guide">关注顺序：先研究开始改善的，再观察只是跌得低的；数据待核验的仅作线索。这里排的是研究顺序，不是买入顺序。</p>
+            <div class="candidate-toolbar">
+                <label>进一步筛选<select id="candidate-filter"><option value="opportunity-watch" selected>全部机会线索</option><option value="low-watch">仅年度价格低位</option><option value="correction-watch">仅超跌回调</option><option value="correction-improving">回调开始缓和</option><option value="correction-references">回调线索·待核验</option><option value="opportunities">优先研究</option><option value="improving">低位开始改善</option><option value="rebound">反弹跟踪</option><option value="falling">低位仍需等待</option><option value="references">低位线索·待核验</option><option value="high-watch">全部高位</option><option value="risk-alerts">优先检查风险</option><option value="weakening">高位开始转弱</option><option value="pullback">转弱后继续回落</option><option value="high">高位尚未转弱</option><option value="high-references">高位线索·待核验</option><option value="favorites">我的关注</option><option value="all">全部板块</option><option value="supported">有估值支持</option><option value="pending">数据待处理</option></select></label>
+                <label>行业分类<select id="candidate-family"><option value="all">全部分类</option></select></label>
+                <label>排序<select id="candidate-sort"><option value="priority">关注顺序优先</option><option value="position">价格位置由低到高</option><option value="position-desc">价格位置由高到低</option><option value="drawdown">距高点回撤由大到小</option></select></label>
+                <span id="candidate-count" role="status">等待价格返回</span>
+            </div>
+            <div class="watch-sections">
+                <section class="watch-section" aria-labelledby="confirmed-title">
+                    <header class="shortlist-heading"><div><span class="watch-kicker">01 / FIRST LOOK</span><h2 id="confirmed-title"><span id="priority-title">优先研究</span> <b id="confirmed-count">0</b></h2><p id="priority-note">不只跌得低，而且已经出现改善迹象；不是买入指令。</p></div><button type="button" id="confirmed-more" aria-controls="candidate-shortlist" aria-expanded="false" hidden>查看全部</button></header>
+                    <div id="candidate-shortlist" class="candidate-shortlist"></div>
+                </section>
+                <section class="watch-section watch-reference" aria-labelledby="reference-title">
+                    <header class="shortlist-heading"><div><span class="watch-kicker">02 / WAIT &amp; VERIFY</span><h2 id="reference-title">先观察 / 待核验 <b id="reference-count">0</b></h2><p id="observe-note">只是跌得低的，先等；未复权的，有线索但先核验。不要直接当成买点。</p></div><button type="button" id="reference-more" aria-controls="reference-shortlist" aria-expanded="false" hidden>查看全部</button></header>
+                    <div id="reference-shortlist" class="candidate-shortlist"></div>
+                </section>
+            </div>
+            <p id="favorite-note" class="candidate-meta" role="status"></p>
+            <p class="table-guide">名称旁显示详情页同口径的当前综合信号与评分（非ROC分位）；参考分、代理参考会明确标注。点击“依据”查看日期、缺项及原交易约束。不同页面分别刷新时，数据快照可能不同。</p>
+            <div class="candidate-table-wrap" role="region" aria-label="股票ETF候选表，可横向滚动" tabindex="0">
+                <table class="candidate-table"><caption>252个交易日收盘区间 · 0%为最低、100%为最高；不是估值分位。股票ETF之外的资产请看原三档。</caption>
+                    <thead><tr><th scope="col">板块 / ETF</th><th scope="col">近一年价格位置</th><th scope="col">距高点回撤</th><th scope="col">日线ROC分位</th><th scope="col">估值依据</th><th scope="col">观察状态 / 约束</th><th scope="col">价格观测日</th><th scope="col">展开</th></tr></thead><tbody id="candidate-rows"></tbody>
+                </table>
+                <p id="candidate-empty" class="empty" hidden>当前条件下没有标的</p>
+            </div>
+            <details class="rules scan-rules"><summary>候选筛选口径 <span>透明阈值，可核对依据</span></summary><div class="rules-content">
+                <p><strong>价格低位区：</strong>前复权收盘在最近252个交易日高低区间中的位置 ≤20%；或距区间最高收盘回撤 ≥25% 且区间位置 ≤40%。价格位置不是历史分位，回撤不是最大回撤；至少252个样本且窗口跨度不超过400个自然日。这些是观察阈值，未经收益优化，不是买点承诺。</p>
+                <p><strong>超跌回调入口：</strong>日线ROC(12)与其MA(6)均为负，且平滑ROC在自身历史中的分位 ≤20%，进入动量回调观察；不要求年度价格位置低，也不要求统一跌幅。负收益条件避免把“上涨变慢”误当超跌。至少144个完整日线，最近144个样本跨度不超过240个自然日；不依赖252日年度窗口。这里的“超跌”只是动量偏弱标签，不代表价格低估。</p>
+                <p><strong>回调改善与跟踪：</strong>当前或此前5个交易日出现上述回调条件，且平滑ROC连续两期回升且收盘不低于前日、高于此前5日最低收盘时，列为回调开始缓和。连续满足只记录首次确认，最多跟踪20个交易日，当前收盘不低于确认日才保留后续跟踪；跌破确认日且不再满足回调条件则退出。所有事件仅用当时及此前数据，不回溯最低点；未复权只显示当前回调线索，不确认改善或跟踪。</p>
+                <p><strong>ROC独立展示：</strong>与详情页使用同一计算引擎，表格固定为日线ROC(12)、MA(6)，相同价格与参数下分位一致。默认至少144个完整日线样本即可计算分位，不必等到价格窗口满252日；未取得当日完整收盘时使用最近已完成交易日。未复权仍展示数值并标注参考；过期显示原日期历史值，不参与当前候选。缺样本或无价格时直接注明原因。</p>
+                <p><strong>低位改善：</strong>位于低位区，固定日线ROC(12)、MA(6)连续两期回升，最新收盘不低于前日且高于此前5日最低收盘；否则为低位未稳。扫描统一用日线，买卖约束仍读取原工具保存的ROC参数，可能是周线，两者不同不互相替代。</p>
+                <p><strong>反弹跟踪：</strong>最近20个交易日曾在低位满足改善条件，现在离开低位区且高于改善确认日收盘；以确认日计算变化，不从事后最低点计算收益。条件从历史逐日计算，不表示本工具在当时实际发出了提醒。</p>
+                <p><strong>高位预警：</strong>价格位于近252个交易日收盘区间的上部20%（价格位置 ≥80%）时列入高位观察，这不是ROC分位 ≥80%。平滑ROC连续两期下降，且收盘不高于前日、低于此前5日最高收盘时标为“高位开始转弱”。最近20个交易日曾满足高位转弱、当前已离开高位区且低于转弱确认日收盘时，列为“转弱后继续回落”；从确认日计算变化，不从事后最高点计算。阈值用于观察，未经收益优化。</p>
+                <p><strong>先看什么：</strong>找机会使用“年度价格低位”和“动量超跌回调”的并集，同一ETF只计一次、保留全部触发理由。优先研究低位或回调已开始缓和的，再看改善后跟踪；回调但未缓和的先观察，未复权的只作线索。年度位置不足但ROC历史合格时仍可观察回调，位置显示未知；过期、身份错误或动量样本不足不能借新入口绕过核验。高位预警独立保留，两侧可同时出现，不能把回调认定成低价或把预警认定成卖出。</p>
+                <p><strong>数据小标签：</strong>“前复权”只说明价格口径，不是确认底部或顶部。原始日线满足高低位条件时，显示线索及未复权参考，不确认改善或转弱。PE支持不能提升价格可信度。原ROC约束不变：≥80%不买，不是必须卖；≤20%不卖，不是应该买。预警仅在页面打开、刷新后展示，不是后台监控或消息推送，也不会自动交易。</p>
+                <p><strong>摘要与排序：</strong>每区默认显示前6个方向，可展开全部；仅按已知跟踪指数代码合并重复产品，不按行业大类去重，未知指数代码不猜测合并。完整表格保留所有产品。列表先显示优先研究或检查的，再显示需等待、需核验的；可在各级内按价格位置或回撤排序。顶部统计当前搜索、行业及分组范围，改善数包含反弹跟踪，转弱数包含回落跟踪，两侧是不同目的，不应相加当作唯一标的数。</p>
+                <p><strong>估值与可信度：</strong>只对已核验、非代理、非参考的自身历史PE均下加“支持”标签，并非独立买入信号，也不代表历史低分位；估值支持不改变价格可信度分级。金融与周期板块需另查PB、ROE与正常化盈利。缺估值仍可扫描价格；失败回退保留原日期，明确标注。名单不声称完成流动性、规模和折溢价筛查，交易前需另行核对。</p>
+            </div></details>
+        </section>
+        <main id="board" class="board" aria-label="三档总览" hidden>
             <section class="lane low" aria-labelledby="low-title"><header class="lane-head"><div><span class="lane-kicker">VALUE WATCH</span><h2 id="low-title"><i></i>低估 <b id="count-low">0</b></h2><p>买入观察 · ROC高位不买</p></div><span class="lane-symbol" aria-hidden="true">↓</span></header><div class="lane-cards" id="lane-low"></div><p class="empty" id="empty-low">暂未发现满足条件的标的</p></section>
             <section class="lane risk" aria-labelledby="risk-title"><header class="lane-head"><div><span class="lane-kicker">RISK WATCH</span><h2 id="risk-title"><i></i>风险 <b id="count-risk">0</b></h2><p>减仓观察 · ROC低位不卖</p></div><span class="lane-symbol" aria-hidden="true">↑</span></header><div class="lane-cards" id="lane-risk"></div><p class="empty" id="empty-risk">暂未发现满足条件的标的</p></section>
             <section class="lane normal" aria-labelledby="normal-title"><header class="lane-head"><div><span class="lane-kicker">BALANCED WATCH</span><h2 id="normal-title"><i></i>正常 <b id="count-normal">0</b></h2><p>继续观察 / ROC暂缓买卖，不等于无风险</p></div><span class="lane-symbol" aria-hidden="true">→</span></header><div class="lane-cards" id="lane-normal"></div><p class="empty" id="empty-normal">等待有效数据完成归档</p></section>

@@ -691,12 +691,37 @@ const ETF_CONFIG = (() => {
             group: GROUPS.ATTACK.key,
         },
 
-        // ===== 19. PCB电子ETF =====
+        {
+            id: 'machine-tool',
+            code: '159663',
+            name: '机床ETF华夏',
+            shortName: '机床ETF华夏',
+            fullName: '华夏中证机床交易型开放式指数证券投资基金',
+            type: ETF_TYPE.A_SHARE_INDEX,
+            market: 'SZ',
+            secid: '0.159663',
+            color: '#546e7a',
+            icon: '机',
+            trackIndex: {
+                name: '中证机床指数',
+                code: '931866',
+                danjuanCode: null,
+                danjuanName: null,
+            },
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH,
+            useBondSpread: false,
+            description: '华夏基金旗下机床主题ETF，跟踪中证机床指数(931866)。行情和ROC独立追踪；未取得可核验的同指数估值历史前，不输出估值买卖结论。',
+            signalRules: 'buffett_growth',
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            group: GROUPS.ATTACK.key,
+        },
+
+        // ===== 19. 电子ETF华宝 =====
         {
             id: 'pcb',
             code: '515260',
-            name: 'PCB电子ETF',
-            shortName: 'PCB电子',
+            name: '电子ETF华宝',
+            shortName: '电子ETF华宝',
             fullName: '华宝中证电子50ETF',
             type: ETF_TYPE.A_SHARE_INDEX,
             market: 'SH',
@@ -743,6 +768,35 @@ const ETF_CONFIG = (() => {
             group: GROUPS.ATTACK.key,
         },
     ];
+
+    const SCAN_ADDITIONS = [
+        ['bank', '512800', '银行', '华宝中证银行ETF', '中证银行指数', '金融', 'PB与ROE需结合资产质量观察'],
+        ['securities', '512880', '证券', '国泰中证全指证券公司ETF', '中证全指证券公司指数', '金融', '盈利随成交活跃度波动'],
+        ['nonferrous', '512400', '有色金属', '南方中证申万有色金属ETF', '中证申万有色金属指数', '资源周期', '周期盈利高点的低PE未必便宜'],
+        ['coal', '515220', '煤炭', '国泰中证煤炭ETF', '中证煤炭指数', '资源周期', '需核对煤价周期和分红持续性'],
+        ['chemical', '516020', '化工', '华宝中证细分化工产业主题ETF', '中证细分化工产业主题指数', '资源周期', '需结合库存与盈利周期'],
+        ['power', '159611', '电力公用事业', '广发中证全指电力公用事业ETF', '中证全指电力公用事业指数', '公用事业', '需结合资本开支与现金流'],
+        ['telecom', '515880', '通信设备', '国泰中证全指通信设备ETF', '中证全指通信设备指数', '科技', '通信设备主题，不等于运营商全行业'],
+        ['software', '515230', '软件', '国泰中证全指软件ETF', '中证全指软件指数', '科技', '亏损成分可能降低PE解释力'],
+        ['solar', '515790', '光伏', '华泰柏瑞中证光伏产业ETF', '中证光伏产业指数', '新能源', '需核对产能与盈利周期'],
+        ['agriculture', '159825', '农业', '富国中证农业主题ETF', '中证农业主题指数', '消费农业', '农业主题并非纯养殖指数'],
+        ['csi500', '510500', '中证500', '南方中证500ETF', '中证500指数', '宽基', '中盘宽基，非行业ETF'],
+        ['csi1000', '512100', '中证1000', '南方中证1000ETF', '中证1000指数', '宽基', '小盘宽基，非行业ETF'],
+    ];
+    for (const [id, code, sector, fullName, indexName, family, caution] of SCAN_ADDITIONS) {
+        ETF_LIST.push({
+            id, code, name: sector + 'ETF', shortName: sector, fullName,
+            type: ETF_TYPE.A_SHARE_INDEX, market: code.startsWith('1') ? 'SZ' : 'SH',
+            secid: `${code.startsWith('1') ? '0' : '1'}.${code}`, color: '#98cfaf', icon: sector[0],
+            sector, family, priceOnly: true, history: null, valuationCapability: 'price-only',
+            trackIndex: { name: indexName, code: null, danjuanCode: null, danjuanName: null },
+            identitySource: `https://fundf10.eastmoney.com/jbgk_${code}.html`, identityCheckedAt: '2026-09-21',
+            valuationMethod: VALUATION_METHOD.MULTI_DIM_GROWTH, signalRules: 'buffett_growth',
+            dimWeights: { valuation: 40, safety: 15, quality: 20, sentiment: 25 },
+            useBondSpread: false, group: GROUPS.ATTACK.key,
+            description: `跟踪${indexName}。${caution}。先接入独立价格扫描；估值指数代码及同口径历史未核验，不接代理PE，不输出估值结论。`,
+        });
+    }
 
     // ========== 巴菲特多维度信号规则集合 ==========
     //

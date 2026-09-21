@@ -31,7 +31,7 @@ function environment(transport = {}) {
             });
         }, removeChild() {} } }
     });
-    for (const file of ['etf-config', 'data-quality', 'signal', 'storage', 'api', 'gpt-strategy-engine', 'gpt-strategy-data', 'overview-model', 'overview-data'])
+    for (const file of ['etf-config', 'data-quality', 'signal', 'storage', 'api', 'gpt-strategy-engine', 'gpt-strategy-data', 'bottom-screener', 'overview-model', 'overview-data'])
         vm.runInContext(read(`js/${file}.js`), context, { filename: file });
     return vm.runInContext('({M:OverviewModel,D:OverviewData,Q:DataQuality,S:SignalEngine,E:GptStrategyEngine,A:DataAPI,C:ETF_CONFIG,Store:DataStorage})', context);
 }
@@ -355,4 +355,133 @@ test('overview shows trading constraints and optional PE instead of the old two-
     assert.ok(!html.includes('少于两项进入'));
     assert.match(app, /card-action/);
     assert.match(app, /已忽略/);
+});
+
+test('price-only additions skip nonexistent history and unused valuation calls in the overview', async () => {
+    const env = environment(), asset = env.C.getETFById('bank');
+    const history = await env.D.historyFor(asset);
+    assert.equal(history.state, 'na');
+    let apiCalls = 0, priceCalls = 0;
+    const controller = env.D.create(loaders(env, { assets: [asset], historyLoader: env.D.historyFor,
+        apiLoader: async () => { apiCalls++; return { success: true }; },
+        priceLoader: async () => { priceCalls++; return { price: null, error: 'offline' }; }
+    }));
+    controller.refreshAll(); await waitDone(controller);
+    assert.equal(apiCalls, 0); assert.equal(priceCalls, 1);
+    const result = controller.records.get(asset.id);
+    assert.equal(result.parts.history, 'na'); assert.equal(result.parts.api, 'na');
+    assert.equal(result.phase, 'done');
+});
+
+test('new price-only assets cannot inherit cached PE or valuation votes', () => {
+    const env = environment(), record = fixture(env);
+    record.asset = env.C.getETFById('bank');
+    mockRoc(env);
+    const model = env.M.build(record, {}, NOW);
+    assert.equal(model.evidence.pe.vote, null);
+    assert.equal(model.evidence.signal.vote, null);
+    assert.equal(model.candidate.valuationSupport, false);
+    assert.equal(model.tier, 'pending');
+});
+
+test('name badge reuses the exact detail signal text, color and one-decimal score from one analysis call', () => {
+    const env = environment(), record = fixture(env, 'dividend-low-vol');
+    const original = env.S.analyzeCurrent;
+    const expected = original(env.M.normalized(record), record.asset, record.history);
+    let calls = 0;
+    env.S.analyzeCurrent = (...args) => { calls++; return original(...args); };
+    const model = env.M.build(record, {}, NOW), badge = model.composite;
+    assert.equal(calls, 1);
+    assert.equal(badge.text, expected.signal.text);
+    assert.equal(badge.color, expected.signal.color);
+    assert.equal(badge.score, expected.total);
+    assert.equal(badge.scoreText, expected.total.toFixed(1));
+    assert.equal(badge.reference, !expected.quality.allowed);
+    assert.equal(model.count, env.M.classify(model.evidence).count);
+    assert.equal(model.tier, env.M.classify(model.evidence).tier);
+    assert.match(badge.detail, /不等于ROC分位/);
+});
+
+test('stale composite scores remain explicit detail-equivalent reference scores, not current classification votes', () => {
+    const env = environment(), record = fixture(env);
+    record.previousCurrent.fieldMeta.pe.asOf = '2026-08-18';
+    const expected = env.S.analyzeCurrent(env.M.normalized(record), record.asset, record.history);
+    const model = env.M.build(record, {}, NOW);
+    assert.equal(expected.quality.calculable, true);
+    assert.equal(model.evidence.signal.vote, null);
+    assert.equal(model.composite.state, 'reference');
+    assert.equal(model.composite.text, expected.signal.text);
+    assert.equal(model.composite.scoreText, expected.total.toFixed(1));
+    assert.match(model.composite.detail, /2026-08-18/);
+    assert.match(model.composite.detail, /过期/);
+});
+
+test('API or valuation history in flight clears badge scores, but price-only progress does not', () => {
+    const env = environment();
+    for (const patch of [r => { r.parts.api = 'loading'; }, r => { r.parts.history = 'queued'; },
+        r => { r.api.pending = ['valuation']; }]) {
+        const r = fixture(env); patch(r);
+        const badge = env.M.build(r, {}, NOW).composite;
+        assert.equal(badge.state, 'loading'); assert.equal(badge.score, null); assert.equal(badge.scoreText, '—');
+    }
+    const r = fixture(env), before = env.M.build(r, {}, NOW).composite;
+    r.parts.price = 'loading';
+    const after = env.M.build(r, {}, NOW);
+    assert.equal(after.loading, true); assert.notEqual(after.composite.state, 'loading');
+    assert.equal(after.composite.text, before.text); assert.equal(after.composite.scoreText, before.scoreText);
+});
+
+test('missing or wrong-instrument valuation never displays the internal zero or referenceTotal as a composite score', () => {
+    const env = environment();
+    for (const patch of [r => { r.previousCurrent = null; r.history = {}; },
+        r => { r.previousCurrent.fieldMeta.pe.instrumentId = 'WRONG'; },
+        r => { r.previousCurrent.fieldMeta.pe.asOf = '2027-01-01'; }]) {
+        const r = fixture(env); patch(r);
+        const result = env.M.build(r, {}, NOW).composite;
+        assert.equal(result.state, 'missing'); assert.equal(result.score, null); assert.equal(result.scoreText, '—');
+        assert.equal(result.text, '暂无法计算');
+    }
+});
+
+test('a legitimate zero composite score displays 0.0 while invalid totals remain missing', () => {
+    const env = environment(), record = fixture(env), original = env.S.analyzeCurrent;
+    for (const total of [0, 62.3, NaN, Infinity, null]) {
+        env.S.analyzeCurrent = (...args) => {
+            const result = original(...args);
+            return { ...result, total, signal: { ...result.signal, level: 'SELL', text: '卖出',
+                quality: { ...result.quality, allowed: true, calculable: true } } };
+        };
+        const badge = env.M.build(record, {}, NOW).composite;
+        assert.equal(badge.scoreText, Number.isFinite(total) ? total.toFixed(1) : '—');
+        assert.equal(badge.state, Number.isFinite(total) ? 'ready' : 'missing');
+    }
+});
+
+test('price-only, GPT-only and VIX badges do not borrow a composite score', () => {
+    const env = environment(), assets = env.M.allAssets(env.C, env.E.ASSETS);
+    for (const id of ['bank', 'star-50', 'vix-dashboard']) {
+        const record = fixture(env); record.asset = assets.find(asset => asset.id === id);
+        const badge = env.M.build(record, {}, NOW).composite;
+        assert.equal(badge.state, 'na'); assert.equal(badge.score, null); assert.equal(badge.scoreText, '—');
+    }
+});
+
+test('reference, proxy and fallback text preserve the detail result without depending on ROC quality', () => {
+    const env = environment(), record = fixture(env), original = env.S.analyzeCurrent;
+    env.S.analyzeCurrent = (...args) => {
+        const result = original(...args);
+        return { ...result, signal: { ...result.signal, level: 'REFERENCE', referenceLevel: 'BUY', text: '吸引力偏高 · 代理参考',
+            color: '#28a745', quality: { ...result.quality, allowed: false, calculable: true } } };
+    };
+    const before = env.M.build(record, {}, NOW).composite;
+    record.priceResult.price.adjustment = 'raw'; record.parts.price = 'fallback';
+    const raw = env.M.build(record, {}, NOW).composite;
+    assert.equal(raw.text, before.text); assert.equal(raw.scoreText, before.scoreText);
+    assert.equal(raw.fallback, false);
+    record.parts.api = 'failed'; record.parts.history = 'fallback';
+    const fallback = env.M.build(record, {}, NOW).composite;
+    assert.equal(fallback.fallback, true); assert.equal(fallback.reference, true);
+    assert.equal(fallback.text, '吸引力偏高 · 代理参考');
+    assert.equal(fallback.scoreText, before.scoreText);
+    assert.match(fallback.detail, /更新失败/);
 });

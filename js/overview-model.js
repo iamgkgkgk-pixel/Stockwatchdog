@@ -80,6 +80,7 @@ const OverviewModel = (() => {
     }
 
     function signalEvidence(record, data, analysis, now) {
+        if (record.asset.priceOnly) return missing('综合信号', 'na', '仅接入价格扫描，尚无已核验的估值依据');
         if (record.asset.id === 'vix-dashboard') return missing('综合信号', 'na', 'VIX不参与原工具综合评分');
         if (record.asset.overviewOnly) return missing('综合信号', 'na', 'GPT独立标的尚无原工具综合信号，不借用其他标的评分');
         if (['queued', 'loading'].includes(record.parts.api) || ['queued', 'loading'].includes(record.parts.history))
@@ -98,6 +99,7 @@ const OverviewModel = (() => {
     }
 
     function peEvidence(record, data, analysis, now) {
+        if (record.asset.priceOnly) return missing('历史PE', 'na', '未核验估值指数代码及同口径历史，不使用代理估值');
         if (record.asset.id === 'vix-dashboard' || ['gold', 'commodity', 'bond'].includes(record.asset.type)) return missing('历史PE', 'na', '该标的没有PE，不用价格替代');
         if (['queued', 'loading'].includes(record.parts.history) || record.api?.pending?.includes('valuation') || record.parts.api === 'queued')
             return missing('历史PE', 'loading', '等待当前估值与可比历史');
@@ -114,6 +116,30 @@ const OverviewModel = (() => {
             detail: `PE ${number(data.pe)} / 均值 ${number(mean)} · ${points.length}点 · ${points[0].date}起（与详情PE图同口径）` };
     }
 
+    function compositeSummary(record, analysis) {
+        const unavailable = (state, text, detail) => ({ state, text, score: null, scoreText: '—', reference: false,
+            color: null, asOf: null, detail });
+        if (record.asset.priceOnly) return unavailable('na', '仅价格观察', '尚无可核验的综合评分依据，不用ROC代替综合信号');
+        if (record.asset.id === 'vix-dashboard' || record.asset.overviewOnly)
+            return unavailable('na', '暂无综合信号', '此标的不参与原工具综合评分，不借用其他标的信号');
+        if (['queued', 'loading'].includes(record.parts.api) || ['queued', 'loading'].includes(record.parts.history) || record.api?.pending?.length)
+            return unavailable('loading', '正在更新', '等待行情、估值及评分历史返回；不展示上一轮评分');
+        const signal = analysis?.signal, quality = signal?.quality || analysis?.quality;
+        if (!signal || !quality?.calculable || !Number.isFinite(analysis?.total))
+            return unavailable('missing', signal?.text || '暂无法计算', signal?.advice || quality?.hardReasons?.join('；') || '缺少综合评分依据');
+        const reference = !quality.allowed || signal.level === 'REFERENCE';
+        const fallback = ['fallback', 'failed'].includes(record.parts.api) || ['fallback', 'failed'].includes(record.parts.history);
+        const asOf = quality.dateLabel || quality.asOf || null;
+        return { state: reference ? 'reference' : 'ready', text: signal.text, score: analysis.total,
+            scoreText: analysis.total.toFixed(1), level: signal.level, referenceLevel: signal.referenceLevel,
+            color: signal.color, reference, fallback, asOf,
+            detail: [`当前综合信号：${signal.text}`, `${reference ? '参考评分' : '信号评分'}：${analysis.total.toFixed(1)} / 100`,
+                asOf ? `评分依据日期：${asOf}` : '评分依据日期未知',
+                fallback ? '部分来源更新失败，按已有观测计算，未更改观测日期' : '',
+                ...(quality.reasons || []), signal.advice || '', '与详情页同一综合评分引擎；不等于ROC分位或候选优先级，原买卖约束仍独立生效'
+            ].filter(Boolean).join('；') };
+    }
+
     function build(record, options = E.DEFAULTS, now = new Date()) {
         let data = {}, analysis = null;
         if (record.asset.id !== 'vix-dashboard') {
@@ -125,7 +151,8 @@ const OverviewModel = (() => {
         const loading = Object.values(record.parts).some(part => part === 'loading' || part === 'queued');
         const issues = [...new Set(Object.values(record.issues || {}).flat().filter(Boolean))];
         const reference = classification.reference || classification.count < 3 || issues.length > 0;
-        return { ...classification, reference, evidence, loading, issues, current: data,
+        const candidate = BottomScreener.analyze(record, evidence, now);
+        return { ...classification, reference, evidence, candidate, composite: compositeSummary(record, analysis), loading, issues, current: data,
             status: record.phase === 'queued' ? 'queued' : loading ? 'loading' : issues.length ? 'error' : classification.tier === 'pending' ? 'incomplete' : reference ? 'reference' : 'ready' };
     }
 

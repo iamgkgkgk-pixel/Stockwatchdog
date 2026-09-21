@@ -118,6 +118,31 @@ class ObservationTests(unittest.TestCase):
         self.assertEqual(data['etfPriceHistory'][0]['value'], 9.43)
         self.assertNotIn('priceChange', data['currentData'])
 
+    def test_machine_and_electronic_collectors_keep_unique_instrument_ids(self):
+        for etf_id, secid in [('machine-tool', '0.159663'), ('pcb', '1.515260')]:
+            configs = []
+            for module in [daily, monthly]:
+                matches = [item for item in module.ETF_CONFIGS if item['id'] == etf_id]
+                self.assertEqual(len(matches), 1)
+                config = matches[0]
+                self.assertEqual(config['secid'], secid)
+                self.assertEqual(config['file'], etf_id + '.json')
+                self.assertIsNone(config['danjuanCode'])
+                self.assertEqual(sum(item['secid'] == secid for item in module.ETF_CONFIGS), 1)
+                configs.append(config)
+            self.assertEqual(configs[0], configs[1])
+
+    def test_machine_bond_refresh_never_creates_pe_history_or_observation_date(self):
+        config = next(item for item in daily.ETF_CONFIGS if item['id'] == 'machine-tool')
+        data = json.loads((Path(__file__).resolve().parents[1] / 'data/machine-tool.json').read_text())
+        original_quote = copy.deepcopy(data['currentData']['fieldMeta']['price'])
+        obs.update_equity(data, config, None, {'cn': self.bond})
+        self.assertEqual(data['peHistory'], [])
+        self.assertIsNone(data['currentData']['pe'])
+        self.assertIsNone(data['currentData']['updateTime'])
+        self.assertNotIn('pe', data['currentData']['fieldMeta'])
+        self.assertEqual(data['currentData']['fieldMeta']['price'], original_quote)
+
     def test_non_today_argument_rejected_before_network_even_with_force(self):
         with patch.object(daily, 'today', return_value='2026-09-14'), patch.object(daily, 'fetch_cn_bond_yield') as fetch:
             for date in ['2026-09-11', '2026-09-15', 'bad-date', '2026-02-30']:

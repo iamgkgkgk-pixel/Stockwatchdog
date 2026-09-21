@@ -27,8 +27,12 @@
         const header = element('div', 'card-head'), link = element('a');
         link.href = asset.detail;
         const heading = element('h3', '', asset.shortName || asset.name), symbol = element('div', 'symbol', asset.code);
+        const nameLine = element('div', 'asset-name-line');
+        const composite = CandidateView.signalBadge({ state: 'loading', text: '正在更新', scoreText: '—', detail: '等待综合评分数据' });
+        composite.removeAttribute('tabindex');
+        nameLine.append(heading, composite);
         symbol.appendChild(element('span', 'group-tag', groups[asset.group] || '观察'));
-        link.append(heading, symbol);
+        link.append(nameLine, symbol);
         const state = element('span', 'state', '排队中');
         header.append(link, state);
         const evidence = element('dl', 'evidence'), rows = {};
@@ -48,7 +52,7 @@
         retry.addEventListener('click', () => controller.retry([asset.id]));
         foot.append(status, retry);
         root.append(header, evidence, action, reason, details, foot);
-        cards.set(asset.id, { root, state, rows, action, reason, detailsBody, status, retry });
+        cards.set(asset.id, { root, state, rows, action, reason, detailsBody, status, retry, composite });
         $('lane-pending').appendChild(root);
     }
     assets.forEach(createCard);
@@ -58,10 +62,14 @@
         try { model = OverviewModel.build(record, options); }
         catch (error) {
             model = { tier: 'pending', status: 'error', count: 0, evidence: {}, loading: false, reference: true,
+                candidate: { ...BottomScreener.describeAsset(record.asset), state: ['gold', 'commodity', 'bond'].includes(record.asset.type)
+                    || ['vix-dashboard', 'tencent-hk'].includes(record.asset.id) ? 'excluded' : 'pending', label: '分析失败',
+                    eligible: false, valuationSupport: false, reason: '分析失败，请重试，不使用旧候选' },
                 reason: '分析失败，暂不归档', issues: ['分析失败：' + error.message] };
         }
         models.set(record.asset.id, model);
         const card = cards.get(record.asset.id);
+        CandidateView.updateSignalBadge(card.composite, model.composite);
         card.root.dataset.status = model.status;
         card.root.setAttribute('aria-busy', String(model.loading));
         card.state.textContent = states[model.status] + (model.loading && model.issues.length ? ` · 已失败${model.issues.length}项` : '');
@@ -124,8 +132,11 @@
         $('progress-detail').textContent = `拉取中 ${info.active} · 排队 ${info.queued} · 有失败记录 ${info.failed}`;
         $('refresh-all').disabled = info.active > 0 || info.queued > 0;
         $('retry-failed').disabled = ![...controller.records.values()].some(record => record.phase === 'done' && Object.values(record.issues).some(list => list.length));
+        candidates.render(models, { query, onlyIssues, group });
     }
     const controller = OverviewData.create({ assets, onChange: update });
+    const candidates = CandidateView.create({ assets, onChange: scheduleLayout,
+        onRetry: id => controller.retry([id]), canRetry: id => controller.records.get(id)?.phase === 'done' });
     $('refresh-all').addEventListener('click', () => controller.refreshAll());
     $('retry-failed').addEventListener('click', () => controller.retry([...controller.records.values()]
         .filter(record => record.phase === 'done' && Object.values(record.issues).some(list => list.length)).map(record => record.asset.id)));

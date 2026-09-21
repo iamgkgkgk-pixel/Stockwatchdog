@@ -66,6 +66,7 @@ ETF_CONFIGS = [
     {"id": "sci-semi", "file": "sci-semi.json", "type": "a_growth", "danjuanCode": None, "secid": "1.588170", "useBondSpread": False, "bondType": "cn"},
     {"id": "robot", "file": "robot.json", "type": "a_growth", "danjuanCode": None, "secid": "1.562500", "useBondSpread": False, "bondType": "cn"},
     {"id": "energy-storage", "file": "energy-storage.json", "type": "a_growth_new", "danjuanCode": None, "secid": "0.159566", "useBondSpread": False, "bondType": "cn"},
+    {"id": "machine-tool", "file": "machine-tool.json", "type": "a_growth", "danjuanCode": None, "secid": "0.159663", "useBondSpread": False, "bondType": "cn"},
     {"id": "pcb", "file": "pcb.json", "type": "a_growth_new", "danjuanCode": None, "secid": "1.515260", "useBondSpread": False, "bondType": "cn"},
     {"id": "sp500-cn", "file": "sp500-cn.json", "type": "us_stock", "danjuanCode": "SP500", "secid": "1.513650", "useBondSpread": False, "bondType": "us"},
     {"id": "nasdaq100-cn", "file": "nasdaq100-cn.json", "type": "us_stock", "danjuanCode": "NDX", "secid": "1.513110", "useBondSpread": False, "bondType": "us"},

@@ -1,6 +1,6 @@
 {
   "description": "纳指100ETF历史数据",
-  "lastUpdate": "2026-09-15",
+  "lastUpdate": "2026-09-21",
   "peHistory": [
     {
       "date": "2016-01",
@@ -661,6 +661,42 @@
       "date": "2026-09-14",
       "value": 30.23,
       "percentile": 46.7
+    },
+    {
+      "date": "2026-09-15",
+      "value": 29.78,
+      "asOf": "2026-09-15",
+      "source": "蛋卷基金-纳指100",
+      "quality": "observed",
+      "instrumentId": "NDX",
+      "percentile": 43.72
+    },
+    {
+      "date": "2026-09-16",
+      "value": 29.81,
+      "asOf": "2026-09-16",
+      "source": "蛋卷基金-纳指100",
+      "quality": "observed",
+      "instrumentId": "NDX",
+      "percentile": 43.88
+    },
+    {
+      "date": "2026-09-17",
+      "value": 30.34,
+      "asOf": "2026-09-17",
+      "source": "蛋卷基金-纳指100",
+      "quality": "observed",
+      "instrumentId": "NDX",
+      "percentile": 47.56
+    },
+    {
+      "date": "2026-09-18",
+      "value": 30.48,
+      "asOf": "2026-09-18",
+      "source": "蛋卷基金-纳指100",
+      "quality": "observed",
+      "instrumentId": "NDX",
+      "percentile": 48.76
     }
   ],
   "dividendYieldHistory": [
@@ -1003,6 +1039,38 @@
     {
       "date": "2026-09-14",
       "value": 0.45
+    },
+    {
+      "date": "2026-09-15",
+      "value": 0.45,
+      "asOf": "2026-09-15",
+      "source": "蛋卷基金-纳指100",
+      "quality": "observed",
+      "instrumentId": "NDX"
+    },
+    {
+      "date": "2026-09-16",
+      "value": 0.45,
+      "asOf": "2026-09-16",
+      "source": "蛋卷基金-纳指100",
+      "quality": "observed",
+      "instrumentId": "NDX"
+    },
+    {
+      "date": "2026-09-17",
+      "value": 0.44,
+      "asOf": "2026-09-17",
+      "source": "蛋卷基金-纳指100",
+      "quality": "observed",
+      "instrumentId": "NDX"
+    },
+    {
+      "date": "2026-09-18",
+      "value": 0.44,
+      "asOf": "2026-09-18",
+      "source": "蛋卷基金-纳指100",
+      "quality": "observed",
+      "instrumentId": "NDX"
     }
   ],
   "bondYieldHistory": [
@@ -1142,42 +1210,42 @@
   "currentData": {
     "dividendYield": 0.44,
     "bondYield": 4.31,
-    "pe": 30.03,
-    "pePercentile": 45.6,
-    "pb": 9.28,
-    "pbPercentile": 79.92,
+    "pe": 30.48,
+    "pePercentile": 48.76,
+    "pb": 9.42,
+    "pbPercentile": 83.72,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-09-14",
+    "updateTime": "2026-09-18",
     "note": "纳斯达克100指数估值数据（美元10Y国债收益率）",
     "spread": -3.9,
     "fieldMeta": {
       "pe": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-纳指100",
         "quality": "observed",
         "instrumentId": "NDX"
       },
       "pb": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-纳指100",
         "quality": "observed",
         "instrumentId": "NDX"
       },
       "pePercentile": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-纳指100",
         "quality": "observed",
         "instrumentId": "NDX"
       },
       "pbPercentile": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-纳指100",
         "quality": "observed",
         "instrumentId": "NDX"
       },
       "dividendYield": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-纳指100",
         "quality": "observed",
         "instrumentId": "NDX"
@@ -1193,13 +1261,13 @@
         "source": "旧版快照（来源待核验）"
       },
       "roe": {
-        "asOf": "2026-09-14",
+        "asOf": "2026-09-18",
         "source": "蛋卷基金-纳指100",
         "quality": "observed",
         "instrumentId": "NDX"
       }
     },
-    "valuationAsOf": "2026-09-14",
+    "valuationAsOf": "2026-09-18",
     "valuationSource": "蛋卷基金-纳指100",
     "roe": 30.89
   },

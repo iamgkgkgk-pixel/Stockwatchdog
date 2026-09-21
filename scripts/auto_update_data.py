@@ -153,6 +153,15 @@ ETF_CONFIGS = [
         "bondType": "cn",
     },
     {
+        "id": "machine-tool",
+        "file": "machine-tool.json",
+        "type": "a_growth",
+        "danjuanCode": None,
+        "secid": "0.159663",
+        "useBondSpread": False,
+        "bondType": "cn",
+    },
+    {
         "id": "pcb",
         "file": "pcb.json",
         "type": "a_growth_new",
