@@ -11,13 +11,13 @@
     <script defer src="js/signal.js?v=20260915a"></script>
     <script defer src="js/storage.js?v=20260915a"></script>
     <script defer src="js/api.js?v=20260921a"></script>
-    <script defer src="js/gpt-strategy-engine.js?v=20260915d"></script>
-    <script defer src="js/gpt-strategy-data.js?v=20260917c"></script>
+    <script defer src="js/gpt-strategy-engine.js?v=20260922a"></script>
+    <script defer src="js/gpt-strategy-data.js?v=20260922a"></script>
     <script defer src="js/bottom-screener.js?v=20260921g"></script>
-    <script defer src="js/overview-model.js?v=20260921h"></script>
-    <script defer src="js/overview-data.js?v=20260921c"></script>
-    <script defer src="js/candidate-view.js?v=20260921h"></script>
-    <script defer src="js/overview-app.js?v=20260921h"></script>
+    <script defer src="js/overview-model.js?v=20260922a"></script>
+    <script defer src="js/overview-data.js?v=20260922a"></script>
+    <script defer src="js/candidate-view.js?v=20260922a"></script>
+    <script defer src="js/overview-app.js?v=20260922a"></script>
 </head>
 <body data-view="scan">
     <a class="skip" href="#candidate-panel">跳到标的总览</a>
@@ -91,7 +91,7 @@
                 <p><strong>价格低位区：</strong>前复权收盘在最近252个交易日高低区间中的位置 ≤20%；或距区间最高收盘回撤 ≥25% 且区间位置 ≤40%。价格位置不是历史分位，回撤不是最大回撤；至少252个样本且窗口跨度不超过400个自然日。这些是观察阈值，未经收益优化，不是买点承诺。</p>
                 <p><strong>超跌回调入口：</strong>日线ROC(12)与其MA(6)均为负，且平滑ROC在自身历史中的分位 ≤20%，进入动量回调观察；不要求年度价格位置低，也不要求统一跌幅。负收益条件避免把“上涨变慢”误当超跌。至少144个完整日线，最近144个样本跨度不超过240个自然日；不依赖252日年度窗口。这里的“超跌”只是动量偏弱标签，不代表价格低估。</p>
                 <p><strong>回调改善与跟踪：</strong>当前或此前5个交易日出现上述回调条件，且平滑ROC连续两期回升且收盘不低于前日、高于此前5日最低收盘时，列为回调开始缓和。连续满足只记录首次确认，最多跟踪20个交易日，当前收盘不低于确认日才保留后续跟踪；跌破确认日且不再满足回调条件则退出。所有事件仅用当时及此前数据，不回溯最低点；未复权只显示当前回调线索，不确认改善或跟踪。</p>
-                <p><strong>ROC独立展示：</strong>与详情页使用同一计算引擎，表格固定为日线ROC(12)、MA(6)，相同价格与参数下分位一致。默认至少144个完整日线样本即可计算分位，不必等到价格窗口满252日；未取得当日完整收盘时使用最近已完成交易日。未复权仍展示数值并标注参考；过期显示原日期历史值，不参与当前候选。缺样本或无价格时直接注明原因。</p>
+                <p><strong>ROC独立展示：</strong>与详情页使用同一计算引擎，表格固定为日线ROC(12)、MA(6)，相同价格与参数下分位一致。默认至少144个日线样本即可计算分位，不必等到价格窗口满252日；手动刷新优先请求最新行情，当天尚未收盘时展示暂估价格与ROC，并保留确认值及日期。候选、年度位置、回撤和交易约束仍按完整日线判定，不用暂估值冒充确认。未复权仍展示数值并标注参考；过期显示原日期历史值，不参与当前候选。缺样本或无价格时直接注明原因。</p>
                 <p><strong>低位改善：</strong>位于低位区，固定日线ROC(12)、MA(6)连续两期回升，最新收盘不低于前日且高于此前5日最低收盘；否则为低位未稳。扫描统一用日线，买卖约束仍读取原工具保存的ROC参数，可能是周线，两者不同不互相替代。</p>
                 <p><strong>反弹跟踪：</strong>最近20个交易日曾在低位满足改善条件，现在离开低位区且高于改善确认日收盘；以确认日计算变化，不从事后最低点计算收益。条件从历史逐日计算，不表示本工具在当时实际发出了提醒。</p>
                 <p><strong>高位预警：</strong>价格位于近252个交易日收盘区间的上部20%（价格位置 ≥80%）时列入高位观察，这不是ROC分位 ≥80%。平滑ROC连续两期下降，且收盘不高于前日、低于此前5日最高收盘时标为“高位开始转弱”。最近20个交易日曾满足高位转弱、当前已离开高位区且低于转弱确认日收盘时，列为“转弱后继续回落”；从确认日计算变化，不从事后最高点计算。阈值用于观察，未经收益优化。</p>

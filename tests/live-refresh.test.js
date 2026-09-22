@@ -448,6 +448,181 @@ test('VIX value can render before slow CNN and history requests complete', async
     assert.equal(env.element('data-source-status').attrs['aria-busy'], 'false');
 });
 
+function intradayPrice(close = 90) {
+    const asset = E.ASSETS[0], bars = [];
+    for (let date = new Date('2025-01-01T00:00:00Z'); date.toISOString().slice(0, 10) <= '2026-09-16'; date.setUTCDate(date.getUTCDate() + 1)) {
+        if ([0, 6].includes(date.getUTCDay())) continue;
+        const value = 100 + Math.sin(bars.length / 8) * 12;
+        bars.push({ date: date.toISOString().slice(0, 10), open: value, close: value, high: value, low: value });
+    }
+    return { ...price(asset, '2026-09-16'), market: 'cn', bars, fetchedAt: NOW.toISOString(),
+        liveBar: { date: '2026-09-17', open: close, close, high: close, low: close } };
+}
+
+test('manual intraday refresh changes current price and ROC without replacing completed bars', async () => {
+    let value = 4;
+    const env = dataEnvironment({ response: url => {
+        const payload = marketResponse(url);
+        payload.data.klines[1] = `2026-09-17,${value},${value},${value},${value},100`;
+        return payload;
+    } });
+    const first = await env.api.loadPrice(E.ASSETS[0], true);
+    value = 4.5;
+    const second = await env.api.loadPrice(E.ASSETS[0], true, first);
+    assert.equal(first.price.liveBar.close, 4);
+    assert.equal(second.price.liveBar.close, 4.5);
+    assert.equal(second.price.asOf, '2026-09-16');
+    assert.equal(second.price.bars.at(-1).close, 3);
+    assert.equal(E.displayRocModel(second.price, {}, NOW).last.close, 4.5);
+    assert.equal(env.scripts.length, 2);
+});
+
+test('day ROC preview shares the formula and historical percentile sample but cannot confirm events', () => {
+    const data = intradayPrice(), before = JSON.stringify(data);
+    const display = E.displayRocModel(data, {}, NOW);
+    const confirmed = E.rocModel(data.bars, {}, NOW);
+    const reference = E.rocModel([...data.bars, data.liveBar], {}, new Date('2026-09-17T08:00:00Z'));
+    assert.equal(display.provisional, true);
+    assert.equal(display.last.date, '2026-09-17');
+    assert.deepEqual(display.last, reference.last);
+    assert.deepEqual(display.events, confirmed.events);
+    assert.deepEqual(display.confirmed, confirmed);
+    assert.equal(display.recent, null);
+    assert.equal(JSON.stringify(data), before);
+    const changed = E.displayRocModel(intradayPrice(130), {}, NOW);
+    assert.notEqual(changed.last.rank, display.last.rank);
+    assert.deepEqual(changed.confirmed, display.confirmed);
+});
+
+test('an old intraday snapshot never matures at close or leaks its live bar into the next day', () => {
+    const data = intradayPrice();
+    const afterClose = E.displayRocModel(data, {}, new Date('2026-09-17T08:00:00Z'));
+    assert.equal(afterClose.provisional, true);
+    assert.equal(afterClose.confirmed.last.date, '2026-09-16');
+    const tomorrow = E.displayRocModel(data, {}, new Date('2026-09-18T02:00:00Z'));
+    assert.equal(tomorrow.provisional, false);
+    assert.equal(tomorrow.last.date, '2026-09-16');
+    assert.equal(E.completedBars([{ ...data.liveBar, provisional: true }], new Date('2026-09-18T08:00:00Z')).length, 0);
+});
+
+test('a newly requested A-share daily bar is accepted at 15:00 instead of waiting until 15:15', () => {
+    const D = require('../js/gpt-strategy-data.js'), asset = E.ASSETS[0];
+    const payload = marketResponse(new URL(D.priceURL(asset, NOW)));
+    const before = D.parseEastmoney(payload, asset, new Date('2026-09-17T06:59:59Z'));
+    assert.equal(before.asOf, '2026-09-16');
+    assert.equal(before.liveBar.date, '2026-09-17');
+    const after = D.parseEastmoney(payload, asset, new Date('2026-09-17T07:00:00Z'));
+    assert.equal(after.asOf, '2026-09-17');
+    assert.equal(after.liveBar, null);
+    assert.equal(E.displayRocModel(after, {}, new Date('2026-09-17T07:00:01Z')).provisional, false);
+    assert.equal(E.clock(new Date('2026-09-17T08:09:00Z'), 'hk').closed, false);
+    assert.equal(E.clock(new Date('2026-09-17T08:10:00Z'), 'hk').closed, true);
+});
+
+test('weekly preview includes the current week without manufacturing a completed-week turn', () => {
+    const data = intradayPrice(), options = { timeframe: 'week' };
+    const display = E.displayRocModel(data, options, NOW);
+    const confirmed = E.rocModel(data.bars, options, NOW);
+    assert.equal(display.last.date, '2026-09-17');
+    assert.equal(display.confirmed.last.date, '2026-09-11');
+    assert.deepEqual(display.events, confirmed.events);
+    assert.equal(display.bars.length, confirmed.bars.length + 1);
+    assert.match(display.status, /本周暂估/);
+});
+
+test('a successful but old primary response still tries the backup and preserves entire raw history', async () => {
+    const asset = E.ASSETS[0];
+    const env = dataEnvironment({ response: url => {
+        const payload = marketResponse(url);
+        payload.data.klines = ['2026-09-15,1,1,1,1,100'];
+        return payload;
+    }, transport: async () => ({ ok: true, json: async () => ({ code: 0, data: { sh512890: {
+        day: [['2026-09-16', '2', '2', '2', '2'], ['2026-09-17', '2', '3', '3', '2']]
+    } } }) }) });
+    const result = await env.api.loadPrice(asset);
+    assert.equal(result.price.asOf, '2026-09-16');
+    assert.equal(result.price.adjustment, 'raw');
+    assert.equal(result.price.liveBar.close, 3);
+    assert.equal(result.price.bars.length, 1);
+    assert.ok(env.requests.some(item => item.url.includes('gtimg') && item.url.includes('&_=')));
+});
+
+test('today raw preview can supplement older adjusted confirmation without splicing prices', async () => {
+    const asset = E.ASSETS[0];
+    const env = dataEnvironment({ bundle: { assets: { [asset.id]: price(asset, '2026-09-16', 1.5) } },
+        transport: async () => ({ ok: true, json: async () => ({ code: 0, data: { sh512890: {
+            day: [['2026-09-16', '2', '2', '2', '2'], ['2026-09-17', '2', '3', '3', '2']]
+        } } }) }) });
+    const result = await env.api.loadPrice(asset);
+    assert.equal(result.price.adjustment, 'qfq');
+    assert.equal(result.price.bars[0].close, 1.5);
+    const display = E.displayRocModel(result.price, {}, NOW);
+    assert.equal(display.raw, true);
+    assert.equal(display.bars[0].close, 2);
+    assert.equal(display.last.close, 3);
+    assert.equal(display.events.length, 0);
+});
+
+test('raw quote requires valid same-instrument time and continuity; qfq quotes never overwrite adjusted bars', () => {
+    const D = require('../js/gpt-strategy-data.js'), asset = E.ASSETS[0], qt = [];
+    qt[2] = asset.code; qt[3] = '3.1'; qt[4] = '2'; qt[5] = '2.1'; qt[30] = '20260917102900'; qt[33] = '3.2'; qt[34] = '2';
+    const instrument = { day: [['2026-09-16', '2', '2', '2', '2']], qt: { sh512890: qt } };
+    const payload = { code: 0, data: { sh512890: instrument } };
+    const raw = D.parseTencentPrice(payload, asset, NOW);
+    assert.equal(raw.liveBar.close, 3.1);
+    assert.equal(raw.asOf, '2026-09-16');
+    instrument.qfqday = [['2026-09-16', '1', '1', '1', '1']];
+    const adjusted = D.parseTencentPrice(payload, asset, NOW);
+    assert.equal(adjusted.liveBar, null);
+    assert.equal(adjusted.quote.close, 3.1);
+    assert.equal(E.displayRocModel(adjusted, {}, NOW).last.close, 1);
+    delete instrument.qfqday;
+    qt[4] = '200';
+    assert.equal(D.parseTencentPrice(payload, asset, NOW).liveBar, null);
+    qt[30] = '20260917150000';
+    assert.equal(D.parseTencentPrice(payload, asset, NOW).quote, null);
+    qt[30] = '20260916102900';
+    assert.equal(D.parseTencentPrice(payload, asset, NOW).quote, null);
+    qt[2] = '999999';
+    assert.throws(() => D.parseTencentPrice(payload, asset, NOW), /身份/);
+});
+
+test('one manual overview round refreshes shared bundles once, the next round reads them again', async () => {
+    const env = dataEnvironment({ response: marketResponse }), scope = new Map();
+    await Promise.all(E.ASSETS.slice(0, 3).map(asset => env.api.loadPrice(asset, true, null, scope)));
+    const count = () => env.requests.filter(item => /gpt-strategy-market|price-roc-history/.test(item.url)).length;
+    assert.equal(count(), 2);
+    await env.api.loadPrice(E.ASSETS[0], true, null, new Map());
+    assert.equal(count(), 4);
+});
+
+test('GPT first load compares successful but old live prices with newer bundled snapshots', async () => {
+    const asset = E.ASSETS[0], bundled = price(asset, '2026-09-16', 8);
+    const env = dataEnvironment({ bundle: { assets: { [asset.id]: bundled } }, response: url => {
+        const result = marketResponse(url); result.data.klines = ['2026-09-15,1,1,1,1,1']; return result;
+    } });
+    const result = await env.api.load(asset);
+    assert.equal(result.price.asOf, '2026-09-16');
+    assert.equal(result.price.bars.at(-1).close, 8);
+    assert.notEqual(result.mode, '本次接口获取');
+});
+
+test('GPT retains same-day adjusted confirmation while displaying a newer raw preview', async () => {
+    const asset = E.ASSETS[0], bundled = price(asset, '2026-09-16', 1.5);
+    const env = dataEnvironment({ bundle: { assets: { [asset.id]: bundled } }, transport: async url => {
+        if (!url.includes('gtimg')) throw new Error('offline');
+        return { ok: true, json: async () => ({ code: 0, data: { sh512890: {
+            day: [['2026-09-16', '2', '2', '2', '2'], ['2026-09-17', '3', '3', '3', '3']]
+        } } }) };
+    } });
+    const result = await env.api.load(asset);
+    assert.equal(result.price.adjustment, 'qfq');
+    assert.equal(result.price.bars[0].close, 1.5);
+    const display = E.displayRocModel(result.price, {}, NOW);
+    assert.equal(display.last.close, 3);
+    assert.equal(display.raw, true);
+});
+
 test('same-day adjusted history still beats a raw response even when raw was fetched later', async () => {
     const asset = E.ASSETS[0], adjusted = price(asset, '2026-09-16', 1.5);
     const env = dataEnvironment({ bundle: { assets: { [asset.id]: adjusted } }, transport: async () => ({ ok: true,

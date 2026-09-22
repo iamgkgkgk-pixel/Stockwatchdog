@@ -189,6 +189,53 @@ async function waitDone(controller) {
     assert.fail('controller did not drain');
 }
 
+test('manual overview refresh and retry force prices with one shared scope per round', async () => {
+    const env = environment(), calls = [];
+    const controller = env.D.create(loaders(env, { priceLoader: async (asset, refresh, previous, scope) => {
+        calls.push({ asset, refresh, previous, scope }); return { price: null, error: 'offline' };
+    } }));
+    controller.refreshAll(); await waitDone(controller);
+    assert.ok(calls.every(call => call.refresh === true));
+    assert.equal(new Set(calls.map(call => call.scope)).size, 1);
+    const previousScope = calls[0].scope, count = calls.length;
+    controller.refreshAll(); await waitDone(controller);
+    assert.notEqual(calls[count].scope, previousScope);
+    const retryCount = calls.length;
+    controller.retry([calls[0].asset.id]); await waitDone(controller);
+    assert.equal(calls.length, retryCount + 1);
+    assert.equal(calls.at(-1).refresh, true);
+    assert.notEqual(calls.at(-1).scope, calls[count].scope);
+});
+
+test('intraday display changes price and ROC without changing overview gates or candidate conclusions', () => {
+    const env = environment(), record = fixture(env), bars = [];
+    for (let d = new Date('2025-01-01T00:00:00Z'); d.toISOString().slice(0, 10) <= '2026-09-18'; d.setUTCDate(d.getUTCDate() + 1)) {
+        if ([0, 6].includes(d.getUTCDay())) continue;
+        const close = 100 + Math.sin(bars.length / 8) * 12;
+        bars.push({ date: d.toISOString().slice(0, 10), open: close, close, high: close, low: close });
+    }
+    record.priceResult.price = { ...record.priceResult.price, bars, market: 'cn', fetchedAt: NOW.toISOString(),
+        liveBar: { date: '2026-09-21', close: 70, high: 70, low: 70, open: 70 } };
+    const first = env.M.build(record, {}, NOW);
+    record.priceResult.price = { ...record.priceResult.price, liveBar: { date: '2026-09-21', close: 140, high: 140, low: 140, open: 140 } };
+    const second = env.M.build(record, {}, NOW);
+    assert.equal(first.display.provisional, true);
+    assert.equal(first.dailyDisplay.last.date, '2026-09-21');
+    assert.notEqual(first.display.last.rank, second.display.last.rank);
+    assert.deepEqual(first.evidence.roc, second.evidence.roc);
+    assert.deepEqual(first.candidate, second.candidate);
+    assert.equal(first.buyBlocked, second.buyBlocked);
+    assert.equal(first.sellBlocked, second.sellBlocked);
+    assert.equal(first.tier, second.tier);
+    record.priceResult.price = { ...record.priceResult.price, bars: bars.filter(bar => bar.date <= '2026-09-01'),
+        fetchedAt: '2026-09-01T08:00:00Z', liveBar: null };
+    const stale = env.M.build(record, {}, NOW);
+    assert.equal(stale.evidence.roc.state, 'stale');
+    assert.equal(stale.evidence.roc.vote, null);
+    assert.equal(stale.buyBlocked, null);
+    assert.equal(stale.sellBlocked, null);
+});
+
 test('async controller starts at most three assets, publishes fast prices, and continues after failure', async () => {
     const env = environment(), gates = new Map(), updates = [];
     const controller = env.D.create(loaders(env, { onChange: record => updates.push({ id: record.asset.id, ...record.parts }),

@@ -83,7 +83,14 @@
             row.date.textContent = item?.asOf || '—';
             row.row.title = item?.detail || '尚无有效数据';
         }
-        card.action.textContent = model.action || '等待ROC，暂不判断买卖节奏';
+        if (model.display?.provisional) {
+            const row = card.rows.roc, latest = model.display;
+            row.label.textContent = `${Number.isFinite(latest.last?.rank) ? latest.last.rank.toFixed(1) + '%' : '样本不足'} · 暂估${latest.raw ? ' · 未复权' : ''}`;
+            row.label.className = 'vote-unknown';
+            row.date.textContent = latest.last?.date || '—';
+            row.row.title = `${latest.note}；确认分位 ${model.evidence.roc?.rank ?? '未知'}%`;
+        }
+        card.action.textContent = (model.display?.provisional ? `确认值（${model.evidence.roc?.asOf || '无'}）：` : '') + (model.action || '等待ROC，暂不判断买卖节奏');
         card.action.dataset.gate = model.buyBlocked === true ? 'no-buy' : model.sellBlocked === true ? 'no-sell'
             : model.buyBlocked === false ? 'open' : 'unknown';
         if (model.evidence.roc?.reference) card.action.textContent += ' · 参考，需核对数据';
@@ -91,6 +98,7 @@
         if (!model.loading && model.reference && model.tier !== 'pending') card.reason.appendChild(element('span', 'reference', '仅供参考'));
         card.detailsBody.replaceChildren();
         for (const item of Object.values(model.evidence)) card.detailsBody.appendChild(element('p', '', `${item.title}：${item.detail}${item.asOf ? '；观测日 ' + item.asOf : ''}`));
+        if (model.display) card.detailsBody.appendChild(element('p', '', `最新价格 ${model.display.quote?.close ?? model.display.last?.close ?? '—'}；${model.display.note}`));
         for (const [key, name] of [['api', '行情 / 估值源'], ['price', '价格 / ROC'], ['history', '历史文件']]) {
             const pending = key === 'api' ? record.api?.pending || [] : [];
             const names = { etf: '行情', bond: '国债', valuation: '估值', fearGreed: '情绪', aShareBreadth: '市场广度', fearGreedFallback: '情绪备用源' };

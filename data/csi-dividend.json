@@ -1,6 +1,6 @@
 {
   "description": "中证红利ETF历史数据（中证红利指数 000922）",
-  "lastUpdate": "2026-09-21",
+  "lastUpdate": "2026-09-22",
   "peHistory": [
     {
       "date": "2021-01",
@@ -642,6 +642,15 @@
       "quality": "observed",
       "instrumentId": "000922",
       "percentile": 76.16
+    },
+    {
+      "date": "2026-09-21",
+      "value": 8.59,
+      "asOf": "2026-09-21",
+      "source": "蛋卷基金-中证红利",
+      "quality": "observed",
+      "instrumentId": "000922",
+      "percentile": 78.68
     }
   ],
   "dividendYieldHistory": [
@@ -1057,6 +1066,14 @@
       "date": "2026-09-18",
       "value": 4.31,
       "asOf": "2026-09-18",
+      "source": "蛋卷基金-中证红利",
+      "quality": "observed",
+      "instrumentId": "000922"
+    },
+    {
+      "date": "2026-09-21",
+      "value": 4.27,
+      "asOf": "2026-09-21",
       "source": "蛋卷基金-中证红利",
       "quality": "observed",
       "instrumentId": "000922"
@@ -1571,44 +1588,44 @@
     }
   ],
   "currentData": {
-    "dividendYield": 4.31,
+    "dividendYield": 4.27,
     "bondYield": 1.73,
-    "pe": 8.49,
-    "pePercentile": 76.16,
-    "pb": 0.84,
-    "pbPercentile": 47.52,
+    "pe": 8.59,
+    "pePercentile": 78.68,
+    "pb": 0.85,
+    "pbPercentile": 49.52,
     "spread": 3.4,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-09-18",
+    "updateTime": "2026-09-21",
     "note": "中证红利指数(000922)估值数据，蛋卷有覆盖(SH000922)",
     "fieldMeta": {
       "pe": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-中证红利",
         "quality": "observed",
         "instrumentId": "000922"
       },
       "pb": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-中证红利",
         "quality": "observed",
         "instrumentId": "000922"
       },
       "pePercentile": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-中证红利",
         "quality": "observed",
         "instrumentId": "000922"
       },
       "pbPercentile": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-中证红利",
         "quality": "observed",
         "instrumentId": "000922"
       },
       "dividendYield": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-中证红利",
         "quality": "observed",
         "instrumentId": "000922"
@@ -1624,15 +1641,15 @@
         "source": "旧版快照（来源待核验）"
       },
       "roe": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-中证红利",
         "quality": "observed",
         "instrumentId": "000922"
       }
     },
-    "valuationAsOf": "2026-09-18",
+    "valuationAsOf": "2026-09-21",
     "valuationSource": "蛋卷基金-中证红利",
-    "roe": 9.85
+    "roe": 9.86
   },
   "valuationAnchor": {
     "peMean": 6.95,

@@ -34,7 +34,7 @@ const GptStrategyEngine = (() => {
             timeZone: market === 'us' ? 'America/New_York' : market === 'hk' ? 'Asia/Hong_Kong' : 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
             hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
         }).formatToParts(now).map(part => [part.type, part.value]));
-        return { today: `${parts.year}-${parts.month}-${parts.day}`, closed: Number(parts.hour) * 60 + Number(parts.minute) >= (market === 'us' ? 990 : market === 'hk' ? 975 : 915) };
+        return { today: `${parts.year}-${parts.month}-${parts.day}`, closed: Number(parts.hour) * 60 + Number(parts.minute) >= (market === 'us' ? 990 : market === 'hk' ? 970 : 900) };
     }
 
     function age(asOf, today) {
@@ -48,20 +48,20 @@ const GptStrategyEngine = (() => {
             smoothing: integer('smoothing', 1, 30), confirmation: integer('confirmation', 1, 5) };
     }
 
-    function completedBars(rows, now = new Date(), market = 'cn') {
+    function completedBars(rows, now = new Date(), market = 'cn', includeCurrent = false) {
         const { today, closed } = clock(now, market);
         const unique = new Map();
         for (const row of rows || []) {
             const day = date(row.date);
             const close = number(row.close);
-            if (!day || close === null || close <= 0 || day > today || (day === today && !closed)) continue;
+            if (!day || close === null || close <= 0 || day > today || (!includeCurrent && (row.provisional || day === today && !closed))) continue;
             unique.set(day, { ...row, date: day, close });
         }
         return [...unique.values()].sort((a, b) => a.date.localeCompare(b.date));
     }
 
-    function periods(rows, timeframe, now = new Date(), market = 'cn') {
-        const daily = completedBars(rows, now, market);
+    function periods(rows, timeframe, now = new Date(), market = 'cn', includeCurrent = false) {
+        const daily = completedBars(rows, now, market, includeCurrent);
         if (timeframe !== 'week') return daily;
         const { today, closed } = clock(now, market);
         const groups = new Map();
@@ -77,7 +77,7 @@ const GptStrategyEngine = (() => {
             const friday = new Date(Date.parse(monday) + 4 * DAY).toISOString().slice(0, 10);
             const calendarComplete = friday < today || (friday === today && closed);
             const dataComplete = bar.date === friday || latestObserved > friday;
-            return calendarComplete && dataComplete;
+            return calendarComplete && dataComplete || includeCurrent && monday <= today && today <= friday;
         }).map(([, bar]) => bar);
     }
 
@@ -100,6 +100,12 @@ const GptStrategyEngine = (() => {
     function rocModel(rows, input = {}, now = new Date(), market = 'cn') {
         const options = settings(input);
         const bars = periods(rows, options.timeframe, now, market);
+        const dailyLast = completedBars(rows, now, market).at(-1);
+        const fresh = !!dailyLast && age(dailyLast.date, clock(now, market).today) <= 7;
+        return rocSeries(bars, options, fresh);
+    }
+
+    function rocSeries(bars, options, fresh) {
         const roc = bars.map((bar, i) => i < options.length ? null : (bar.close / bars[i - options.length].close - 1) * 100);
         const smooth = roc.map((_, i) => {
             const window = roc.slice(Math.max(0, i - options.smoothing + 1), i + 1);
@@ -129,10 +135,42 @@ const GptStrategyEngine = (() => {
         const slope = lastIndex > 0 && smooth[lastIndex] !== null && smooth[lastIndex - 1] !== null ? Math.sign(smooth[lastIndex] - smooth[lastIndex - 1]) : 0;
         const recent = [...events].reverse().find(event => event.extreme && lastIndex - event.confirmIndex <= 3 &&
             (event.type === 'trough' ? slope > 0 && smooth[lastIndex] > event.value : slope < 0 && smooth[lastIndex] < event.value)) || null;
-        const dailyLast = completedBars(rows, now, market).at(-1);
-        const fresh = !!dailyLast && age(dailyLast.date, clock(now, market).today) <= 7;
         return { options, bars, roc, smooth, ranks, lowerBand, upperBand, events, recent, slope, fresh, lookback, minimum,
             last: lastIndex >= 0 ? { date: bars[lastIndex].date, close: bars[lastIndex].close, roc: roc[lastIndex], smooth: smooth[lastIndex], rank: ranks[lastIndex] } : null };
+    }
+
+    function displayRocModel(price, input = {}, now = new Date(), market = 'cn') {
+        const options = settings(input), today = clock(now, market).today;
+        const captured = new Date(price?.fetchedAt);
+        const cut = Number.isFinite(captured.getTime()) && captured <= now ? captured : now;
+        const confirmed = rocModel(price?.bars || [], options, cut, market);
+        confirmed.fresh = !!confirmed.last && age(confirmed.last.date, today) <= 7;
+        const alternative = price?.preview;
+        const source = alternative && alternative.code === price.code && alternative.secid === price.secid
+            && (alternative.market || market) === market && (!price.market || price.market === market) ? alternative : price;
+        const fetched = new Date(source?.fetchedAt);
+        const validCapture = Number.isFinite(fetched.getTime()) && fetched <= now && clock(fetched, market).today === today;
+        const live = validCapture && source?.liveBar?.date === today && number(source.liveBar.close) > 0 ? source.liveBar : null;
+        const daily = completedBars(source?.bars || [], validCapture ? fetched : cut, market);
+        const rows = live ? [...daily.filter(bar => bar.date < live.date), { ...live, provisional: true }] : daily;
+        const displayBars = validCapture ? periods(rows, options.timeframe, fetched, market, true) : confirmed.bars;
+        const provisional = !!displayBars.length && (!confirmed.last || displayBars.at(-1).date > confirmed.last.date);
+        const raw = (provisional ? source?.adjustment : price?.adjustment) === 'raw';
+        const base = provisional ? rocSeries(displayBars, options, confirmed.fresh) : confirmed;
+        const quote = price?.quote;
+        const validQuote = quote && quote.code === price.code && quote.secid === price.secid && quote.date === today
+            && number(quote.close) > 0 && Number.isFinite(Date.parse(quote.observedAt)) && Date.parse(quote.observedAt) <= now.getTime();
+        const formatTime = value => Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString('zh-CN', {
+            timeZone: market === 'us' ? 'America/New_York' : 'Asia/Shanghai', hour12: false }) : '时间未标注';
+        const capturedAt = provisional ? source?.fetchedAt : price?.fetchedAt;
+        const timeLabel = live?.observedAt ? '报价于 ' + formatTime(live.observedAt) : '获取于 ' + formatTime(capturedAt);
+        const status = provisional ? options.timeframe === 'week' ? '本周暂估 · 未确认' : '当日暂估 · 未确认' : '收盘日线';
+        const note = `${status}；${timeLabel}；${provisional ? '展示ROC随本次行情变化，确认信号仍截至 ' + (confirmed.last?.date || '无') : '日线截至 ' + (confirmed.last?.date || '无')}`
+            + (confirmed.last && confirmed.last.date < today ? '；当天完整日线尚未取得或尚未收盘，不将旧日期改成今天' : '')
+            + (raw ? '；未复权参考' : '') + '；源端行情可能延迟或修订';
+        return { ...base, provisional, confirmed, raw, source: provisional ? source?.source : price?.source,
+            capturedAt, timeLabel, status, note, quote: validQuote ? { ...quote, timeLabel: formatTime(quote.observedAt) } : null,
+            events: raw || provisional && source !== price ? [] : confirmed.events, recent: null };
     }
 
     function valuationBand(rank) {
@@ -363,7 +401,7 @@ const GptStrategyEngine = (() => {
     }
 
     return { ASSETS, DEFAULTS, POLICY, MARKETS, number, date, clock, age, settings, completedBars, periods, percentile, quantile,
-        rocModel, valuationModel, valuationBand, marketFor, marketBars, stressSeries, sentimentModel, primaryDecision, tacticalDecision, decision };
+        rocModel, displayRocModel, valuationModel, valuationBand, marketFor, marketBars, stressSeries, sentimentModel, primaryDecision, tacticalDecision, decision };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = GptStrategyEngine;

@@ -1,6 +1,6 @@
 {
   "description": "医药ETF历史数据",
-  "lastUpdate": "2026-09-21",
+  "lastUpdate": "2026-09-22",
   "peHistory": [
     {
       "date": "2019-01",
@@ -667,6 +667,15 @@
       "quality": "observed",
       "instrumentId": "000978",
       "percentile": 31.48
+    },
+    {
+      "date": "2026-09-21",
+      "value": 31.84,
+      "asOf": "2026-09-21",
+      "source": "蛋卷基金-医药100",
+      "quality": "observed",
+      "instrumentId": "000978",
+      "percentile": 38.48
     }
   ],
   "dividendYieldHistory": [
@@ -1041,6 +1050,14 @@
       "source": "蛋卷基金-医药100",
       "quality": "observed",
       "instrumentId": "000978"
+    },
+    {
+      "date": "2026-09-21",
+      "value": 1.8,
+      "asOf": "2026-09-21",
+      "source": "蛋卷基金-医药100",
+      "quality": "observed",
+      "instrumentId": "000978"
     }
   ],
   "bondYieldHistory": [
@@ -1306,44 +1323,44 @@
     }
   ],
   "currentData": {
-    "dividendYield": 1.87,
+    "dividendYield": 1.8,
     "bondYield": 1.73,
-    "pe": 30.85,
-    "pePercentile": 31.48,
-    "pb": 3.0,
-    "pbPercentile": 6.12,
+    "pe": 31.84,
+    "pePercentile": 38.48,
+    "pb": 3.1,
+    "pbPercentile": 10.44,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-09-18",
+    "updateTime": "2026-09-21",
     "note": "沪深300医药卫生指数估值数据",
     "spread": 0.2,
     "fieldMeta": {
       "pe": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-医药100",
         "quality": "observed",
         "instrumentId": "000978"
       },
       "pb": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-医药100",
         "quality": "observed",
         "instrumentId": "000978"
       },
       "pePercentile": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-医药100",
         "quality": "observed",
         "instrumentId": "000978"
       },
       "pbPercentile": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-医药100",
         "quality": "observed",
         "instrumentId": "000978"
       },
       "dividendYield": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-医药100",
         "quality": "observed",
         "instrumentId": "000978"
@@ -1359,13 +1376,13 @@
         "source": "旧版快照（来源待核验）"
       },
       "roe": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-医药100",
         "quality": "observed",
         "instrumentId": "000978"
       }
     },
-    "valuationAsOf": "2026-09-18",
+    "valuationAsOf": "2026-09-21",
     "valuationSource": "蛋卷基金-医药100",
     "roe": 9.74
   },

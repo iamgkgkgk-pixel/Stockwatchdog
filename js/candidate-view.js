@@ -111,15 +111,27 @@ const CandidateView = (() => {
                 cell.title = display.title;
                 for (const note of display.notes) cell.appendChild(node('small', 'metric-note', note));
             }
+            const latest = model.dailyDisplay;
+            if (latest?.provisional) {
+                r.cells.rank.replaceChildren(node('strong', 'numeric', format(latest.last?.rank)),
+                    node('small', 'metric-note', latest.raw ? '暂估 · 未复权参考' : '暂估 · 未确认'),
+                    node('small', 'metric-note', `确认 ${format(c.rank)} / ${c.asOf || '—'}`));
+                r.cells.rank.title = latest.note;
+            }
             if ((c.correction?.eligible || c.correction?.referenceEligible) && !c.lowZone)
                 r.cells.position.appendChild(node('small', 'price-context', Number.isFinite(c.position) ? '并非年度低位' : '年度位置未知'));
             r.cells.valuation.replaceChildren(node('span', c.valuationSupport ? 'valuation-supported' : '', c.valuationLabel || c.capability));
             r.cells.state.replaceChildren(node('span', 'stage stage-' + attention.state, attention.label),
                 node('small', 'entry-tags', BottomScreener.entryTags(c).join(' · ') || '当前无触发入口'),
                 node('small', 'attention-action', attention.action),
-                node('small', 'gate', (c.gate || '等待价格') + (model.evidence?.roc?.reference ? ' · 参考' : '')));
+                node('small', 'gate', (latest?.provisional ? '确认约束：' : '') + (c.gate || '等待价格') + (model.evidence?.roc?.reference ? ' · 参考' : '')));
             r.cells.state.title = model.evidence?.roc?.detail || '约束读取详情页已保存参数；候选扫描固定使用日线ROC(12)、MA(6)';
-            r.cells.date.replaceChildren(node('span', 'numeric', c.asOf || '—'), node('small', c.fallback ? 'fallback-note' : '', c.asOf ? c.trustLabel : '等待有效数据'));
+            r.cells.date.replaceChildren(node('span', 'numeric', latest?.last?.date || c.asOf || '—'),
+                node('small', c.fallback ? 'fallback-note' : '', latest?.provisional ? `暂估；确认 ${c.asOf || '—'}` : c.asOf ? c.trustLabel : '等待有效数据'));
+            const close = latest?.quote?.close ?? latest?.last?.close;
+            if (Number.isFinite(close)) r.cells.date.appendChild(node('small', 'numeric', `${latest?.quote ? '报价' : latest?.provisional ? '最新价' : '收盘'} ${close.toFixed(3)}`));
+            r.cells.date.title = latest?.note || '';
+            if (latest?.quote) r.cells.date.title += `；报价 ${latest.quote.timeLabel}；ROC用价 ${latest.last?.close ?? '未知'}`;
             r.reason.textContent = attention.reason;
             r.reason.appendChild(node('small', 'screening-check', BottomScreener.explain(c)));
             r.reason.appendChild(node('small', 'screening-check', model.composite?.detail || '综合信号尚未返回'));
@@ -129,6 +141,7 @@ const CandidateView = (() => {
                 + (c.risk?.entryDate ? ` 最近高位转弱确认日 ${c.risk.entryDate}${c.risk.change !== null ? '，自该日收盘变化 ' + format(c.risk.change) : ''}；不回溯到最高点计算收益。` : '')
                 + (Number.isFinite(c.correction?.recentDrawdown) ? ` 近20个交易日最高收盘至今回撤 ${format(c.correction.recentDrawdown)}，与表格年度回撤不同，不设统一跌幅门槛。` : '')
                 + (c.correction?.entryDate ? ` 回调触发日 ${c.correction.seedDate}，改善确认日 ${c.correction.entryDate}，自确认日变化 ${format(c.correction.change)}。` : '');
+            if (latest) r.info.textContent += ` 最新展示：${latest.note}；ROC ${format(latest.last?.roc)}，MA ${format(latest.last?.smooth)}，分位 ${format(latest.last?.rank)}。候选、年度位置和回撤均按确认日线，不由暂估值触发。`;
             r.risk.textContent = `${asset.priceOnly ? asset.description : '估值标签仅比较可核验的自身历史，不跨行业比较绝对PE；PE均下不等于已确认底部。'} ${model.action || ''}。${model.loading ? '其他数据仍在返回，价格候选先展示。' : ''}`;
             r.retry.disabled = !canRetry(asset.id);
             favoriteState(asset, r.favorite);
@@ -208,6 +221,8 @@ const CandidateView = (() => {
                         node('span', '', `年度位置 ${format(c.position)} · 年度回撤 ${format(c.drawdown)}`),
                         node('span', '', `${c.asOf || '—'} · ${c.adjustment === 'raw' ? '未复权参考' : '前复权'}${c.fallback ? ' · 失败回退' : ''}`),
                         node('span', 'pick-gate', `${c.gate || 'ROC约束待判定'}${model.evidence?.roc?.reference ? ' · 参考' : ''}`));
+                    if (model.dailyDisplay?.provisional) button.appendChild(node('span', 'metric-note',
+                        `暂估ROC ${format(model.dailyDisplay.last?.rank)} / ${model.dailyDisplay.last?.date}；上方按确认值筛选`));
                     button.addEventListener('click', () => {
                         const r = rows.get(asset.id); r.detail.hidden = false; r.expand.setAttribute('aria-expanded', 'true');
                         r.row.scrollIntoView({ block: 'center', behavior: 'smooth' }); r.expand.focus({ preventScroll: true });

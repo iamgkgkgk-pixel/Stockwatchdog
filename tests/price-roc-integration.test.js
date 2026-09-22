@@ -179,7 +179,8 @@ test('price-only loader does not fetch valuations or fear and deduplicates in-fl
     assert.equal(first.price.code, asset.code);
     assert.equal(second.price.code, asset.code);
     assert.equal(sandbox.scriptRequests.length, 1);
-    assert.ok(sandbox.fetchRequests.every(url => url.startsWith('data/')));
+    assert.ok(sandbox.fetchRequests.every(url => url.startsWith('data/') || url.startsWith('https://web.ifzq.gtimg.cn/')));
+    assert.ok(sandbox.fetchRequests.some(url => url.startsWith('https://web.ifzq.gtimg.cn/')));
     assert.ok(!sandbox.fetchRequests.some(url => /sentiment|danjuan|fear/.test(url)));
     await sandbox.api.loadPrice(asset);
     assert.equal(sandbox.scriptRequests.length, 2);

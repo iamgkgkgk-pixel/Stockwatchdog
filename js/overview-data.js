@@ -55,7 +55,7 @@ const OverviewData = (() => {
                     if (!live()) return;
                     record.history = {}; record.parts.history = 'failed'; record.issues.history = ['历史数据读取超时或失败']; emit(record);
                 }),
-                deadline(Promise.resolve().then(() => priceLoader(record.asset, false, record.previousPrice)), timeout).then(result => {
+                deadline(Promise.resolve().then(() => priceLoader(record.asset, true, record.previousPrice, scope)), timeout).then(result => {
                     if (!live()) return;
                     record.priceResult = result;
                     record.parts.price = result?.price ? result.error ? 'fallback' : 'ready' : 'failed';

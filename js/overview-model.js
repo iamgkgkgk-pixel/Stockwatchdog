@@ -62,12 +62,15 @@ const OverviewModel = (() => {
         if (!price) return missing('ROC', 'missing', '未取得价格，不能计算动量');
         if (price.code !== record.asset.code || price.secid && price.secid !== record.asset.secid) return missing('ROC', 'missing', '行情身份不匹配');
         const market = GptStrategyData.priceMarket(record.asset);
+        const captured = new Date(price.fetchedAt);
+        const cut = Number.isFinite(captured.getTime()) && captured <= now ? captured : now;
         const key = JSON.stringify([E.settings(options), E.clock(now, market), market]);
         const cached = rocCache.get(price);
-        const model = cached?.key === key && cached.factory === E.rocModel ? cached.model : E.rocModel(price.bars, options, now, market);
+        const model = cached?.key === key && cached.factory === E.rocModel ? cached.model : E.rocModel(price.bars, options, cut, market);
         if (model !== cached?.model) rocCache.set(price, { key, model, factory: E.rocModel });
         const last = model.last, lower = model.lowerBand.at(-1), upper = model.upperBand.at(-1);
-        if (!model.fresh) return { ...missing('ROC', 'stale', '价格超过7天，只作历史参考'), asOf: last?.date };
+        if (!model.fresh || last && E.age(last.date, E.clock(now, market).today) > 7)
+            return { ...missing('ROC', 'stale', '价格超过7天，只作历史参考'), asOf: last?.date };
         const rank = Q.number(last?.rank);
         if (!last || Q.number(last.smooth) === null || rank === null || rank < 0 || rank > 100 || Q.number(lower) === null || Q.number(upper) === null)
             return { ...missing('ROC', 'missing', `分位不足或无效：至少需要${model.minimum}个历史平滑ROC样本`), asOf: last?.date };
@@ -152,7 +155,13 @@ const OverviewModel = (() => {
         const issues = [...new Set(Object.values(record.issues || {}).flat().filter(Boolean))];
         const reference = classification.reference || classification.count < 3 || issues.length > 0;
         const candidate = BottomScreener.analyze(record, evidence, now);
-        return { ...classification, reference, evidence, candidate, composite: compositeSummary(record, analysis), loading, issues, current: data,
+        const price = record.priceResult?.price;
+        const validPrice = price && price.code === record.asset.code && price.secid === record.asset.secid
+            && !['queued', 'loading'].includes(record.parts.price);
+        const market = GptStrategyData.priceMarket(record.asset);
+        const display = validPrice ? E.displayRocModel(price, options, now, market) : null;
+        const dailyDisplay = validPrice ? E.displayRocModel(price, E.DEFAULTS, now, market) : null;
+        return { ...classification, reference, evidence, candidate, display, dailyDisplay, composite: compositeSummary(record, analysis), loading, issues, current: data,
             status: record.phase === 'queued' ? 'queued' : loading ? 'loading' : issues.length ? 'error' : classification.tier === 'pending' ? 'incomplete' : reference ? 'reference' : 'ready' };
     }
 

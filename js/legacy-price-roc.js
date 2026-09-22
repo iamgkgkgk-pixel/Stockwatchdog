@@ -83,16 +83,17 @@ const LegacyPriceRoc = (() => {
     function render() {
         if (!asset || !initialized || !result) return;
         const price = result.price;
-        model = E.rocModel(price?.bars || [], options, new Date(), D.priceMarket(asset));
+        model = E.displayRocModel(price, options, new Date(), D.priceMarket(asset));
         const isIndex = price?.adjustment === 'none';
-        const isRaw = price?.adjustment === 'raw';
-        if (isRaw) model = { ...model, events: [], recent: null };
-        const label = isIndex ? '指数收盘' : isRaw ? '未复权收盘' : '前复权收盘';
-        text('legacy-roc-price', `${label} ${number(model.last?.close, 3)}${model.last ? ' / ' + model.last.date : ''}`);
-        text('legacy-roc-value', `ROC(${options.length}) ${signed(model.last?.roc)} · MA(${options.smoothing}) ${signed(model.last?.smooth)}`);
-        text('legacy-roc-rank', `动量分位 ${percent(model.last?.rank)}`);
-        text('legacy-roc-source', price ? `${result.mode} · ${price.source}` : '未取得真实价格');
-        const notices = [result.error];
+        const isRaw = model.raw;
+        const label = model.provisional ? '最新价 · 暂估' : isIndex ? '指数收盘' : isRaw ? '未复权收盘' : '前复权收盘';
+        const quote = model.quote;
+        text('legacy-roc-price', quote ? `最新报价 ${number(quote.close, 3)} / ${quote.timeLabel}；ROC用价 ${number(model.last?.close, 3)}`
+            : `${label} ${number(model.last?.close, 3)}${model.last ? ' / ' + model.last.date : ''}`);
+        text('legacy-roc-value', `ROC(${options.length}) ${signed(model.last?.roc)} · MA(${options.smoothing}) ${signed(model.last?.smooth)}${model.provisional ? ' · 暂估' : ''}`);
+        text('legacy-roc-rank', `动量分位 ${percent(model.last?.rank)}${model.provisional ? ' · 未确认' : ''}`);
+        text('legacy-roc-source', price ? `${result.mode} · ${model.source} · ${model.timeLabel}` : '未取得真实价格');
+        const notices = [result.error, price ? model.note : null];
         if (isRaw) notices.push('备用来源仅返回原始日线，ROC可能受分红除权影响；不生成峰谷确认。');
         if (price && !model.fresh) notices.push('价格超过7天，图形仅供历史参考。');
         if (model.last && model.last.rank === null) notices.push('历史样本不足，暂不标注极端分位。');

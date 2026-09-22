@@ -30,7 +30,8 @@ const GptStrategyData = (() => {
         const market = priceMarket(asset);
         const completed = E.completedBars(bars, now, market);
         if (!completed.length) throw new Error('没有可用的已完成前复权价格');
-        return { bars: completed, adjustment: 'qfq', code: asset.code, secid: asset.secid, market, source: '东方财富 · 日线前复权', asOf: completed.at(-1).date, fetchedAt: now.toISOString(), completedOnly: true };
+        const liveBar = E.clock(now, market).closed ? null : bars.find(bar => bar.date === E.clock(now, market).today) || null;
+        return { bars: completed, liveBar, adjustment: 'qfq', code: asset.code, secid: asset.secid, market, source: '东方财富 · 日线前复权', asOf: completed.at(-1).date, fetchedAt: now.toISOString(), completedOnly: true };
     }
 
     function tencentSymbol(asset) {
@@ -52,18 +53,58 @@ const GptStrategyData = (() => {
         const adjusted = Array.isArray(data.qfqday) && data.qfqday.length > 0;
         const rows = adjusted ? data.qfqday : data.day;
         if (!Array.isArray(rows)) throw new Error('备用行情没有价格序列');
-        const bars = E.completedBars(rows.filter(Array.isArray).map(row => ({ date: row[0], open: E.number(row[1]), close: E.number(row[2]),
-            high: E.number(row[3]), low: E.number(row[4]) })).filter(bar => [bar.open, bar.close, bar.high, bar.low].every(value => value !== null && value > 0) &&
-                bar.high >= Math.max(bar.open, bar.close) && bar.low <= Math.min(bar.open, bar.close)), now, priceMarket(asset));
+        const market = priceMarket(asset), clock = E.clock(now, market);
+        const valid = rows.filter(Array.isArray).map(row => ({ date: row[0], open: E.number(row[1]), close: E.number(row[2]),
+            high: E.number(row[3]), low: E.number(row[4]) })).filter(bar => E.date(bar.date) && [bar.open, bar.close, bar.high, bar.low].every(value => value !== null && value > 0) &&
+                bar.high >= Math.max(bar.open, bar.close) && bar.low <= Math.min(bar.open, bar.close));
+        const bars = E.completedBars(valid, now, market);
         if (!bars.length) throw new Error('备用行情没有完整收盘记录');
-        return { bars, code: asset.code, secid: asset.secid, market: priceMarket(asset), adjustment: adjusted ? 'qfq' : 'raw',
+        const qt = data.qt?.[symbol], stamp = String(qt?.[30] || '');
+        const quoteDate = /^\d{14}$/.test(stamp) ? `${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}` : null;
+        const quoteTime = quoteDate ? `${quoteDate}T${stamp.slice(8, 10)}:${stamp.slice(10, 12)}:${stamp.slice(12, 14)}+08:00` : null;
+        const quote = qt?.[2] === asset.code && E.date(quoteDate) && Number.isFinite(Date.parse(quoteTime)) && Date.parse(quoteTime) <= now.getTime()
+            && quoteDate === clock.today && E.number(qt[3]) > 0
+            ? { close: E.number(qt[3]), date: quoteDate, observedAt: quoteTime, source: '腾讯最新报价', code: asset.code, secid: asset.secid } : null;
+        let liveBar = !clock.closed ? valid.find(bar => bar.date === clock.today) || null : null;
+        if (!adjusted && quote && (!clock.closed || bars.at(-1).date < clock.today)) {
+            const last = bars.at(-1), gap = E.age(last.date, quote.date);
+            const compatible = last.date === quote.date || gap > 0 && gap <= 4 && E.number(qt[4]) === last.close;
+            if (compatible) {
+                const close = quote.close;
+                liveBar = { date: quote.date, open: E.number(qt[5]) || close, close,
+                    high: Math.max(close, E.number(qt[33]) || close, E.number(qt[5]) || close),
+                    low: Math.min(close, E.number(qt[34]) || close, E.number(qt[5]) || close), provisional: true, observedAt: quote.observedAt };
+            }
+        }
+        return { bars, liveBar, quote, code: asset.code, secid: asset.secid, market, adjustment: adjusted ? 'qfq' : 'raw',
             requestedAdjustment: 'qfq', source: adjusted ? '腾讯行情 · 日线前复权' : '腾讯行情 · 原始日线（复权未确认）',
             asOf: bars.at(-1).date, fetchedAt: now.toISOString(), completedOnly: true };
     }
 
     async function fetchPrice(asset) {
-        try { return parseEastmoney(await jsonp(priceURL(asset)), asset); }
-        catch (_) { return parseTencentPrice(await json(tencentPriceURL(asset)), asset); }
+        let primary = null;
+        try { primary = parseEastmoney(await jsonp(priceURL(asset)), asset); } catch (_) {}
+        const today = E.clock(new Date(), priceMarket(asset)).today;
+        if (primary && (primary.liveBar?.date === today || primary.asOf === today)) return primary;
+        let backup = null;
+        try { backup = parseTencentPrice(await json(tencentPriceURL(asset) + '&_=' + Date.now()), asset); } catch (_) {}
+        const price = newestPrice(primary, backup);
+        if (!price) throw new Error('价格接口均不可用');
+        return withLatestDisplay(price, primary, backup);
+    }
+
+    function withLatestDisplay(price, ...sources) {
+        if (!price) return null;
+        const previews = [price, ...sources].flatMap(item => item ? [item, item.preview].filter(Boolean) : [])
+            .filter(item => item.code === price.code && item.secid === price.secid && item.liveBar?.date > price.asOf);
+        previews.sort((a, b) => b.liveBar.date.localeCompare(a.liveBar.date) || Number(b.adjustment === 'qfq') - Number(a.adjustment === 'qfq')
+            || Date.parse(b.fetchedAt) - Date.parse(a.fetchedAt));
+        const chosen = previews[0];
+        const preview = chosen && chosen !== price ? { bars: chosen.bars, liveBar: chosen.liveBar, code: chosen.code, secid: chosen.secid,
+            market: chosen.market, adjustment: chosen.adjustment, source: chosen.source, fetchedAt: chosen.fetchedAt } : null;
+        const quotes = [price, ...sources].map(item => item?.quote).filter(item => item?.code === price.code && item.secid === price.secid);
+        quotes.sort((a, b) => Date.parse(b.observedAt) - Date.parse(a.observedAt));
+        return { ...price, preview, quote: quotes[0] || null };
     }
 
     function priceURL(asset, now = new Date()) {
@@ -226,7 +267,7 @@ const GptStrategyData = (() => {
             Date.parse(b.fetchedAt) - Date.parse(a.fetchedAt) || b.bars.length - a.bars.length)[0] || null;
     }
 
-    function loadPrice(asset, refresh = true, previous = null) {
+    function loadPrice(asset, refresh = true, previous = null, scope = null) {
         const isVix = asset.id === 'vix-dashboard';
         const key = `${asset.secid}|${isVix ? 'none' : 'prefer-qfq'}|history`;
         if (priceRequests.has(key)) return priceRequests.get(key);
@@ -241,7 +282,10 @@ const GptStrategyData = (() => {
             const memo = priceCache.get(key);
             const previousPrice = cachedPrice(previous?.price, asset, previous?.price?.fetchedAt, true);
             const live = Promise.allSettled([fetchPrice(asset)]);
-            const [bundle, extended, [response]] = await Promise.all([loadBundle(refresh), loadPriceBundle(refresh), live]);
+            const sharedKey = 'price-history-bundles';
+            if (scope && !scope.has(sharedKey)) scope.set(sharedKey, Promise.all([loadBundle(refresh), loadPriceBundle(refresh)]));
+            const bundles = scope ? scope.get(sharedKey) : Promise.all([loadBundle(refresh), loadPriceBundle(refresh)]);
+            const [[bundle, extended], [response]] = await Promise.all([bundles, live]);
             const packed = cachedPrice(bundle.assets?.[asset.id], asset, bundle.fetchedAt, true);
             const extendedPrice = cachedPrice(extended.assets?.[asset.id], asset, extended.fetchedAt, true);
             let price = newestPrice(memo?.price, previousPrice, packed, extendedPrice);
@@ -254,6 +298,7 @@ const GptStrategyData = (() => {
                     mode = '本次行情获取';
                 } else error = '接口未提供日期更新或同日更优口径的数据，保留已有完整序列。';
             } else error = price ? '价格更新失败，保留原观测日期。' : '暂未取得该标的真实价格，请重试。';
+            price = withLatestDisplay(price, response.status === 'fulfilled' ? response.value : null);
             const result = { price, mode, error };
             if (price) priceCache.set(key, result);
             return result;
@@ -316,23 +361,11 @@ const GptStrategyData = (() => {
             publish();
         });
         const priceTask = (async () => {
-            let latest = null;
-            try { latest = await fetchPrice(asset); } catch (_) {}
-            let fallback = cachedPrice(previous?.price, asset, previous?.bundledAt, true);
-            if (!latest || newestPrice(latest, fallback) !== latest) {
-                const [, extended] = await Promise.all([bundled, loadPriceBundle(refresh)]);
-                const packed = cachedPrice(bundle.assets?.[asset.id], asset, bundle.fetchedAt, true);
-                const extendedPrice = cachedPrice(extended.assets?.[asset.id], asset, extended.fetchedAt, true);
-                fallback = newestPrice(fallback, packed, extendedPrice);
-            }
-            if (latest && newestPrice(latest, fallback) === latest) {
-                state.price = latest;
-                state.mode = '本次接口获取';
-            } else {
-                state.price = fallback;
-                state.mode = fallback ? '失败回退 · 原日期快照' : '暂无数据';
-                state.errors.push('未取得日期更新或同日更优口径的行情，保留已有完整序列及原日期。');
-            }
+            const scope = new Map([['price-history-bundles', Promise.all([bundled, loadPriceBundle(refresh)])]]);
+            const result = await loadPrice(asset, refresh, previous, scope);
+            state.price = result.price;
+            state.mode = result.mode === '本次行情获取' ? '本次接口获取' : result.mode;
+            if (result.error) state.errors.push(result.error);
             pending.delete('price');
             publish();
         })();

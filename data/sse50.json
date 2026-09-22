@@ -1,6 +1,6 @@
 {
   "description": "上证50ETF历史数据",
-  "lastUpdate": "2026-09-21",
+  "lastUpdate": "2026-09-22",
   "spreadHistory": [
     {
       "date": "2021-01",
@@ -1103,6 +1103,15 @@
       "quality": "observed",
       "instrumentId": "000016",
       "percentile": 54.48
+    },
+    {
+      "date": "2026-09-21",
+      "value": 10.76,
+      "asOf": "2026-09-21",
+      "source": "蛋卷基金-上证50",
+      "quality": "observed",
+      "instrumentId": "000016",
+      "percentile": 58.24
     }
   ],
   "dividendYieldHistory": [
@@ -1477,6 +1486,14 @@
       "source": "蛋卷基金-上证50",
       "quality": "observed",
       "instrumentId": "000016"
+    },
+    {
+      "date": "2026-09-21",
+      "value": 3.22,
+      "asOf": "2026-09-21",
+      "source": "蛋卷基金-上证50",
+      "quality": "observed",
+      "instrumentId": "000016"
     }
   ],
   "bondYieldHistory": [
@@ -1742,45 +1759,45 @@
     }
   ],
   "currentData": {
-    "dividendYield": 3.25,
+    "dividendYield": 3.22,
     "bondYield": 1.73,
     "spread": 1.94,
     "spreadPercentile": 45.8,
-    "pe": 10.67,
-    "pePercentile": 54.48,
-    "pb": 1.22,
-    "pbPercentile": 44.88,
+    "pe": 10.76,
+    "pePercentile": 58.24,
+    "pb": 1.24,
+    "pbPercentile": 51.48,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-09-18",
+    "updateTime": "2026-09-21",
     "note": "上证50指数估值数据",
     "fieldMeta": {
       "pe": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-上证50",
         "quality": "observed",
         "instrumentId": "000016"
       },
       "pb": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-上证50",
         "quality": "observed",
         "instrumentId": "000016"
       },
       "pePercentile": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-上证50",
         "quality": "observed",
         "instrumentId": "000016"
       },
       "pbPercentile": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-上证50",
         "quality": "observed",
         "instrumentId": "000016"
       },
       "dividendYield": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-上证50",
         "quality": "observed",
         "instrumentId": "000016"
@@ -1796,13 +1813,13 @@
         "source": "旧版快照（来源待核验）"
       },
       "roe": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-上证50",
         "quality": "observed",
         "instrumentId": "000016"
       }
     },
-    "valuationAsOf": "2026-09-18",
+    "valuationAsOf": "2026-09-21",
     "valuationSource": "蛋卷基金-上证50",
     "roe": 11.48
   },

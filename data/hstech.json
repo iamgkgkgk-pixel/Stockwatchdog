@@ -1,6 +1,6 @@
 {
   "description": "恒生科技指数ETF历史数据",
-  "lastUpdate": "2026-09-21",
+  "lastUpdate": "2026-09-22",
   "peHistory": [
     {
       "date": "2021-01",
@@ -642,6 +642,15 @@
       "quality": "observed",
       "instrumentId": "HSTECH",
       "percentile": 36.45
+    },
+    {
+      "date": "2026-09-21",
+      "value": 23.42,
+      "asOf": "2026-09-21",
+      "source": "蛋卷基金-恒生科技",
+      "quality": "observed",
+      "instrumentId": "HSTECH",
+      "percentile": 39.1
     }
   ],
   "dividendYieldHistory": [
@@ -1016,6 +1025,14 @@
       "source": "蛋卷基金-恒生科技",
       "quality": "observed",
       "instrumentId": "HSTECH"
+    },
+    {
+      "date": "2026-09-21",
+      "value": 1.04,
+      "asOf": "2026-09-21",
+      "source": "蛋卷基金-恒生科技",
+      "quality": "observed",
+      "instrumentId": "HSTECH"
     }
   ],
   "bondYieldHistory": [
@@ -1281,44 +1298,44 @@
     }
   ],
   "currentData": {
-    "dividendYield": 1.06,
+    "dividendYield": 1.04,
     "bondYield": 1.73,
-    "pe": 23.16,
-    "pePercentile": 36.45,
-    "pb": 2.35,
-    "pbPercentile": 18.06,
+    "pe": 23.42,
+    "pePercentile": 39.1,
+    "pb": 2.38,
+    "pbPercentile": 19.99,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-09-18",
+    "updateTime": "2026-09-21",
     "note": "恒生科技指数估值数据",
     "spread": -0.46,
     "fieldMeta": {
       "pe": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-恒生科技",
         "quality": "observed",
         "instrumentId": "HSTECH"
       },
       "pb": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-恒生科技",
         "quality": "observed",
         "instrumentId": "HSTECH"
       },
       "pePercentile": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-恒生科技",
         "quality": "observed",
         "instrumentId": "HSTECH"
       },
       "pbPercentile": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-恒生科技",
         "quality": "observed",
         "instrumentId": "HSTECH"
       },
       "dividendYield": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-恒生科技",
         "quality": "observed",
         "instrumentId": "HSTECH"
@@ -1334,13 +1351,13 @@
         "source": "旧版快照（来源待核验）"
       },
       "roe": {
-        "asOf": "2026-09-18",
+        "asOf": "2026-09-21",
         "source": "蛋卷基金-恒生科技",
         "quality": "observed",
         "instrumentId": "HSTECH"
       }
     },
-    "valuationAsOf": "2026-09-18",
+    "valuationAsOf": "2026-09-21",
     "valuationSource": "蛋卷基金-恒生科技",
     "roe": 10.15
   },

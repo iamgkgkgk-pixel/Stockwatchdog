@@ -9,12 +9,12 @@
     <link rel="stylesheet" href="css/price-roc.css?v=20260915d">
     <script defer src="lib/echarts.min.js"></script>
     <script defer src="js/data-quality.js?v=20260917b"></script>
-    <script defer src="js/gpt-strategy-engine.js?v=20260915d"></script>
-    <script defer src="js/gpt-strategy-data.js?v=20260917c"></script>
+    <script defer src="js/gpt-strategy-engine.js?v=20260922a"></script>
+    <script defer src="js/gpt-strategy-data.js?v=20260922a"></script>
     <script defer src="js/etf-config.js?v=20260915a"></script>
     <script defer src="js/strategy-navigation.js?v=20260915d"></script>
-    <script defer src="js/price-roc-chart.js?v=20260915d"></script>
-    <script defer src="js/gpt-strategy-app.js?v=20260917c"></script>
+    <script defer src="js/price-roc-chart.js?v=20260922a"></script>
+    <script defer src="js/gpt-strategy-app.js?v=20260922a"></script>
 </head>
 <body>
     <a class="skip-link" href="#decision">跳到策略结论</a>
@@ -47,7 +47,7 @@
                 <div class="chart-readout"><span id="price-readout">价格 —</span><span id="roc-readout">ROC —</span><span id="rank-readout">动量历史位置 —</span></div>
                 <div id="strategy-chart" role="img" aria-label="前复权价格与ROC双图，转折标记位于确认日"></div>
                 <div id="chart-empty" class="empty-state" hidden>暂无真实价格数据。请尝试更新；页面不会生成模拟行情。</div>
-                <div class="chart-footer"><span><i class="legend-line roc"></i>ROC <i class="legend-line average"></i>ROC均线 <i class="legend-line band"></i>过去样本20% / 80%线</span><span id="price-source">只使用已完成的前复权K线</span></div>
+                <div class="chart-footer"><span><i class="legend-line roc"></i>ROC <i class="legend-line average"></i>ROC均线 <i class="legend-line band"></i>过去样本20% / 80%线</span><span id="price-source">刷新获取最新行情；未完成K线单独标注暂估</span></div>
                 <p class="chart-disclaimer">图中“谷确认 / 峰确认”是动量形态，不是历史买卖信号。标记落在确认日；尚未确认的右端不补画顶底。</p>
             </section>
 
@@ -68,7 +68,7 @@
                 <div><h3>估值决定主方向，ROC只调节奏</h3><p>主判断先看当前PE、历史分位，再参考匹配市场的恐慌情况。低估可分批买入；合理估值以持有为主；偏贵先暂停加仓；明显高估才提示分批减仓。ROC无论是波峰、波谷、继续下跌还是暂时缺失，都不能独自改写主方向。</p><p>红利低波与自由现金流按长期底仓＋机动仓理解。科技新买仍服从你手动选择的利率阶段，但不再要求ROC先见底。利率阶段不代表未来盈利保证，也不会强制已有持仓清仓。</p><h3>有限的情绪修正</h3><p>低估遇到恐慌，增强分批投入意愿，而不是一次买满；红利类合理估值叠加较强压力可提示小幅加仓；科技仍优先等低估。估值偏贵时，恐慌不能把它变成买点。缺失或过期情绪不当作中性，也不清空估值判断。</p></div>
                 <div><h3>PE历史如何影响结论</h3><p>同指数历史按月等权，排除本月、估算及代理记录。3年或5年窗口覆盖至少80%的月份才计算分位；5年优先、3年辅助。只有一个窗口足够时使用单窗口参考。窗口分歧向持有方向保守处理；一个判断便宜、另一个判断偏贵时不下单边结论。</p><p>实验边界：PE分位≤20%为相对低位，20%–60%为合理，60%–90%为偏高。减仓须同时达到≥90%分位和相对参考中位PE高出至少20%，且另一个有效窗口不反对高估判断。这个幅度缓冲是显式假设，避免仅因狭窄区间内分位高就卖出，不是内在价值模型。</p><p>没有本地完整窗口时，同指数服务商分位可作注明来源的有限参考，不冒充本地3年或5年结果，也不据此确认明显透支。人工估值是独立覆盖：你选“明显偏高 / 可能透支”并填写日期和依据后，将按你的判断提示分批减仓，不再要求本地数值门槛，主标题旁会标明“采用你的估值判断”。人工判断30天后失效。PE与分位不重复加权，不输出虚假的综合胜率。</p></div>
                 <div><h3>恐慌参考用什么</h3><p>美股使用Cboe官方VIX日收盘：20以上作为有所恐慌参考，30以上作为较强恐慌参考。VIX来自标普500期权的30天预期波动，不是纳指专属情绪，更不是涨跌方向预测。低VIX不自动等于贪婪。</p><p>A股使用沪深300价格压力代理，不使用单日涨跌家数当恐惧贪婪。先计算20日对数收益样本标准差并年化，再与此前最多756日波动率比较（至少252个有效样本）；同时看当前价格距252日最高收盘的回撤。回撤≥10%且波动分位≥80%为压力偏高；回撤≥15%且分位≥90%为压力很高。回撤与高波动须同时出现，单独普跌或放量上涨不等于恐慌。这是市场压力代理，不能识别所有情绪或行业风险。</p><p>恐慌参考始终用日线，与ROC日/周线参数无关。各市场按当地收盘时区过滤未完成日线。观测超过7天不参与；抓取时间不能代替观测日。跨域更新失败时保留只读快照及原日期。</p></div>
-                <div><h3>波段辅助与已知局限</h3><p>ROC =（当前收盘 / N期前收盘 − 1）×100%，转折按M期简单均线判定。日线历史分位回看252期（至少126个样本），周线回看104期（至少52个）；低于20%且为负的谷、高于80%且为正的峰，在右侧完成确认后才显示。最近3期且方向仍有效的形态仅用于分批节奏或机动仓做T，不倒画成可预知顶底。</p><p>ETF价格使用前复权已完成K线；纳指场内价格还受汇率与溢价影响。价格过期仅暂停波段提示；PE过期或身份不明暂停当前估值主判断。历史样本来源与成分变化仍需核验，历史图不是完整策略回测；本页没有可靠的未来盈利预测，不把“相对低估”说成“绝对底部”。</p><p>计算只在浏览器内进行，不读取账户、不给仓位比例、不调用模型、不改原工具评分。所有阈值为透明的实验规则，尚未验证投资收益优势。</p><p>参考：<a href="https://www.cboe.com/tradable_products/vix/" target="_blank" rel="noopener noreferrer">Cboe VIX定义</a> · <a href="https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/rate-of-change-roc-and-momentum" target="_blank" rel="noopener noreferrer">ROC说明</a></p></div>
+                <div><h3>波段辅助与已知局限</h3><p>ROC =（当前收盘 / N期前收盘 − 1）×100%，转折按M期简单均线判定。日线历史分位回看252期（至少126个样本），周线回看104期（至少52个）；低于20%且为负的谷、高于80%且为正的峰，在右侧完成确认后才显示。最近3期且方向仍有效的形态仅用于分批节奏或机动仓做T，不倒画成可预知顶底。</p><p>ETF价格优先使用前复权K线，手动刷新时展示可取得的最新价格及暂估ROC；未完成日线或周线不参与峰谷确认与波段提示。纳指场内价格还受汇率与溢价影响。价格过期仅暂停波段提示；PE过期或身份不明暂停当前估值主判断。历史样本来源与成分变化仍需核验，历史图不是完整策略回测；本页没有可靠的未来盈利预测，不把“相对低估”说成“绝对底部”。</p><p>计算只在浏览器内进行，不读取账户、不给仓位比例、不调用模型、不改原工具评分。所有阈值为透明的实验规则，尚未验证投资收益优势。</p><p>参考：<a href="https://www.cboe.com/tradable_products/vix/" target="_blank" rel="noopener noreferrer">Cboe VIX定义</a> · <a href="https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/rate-of-change-roc-and-momentum" target="_blank" rel="noopener noreferrer">ROC说明</a></p></div>
             </div></details>
             <div id="status-message" class="status-message" role="status" aria-live="polite"></div>
         </main>

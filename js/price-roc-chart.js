@@ -25,6 +25,9 @@ const PriceRocChart = (() => {
             symbolSize: 10, itemStyle: { color: event.type === 'trough' ? '#87c9af' : '#deb686' }, event,
             label: { show: !mobile, formatter: event.type === 'trough' ? '谷确认' : '峰确认', color: '#a5b5b9', fontSize: 9, position: event.type === 'trough' ? 'bottom' : 'top' },
         }));
+        if (model.provisional && model.last) markers.push({ name: '暂估 · 未确认', coord: [model.last.date, model.last.close],
+            symbol: 'circle', symbolSize: 8, itemStyle: { color: '#d7be8c' },
+            label: { show: true, formatter: '暂估', color: '#d7be8c', fontSize: 10, position: 'top' } });
         const axis = { type: 'category', data: dates, boundaryGap: false, axisLine: { lineStyle: { color: '#3b4e55' } }, axisTick: { show: false }, axisLabel: { color: '#8da3aa', fontSize: 10, hideOverlap: true } };
         return {
             animation: false, backgroundColor: 'transparent',
@@ -41,7 +44,7 @@ const PriceRocChart = (() => {
                     const i = params[0]?.dataIndex;
                     if (i === undefined || !model.bars[i]) return '';
                     const event = model.events.find(item => item.confirmIndex === i && item.extreme);
-                    return `${escape(dates[i])}<br>${escape(priceLabel)} ${format(model.bars[i].close, 3)}<br>ROC(${options.length}) ${signed(model.roc[i])}<br>ROC均线 ${signed(model.smooth[i])}<br>当时动量分位 ${rank(model.ranks[i])}${event ? '<br>' + (event.type === 'trough' ? '谷' : '峰') + '确认；发生于 ' + escape(event.pivotDate) : ''}`;
+                    return `${escape(dates[i])}${model.provisional && i === dates.length - 1 ? '<br>暂估 · 未确认<br>' + escape(model.timeLabel || '') : ''}<br>${escape(priceLabel)} ${format(model.bars[i].close, 3)}<br>ROC(${options.length}) ${signed(model.roc[i])}<br>ROC均线 ${signed(model.smooth[i])}<br>当时动量分位 ${rank(model.ranks[i])}${event ? '<br>' + (event.type === 'trough' ? '谷' : '峰') + '确认；发生于 ' + escape(event.pivotDate) : ''}`;
                 } },
             xAxis: [{ ...axis, gridIndex: 0, axisLabel: { show: false } }, { ...axis, gridIndex: 1 }],
             yAxis: [{ type: 'value', scale: true, gridIndex: 0, splitNumber: 4, axisLabel: { color: '#8da3aa', fontSize: 10 }, splitLine: { lineStyle: { color: '#25363e' } } },

@@ -170,15 +170,17 @@
     }
 
     function renderChart() {
+        const model = E.displayRocModel(data.price, options);
         const available = model.bars.length > 0;
         $('strategy-chart').hidden = !available;
         $('chart-empty').hidden = available;
         text('chart-title', asset.name + ' · 价格与 ROC');
-        const raw = data.price?.adjustment === 'raw';
-        text('price-readout', `${raw ? '未复权收盘' : '前复权收盘'} ${fmt(model.last?.close, 3)}${model.last ? ' / ' + model.last.date : ''}`);
-        text('roc-readout', `ROC(${options.length}) ${signed(model.last?.roc)} · MA(${options.smoothing}) ${signed(model.last?.smooth)}`);
-        text('rank-readout', `动量分位 ${pct(model.last?.rank)}`);
-        text('price-source', data.price ? `${data.mode} · ${data.price.source} · 仅完整${options.timeframe === 'week' ? '周' : '交易日'}${raw ? '。整段使用未复权日线，ROC可能受分红除权影响，暂停峰谷及波段交易提示。' : ''}` : '没有真实价格，不生成模拟行情');
+        const raw = model.raw, quote = model.quote;
+        text('price-readout', quote ? `最新报价 ${fmt(quote.close, 3)} / ${quote.timeLabel}；ROC用价 ${fmt(model.last?.close, 3)}`
+            : `${model.provisional ? '最新价 · 暂估' : raw ? '未复权收盘' : '前复权收盘'} ${fmt(model.last?.close, 3)}${model.last ? ' / ' + model.last.date : ''}`);
+        text('roc-readout', `ROC(${options.length}) ${signed(model.last?.roc)} · MA(${options.smoothing}) ${signed(model.last?.smooth)}${model.provisional ? ' · 暂估' : ''}`);
+        text('rank-readout', `动量分位 ${pct(model.last?.rank)}${model.provisional ? ' · 未确认' : ''}`);
+        text('price-source', data.price ? `${data.mode} · ${model.source} · ${model.note}${raw ? '。整段使用未复权日线，ROC可能受分红除权影响，暂停峰谷及波段交易提示。' : ''}` : '没有真实价格，不生成模拟行情');
         if (!available) { chart?.clear(); return; }
         if (typeof echarts === 'undefined') {
             $('strategy-chart').hidden = true;
@@ -194,7 +196,7 @@
     function render() {
         renderContext();
         if (!data) return;
-        model = E.rocModel(data.price?.bars || [], options);
+        model = E.displayRocModel(data.price, options).confirmed;
         const raw = data.price?.adjustment === 'raw';
         if (raw) model = { ...model, events: [], recent: null };
         const valuation = E.valuationModel(data.points, data.observation, manuals[asset.id]);

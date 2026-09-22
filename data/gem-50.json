@@ -1,6 +1,6 @@
 {
   "description": "创业板50ETF历史数据",
-  "lastUpdate": "2026-09-21",
+  "lastUpdate": "2026-09-22",
   "peHistory": [
     {
       "date": "2021-01",
@@ -1234,13 +1234,13 @@
     "updateDate": "2026-04"
   },
   "proxyValuation": {
-    "pe": 38.4143,
-    "pb": 5.374,
-    "pePercentile": 32.68,
-    "pbPercentile": 61.12,
-    "dividendYield": 0.95,
-    "roe": 13.99,
-    "asOf": "2026-09-18",
+    "pe": 38.6633,
+    "pb": 5.415,
+    "pePercentile": 33.32,
+    "pbPercentile": 61.839999999999996,
+    "dividendYield": 0.96,
+    "roe": 14.01,
+    "asOf": "2026-09-21",
     "instrumentId": "399006",
     "source": "蛋卷基金-创业板",
     "quality": "proxy"
