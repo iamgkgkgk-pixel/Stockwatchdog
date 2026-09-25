@@ -91,12 +91,13 @@ const LegacyPriceRoc = (() => {
         text('legacy-roc-price', quote ? `最新报价 ${number(quote.close, 3)} / ${quote.timeLabel}；ROC用价 ${number(model.last?.close, 3)}`
             : `${label} ${number(model.last?.close, 3)}${model.last ? ' / ' + model.last.date : ''}`);
         text('legacy-roc-value', `ROC(${options.length}) ${signed(model.last?.roc)} · MA(${options.smoothing}) ${signed(model.last?.smooth)}${model.provisional ? ' · 暂估' : ''}`);
-        text('legacy-roc-rank', `动量分位 ${percent(model.last?.rank)}${model.provisional ? ' · 未确认' : ''}`);
+        text('legacy-roc-rank', `ROC(${options.length})分位 ${percent(model.last?.rocRank)} · 均线分位 MA(${options.smoothing}) ${percent(model.last?.rank)}${model.provisional ? ' · 暂估 / 未确认' : ''}`);
         text('legacy-roc-source', price ? `${result.mode} · ${model.source} · ${model.timeLabel}` : '未取得真实价格');
         const notices = [result.error, price ? model.note : null];
         if (isRaw) notices.push('备用来源仅返回原始日线，ROC可能受分红除权影响；不生成峰谷确认。');
         if (price && !model.fresh) notices.push('价格超过7天，图形仅供历史参考。');
-        if (model.last && model.last.rank === null) notices.push('历史样本不足，暂不标注极端分位。');
+        if (model.last?.rocRank === null) notices.push('ROC原值历史样本不足，原值分位暂不可用。');
+        if (model.last?.rank === null) notices.push('ROC均线历史样本不足，均线分位暂不可用。');
         text('legacy-roc-status', notices.filter(Boolean).join(' ') || '仅展示波段证据，不改变上方综合信号。峰谷标记位于确认日，不是提前预知的买卖点。');
         renderEvents();
         if (!model.bars.length) { empty('暂无完整价格数据，可点击“更新价格”重试。'); return; }

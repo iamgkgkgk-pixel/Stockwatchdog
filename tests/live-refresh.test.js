@@ -491,6 +491,9 @@ test('day ROC preview shares the formula and historical percentile sample but ca
     assert.equal(JSON.stringify(data), before);
     const changed = E.displayRocModel(intradayPrice(130), {}, NOW);
     assert.notEqual(changed.last.rank, display.last.rank);
+    assert.notEqual(changed.last.rocRank, display.last.rocRank);
+    assert.deepEqual(changed.rocRanks.slice(0, -1), display.rocRanks.slice(0, -1));
+    assert.equal(display.last.rocRank, E.percentile(display.last.roc, display.roc.slice(0, -1).slice(-252), 126));
     assert.deepEqual(changed.confirmed, display.confirmed);
 });
 

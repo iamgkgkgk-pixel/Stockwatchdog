@@ -1,6 +1,6 @@
 {
   "description": "标普500ETF历史数据",
-  "lastUpdate": "2026-09-22",
+  "lastUpdate": "2026-09-25",
   "peHistory": [
     {
       "date": "2016-01",
@@ -706,6 +706,33 @@
       "quality": "observed",
       "instrumentId": "SPX",
       "percentile": 60.56
+    },
+    {
+      "date": "2026-09-22",
+      "value": 25.56,
+      "asOf": "2026-09-22",
+      "source": "蛋卷基金-标普500",
+      "quality": "observed",
+      "instrumentId": "SPX",
+      "percentile": 60.6
+    },
+    {
+      "date": "2026-09-23",
+      "value": 25.32,
+      "asOf": "2026-09-23",
+      "source": "蛋卷基金-标普500",
+      "quality": "observed",
+      "instrumentId": "SPX",
+      "percentile": 58.36
+    },
+    {
+      "date": "2026-09-24",
+      "value": 25.32,
+      "asOf": "2026-09-24",
+      "source": "蛋卷基金-标普500",
+      "quality": "observed",
+      "instrumentId": "SPX",
+      "percentile": 58.4
     }
   ],
   "dividendYieldHistory": [
@@ -1088,6 +1115,30 @@
       "source": "蛋卷基金-标普500",
       "quality": "observed",
       "instrumentId": "SPX"
+    },
+    {
+      "date": "2026-09-22",
+      "value": 1.02,
+      "asOf": "2026-09-22",
+      "source": "蛋卷基金-标普500",
+      "quality": "observed",
+      "instrumentId": "SPX"
+    },
+    {
+      "date": "2026-09-23",
+      "value": 1.02,
+      "asOf": "2026-09-23",
+      "source": "蛋卷基金-标普500",
+      "quality": "observed",
+      "instrumentId": "SPX"
+    },
+    {
+      "date": "2026-09-24",
+      "value": 1.02,
+      "asOf": "2026-09-24",
+      "source": "蛋卷基金-标普500",
+      "quality": "observed",
+      "instrumentId": "SPX"
     }
   ],
   "bondYieldHistory": [
@@ -1227,42 +1278,42 @@
   "currentData": {
     "dividendYield": 1.02,
     "bondYield": 4.31,
-    "pe": 25.56,
-    "pePercentile": 60.56,
-    "pb": 5.62,
-    "pbPercentile": 97.36,
+    "pe": 25.32,
+    "pePercentile": 58.4,
+    "pb": 5.57,
+    "pbPercentile": 95.76,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-09-21",
+    "updateTime": "2026-09-24",
     "note": "标普500指数估值数据（美元10Y国债收益率）",
     "spread": -3.31,
     "fieldMeta": {
       "pe": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-标普500",
         "quality": "observed",
         "instrumentId": "SPX"
       },
       "pb": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-标普500",
         "quality": "observed",
         "instrumentId": "SPX"
       },
       "pePercentile": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-标普500",
         "quality": "observed",
         "instrumentId": "SPX"
       },
       "pbPercentile": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-标普500",
         "quality": "observed",
         "instrumentId": "SPX"
       },
       "dividendYield": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-标普500",
         "quality": "observed",
         "instrumentId": "SPX"
@@ -1278,15 +1329,15 @@
         "source": "旧版快照（来源待核验）"
       },
       "roe": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-标普500",
         "quality": "observed",
         "instrumentId": "SPX"
       }
     },
-    "valuationAsOf": "2026-09-21",
+    "valuationAsOf": "2026-09-24",
     "valuationSource": "蛋卷基金-标普500",
-    "roe": 21.99
+    "roe": 21.98
   },
   "valuationAnchor": {
     "peMean": 22.97,

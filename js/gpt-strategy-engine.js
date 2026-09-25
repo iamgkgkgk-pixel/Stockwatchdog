@@ -113,9 +113,11 @@ const GptStrategyEngine = (() => {
         });
         const lookback = options.timeframe === 'week' ? 104 : 252;
         const minimum = lookback / 2;
-        const ranks = [], lowerBand = [], upperBand = [], events = [];
+        const ranks = [], rocRanks = [], lowerBand = [], upperBand = [], events = [];
         for (let i = 0; i < bars.length; i++) {
-            const past = smooth.slice(Math.max(0, i - lookback), i).filter(v => v !== null);
+            const start = Math.max(0, i - lookback);
+            const past = smooth.slice(start, i).filter(v => v !== null);
+            rocRanks.push(percentile(roc[i], roc.slice(start, i), minimum));
             ranks.push(percentile(smooth[i], past, minimum));
             lowerBand.push(past.length >= minimum ? quantile(past, 0.2) : null);
             upperBand.push(past.length >= minimum ? quantile(past, 0.8) : null);
@@ -135,8 +137,8 @@ const GptStrategyEngine = (() => {
         const slope = lastIndex > 0 && smooth[lastIndex] !== null && smooth[lastIndex - 1] !== null ? Math.sign(smooth[lastIndex] - smooth[lastIndex - 1]) : 0;
         const recent = [...events].reverse().find(event => event.extreme && lastIndex - event.confirmIndex <= 3 &&
             (event.type === 'trough' ? slope > 0 && smooth[lastIndex] > event.value : slope < 0 && smooth[lastIndex] < event.value)) || null;
-        return { options, bars, roc, smooth, ranks, lowerBand, upperBand, events, recent, slope, fresh, lookback, minimum,
-            last: lastIndex >= 0 ? { date: bars[lastIndex].date, close: bars[lastIndex].close, roc: roc[lastIndex], smooth: smooth[lastIndex], rank: ranks[lastIndex] } : null };
+        return { options, bars, roc, smooth, ranks, rocRanks, lowerBand, upperBand, events, recent, slope, fresh, lookback, minimum,
+            last: lastIndex >= 0 ? { date: bars[lastIndex].date, close: bars[lastIndex].close, roc: roc[lastIndex], smooth: smooth[lastIndex], rank: ranks[lastIndex], rocRank: rocRanks[lastIndex] } : null };
     }
 
     function displayRocModel(price, input = {}, now = new Date(), market = 'cn') {

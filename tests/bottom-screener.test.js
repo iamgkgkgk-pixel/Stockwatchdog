@@ -166,14 +166,17 @@ test('raw HSTECH, energy storage and software show exactly the detail-engine dai
 
 test('ROC has its own 13/18/144 sample boundaries and need not wait for 252 price samples', () => {
     const { B, E, V } = env();
-    for (const count of [12, 13, 17, 18, 143, 144, 251, 252]) {
+    for (const count of [12, 13, 17, 18, 138, 139, 143, 144, 251, 252]) {
         const r = record(Array.from({ length: count }, (_, i) => 100 + Math.sin(i / 4) * 5 + i / 50));
         const c = B.analyze(r, votes, NOW), model = E.rocModel(r.priceResult.price.bars, E.DEFAULTS, NOW, 'cn');
         assert.equal(c.rocValue, count < 13 ? null : model.last.roc);
         assert.equal(c.rocSmooth, count < 18 ? null : model.last.smooth);
         assert.equal(c.rank, count < 144 ? null : model.last.rank);
+        assert.equal(c.rocRank, count < 139 ? null : model.last.rocRank);
+        if (count < 139) assert.match(V.metricPresentation(c, 'rocRank').notes[0], /ROC12样本不足/);
+        else assert.notEqual(V.metricPresentation(c, 'rocRank').value, '—');
         if (count < 252) { assert.equal(c.eligible, false); assert.equal(c.position, null); assert.match(V.metricPresentation(c, 'position').notes[0], /价格样本不足/); }
-        if (count < 144) assert.match(V.metricPresentation(c, 'rank').notes[0], /ROC样本不足/);
+        if (count < 144) assert.match(V.metricPresentation(c, 'rank').notes[0], /ROC均线样本不足/);
         else assert.notEqual(V.metricPresentation(c, 'rank').value, '—');
     }
 });

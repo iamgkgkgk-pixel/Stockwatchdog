@@ -72,7 +72,9 @@ function fixture(env, id = 'csi300') {
             bars: [{ date: '2026-09-18', close: 4 }], asOf: '2026-09-18' }, mode: 'fixture' } };
 }
 function mockRoc(env, value = -5, lower = -4, upper = 4, rank = 10) {
-    env.E.rocModel = () => ({ fresh: true, last: { date: '2026-09-18', smooth: value, rank }, lowerBand: [lower], upperBand: [upper], minimum: 126 });
+    env.E.rocModel = (rows, options) => ({ options: env.E.settings(options), fresh: true,
+        last: { date: '2026-09-18', smooth: value, rank, rocRank: rank === null ? null : 100 - rank },
+        lowerBand: [lower], upperBand: [upper], minimum: 126 });
 }
 
 test('ROC gates use the real percentile, including 20 and 80 boundaries without rounding', () => {

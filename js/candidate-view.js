@@ -10,7 +10,7 @@ const CandidateView = (() => {
     };
     function metricPresentation(candidate, key) {
         const available = Number.isFinite(candidate[key]);
-        const reason = key === 'rank' ? candidate.rocMissing : key === 'position' ? candidate.positionMissing : candidate.priceMissing;
+        const reason = key === 'rocRank' ? candidate.rocRankMissing : key === 'rank' ? candidate.rocMissing : key === 'position' ? candidate.positionMissing : candidate.priceMissing;
         const notes = [];
         if (!available) notes.push(reason || candidate.reason || '等待数据');
         if (candidate.asOf) {
@@ -19,7 +19,8 @@ const CandidateView = (() => {
             if (candidate.stale) notes.push('已过期 · 历史参考');
             if (candidate.fallback) notes.push('失败回退');
         }
-        return { value: format(candidate[key]), notes, title: [key === 'rank' ? '日线ROC(12)、MA(6)，与详情相同参数时同口径；独立于252日价格窗口' : '最近252个交易日收盘价格窗口',
+        return { value: format(candidate[key]), notes, title: [key === 'rocRank' ? '日线ROC(12)原值在此前最多252期ROC原值中的分位；至少126个样本；对应图中蓝线；仅展示，不改筛选'
+            : key === 'rank' ? '日线ROC(12)的MA(6)在此前最多252期均线值中的分位；至少126个样本；对应图中金线；原筛选口径不变' : '最近252个交易日收盘价格窗口',
             candidate.asOf ? `观测日 ${candidate.asOf}` : '', ...notes].filter(Boolean).join('；') };
     }
     function updateSignalBadge(badge, summary) {
@@ -49,7 +50,7 @@ const CandidateView = (() => {
         for (const [key, title] of [['priority', '优先研究'], ['observe', '先观察，等更多迹象'],
             ['verify', '有线索，先核验数据'], ['none', '其他板块 / 数据待处理']]) {
             const row = node('tr', 'candidate-section-row'), heading = node('th');
-            heading.colSpan = 8; heading.textContent = title;
+            heading.colSpan = 9; heading.textContent = title;
             row.dataset.watchSection = key; row.appendChild(heading); rowSections.set(key, row);
         }
         try { const saved = JSON.parse(localStorage.getItem(key) || '[]'); if (Array.isArray(saved)) favorites = saved.filter(id => typeof id === 'string'); } catch (_) {}
@@ -79,13 +80,14 @@ const CandidateView = (() => {
             nameLine.append(link, composite);
             nameCell.append(nameLine, meta, favorite); row.appendChild(nameCell);
             const cells = {};
-            for (const name of ['position', 'drawdown', 'rank', 'valuation', 'state', 'date']) { cells[name] = node('td'); row.appendChild(cells[name]); }
+            for (const name of ['position', 'drawdown', 'rocRank', 'rank', 'valuation', 'state', 'date']) { cells[name] = node('td'); row.appendChild(cells[name]); }
+            cells.rocRank.className = 'roc-rank-cell'; cells.rank.className = 'roc-rank-cell smooth-rank';
             const actions = node('td'), expand = node('button', 'expand-evidence', '依据'); expand.type = 'button';
             expand.setAttribute('aria-expanded', 'false'); expand.setAttribute('aria-controls', detail.id);
             expand.setAttribute('aria-label', '查看' + asset.shortName + '筛选依据');
             expand.addEventListener('click', () => { detail.hidden = !detail.hidden; expand.setAttribute('aria-expanded', String(!detail.hidden)); });
             actions.appendChild(expand); row.appendChild(actions);
-            const body = node('td'); body.colSpan = 8;
+            const body = node('td'); body.colSpan = 9;
             const reason = node('p', 'candidate-reason'), info = node('p', 'candidate-meta'), risk = node('p', 'candidate-meta');
             const footer = node('div', 'candidate-detail-actions'), chart = node('a', 'candidate-chart-link', '价格 / ROC / 估值详情 ↗'); chart.href = asset.detail;
             const retry = node('button', '', '重试此标的'); retry.type = 'button'; retry.addEventListener('click', () => onRetry(asset.id));
@@ -105,7 +107,7 @@ const CandidateView = (() => {
                 const bar = node('span', 'position-track'), fill = node('span'); fill.style.width = `${Math.max(0, Math.min(100, c.position))}%`;
                 bar.appendChild(fill); r.cells.position.appendChild(bar);
             }
-            for (const key of ['position', 'drawdown', 'rank']) {
+            for (const key of ['position', 'drawdown', 'rocRank', 'rank']) {
                 const display = metricPresentation(c, key), cell = r.cells[key];
                 if (key !== 'position') cell.replaceChildren(node('strong', 'numeric', display.value));
                 cell.title = display.title;
@@ -113,10 +115,13 @@ const CandidateView = (() => {
             }
             const latest = model.dailyDisplay;
             if (latest?.provisional) {
-                r.cells.rank.replaceChildren(node('strong', 'numeric', format(latest.last?.rank)),
-                    node('small', 'metric-note', latest.raw ? '暂估 · 未复权参考' : '暂估 · 未确认'),
-                    node('small', 'metric-note', `确认 ${format(c.rank)} / ${c.asOf || '—'}`));
-                r.cells.rank.title = latest.note;
+                for (const key of ['rocRank', 'rank']) {
+                    r.cells[key].replaceChildren(node('strong', 'numeric', format(latest.last?.[key])),
+                        node('small', 'metric-note', latest.raw ? '暂估 · 未复权参考' : '暂估 · 未确认'),
+                        node('small', 'metric-note', `确认 ${format(c[key])} / ${c.asOf || '—'}`));
+                    if (!Number.isFinite(latest.last?.[key])) r.cells[key].appendChild(node('small', 'metric-note', '历史样本不足'));
+                    r.cells[key].title = `${metricPresentation(c, key).title}；${latest.note}`;
+                }
             }
             if ((c.correction?.eligible || c.correction?.referenceEligible) && !c.lowZone)
                 r.cells.position.appendChild(node('small', 'price-context', Number.isFinite(c.position) ? '并非年度低位' : '年度位置未知'));
@@ -136,12 +141,12 @@ const CandidateView = (() => {
             r.reason.appendChild(node('small', 'screening-check', BottomScreener.explain(c)));
             r.reason.appendChild(node('small', 'screening-check', model.composite?.detail || '综合信号尚未返回'));
             r.info.textContent = `价格口径：${c.adjustment === 'qfq' ? '前复权收盘' : c.adjustment === 'raw' ? '未复权收盘（仅参考）' : c.adjustment || '待返回'}；窗口 ${c.from || '—'} 至 ${c.asOf || '—'}，${c.samples || 0}/252个样本；来源 ${c.source || '—'}。`
-                + ` 日线ROC(12) ${format(c.rocValue)}，MA(6) ${format(c.rocSmooth)}，分位 ${format(c.rank)}；此前有效平滑ROC样本 ${c.rocSamples || 0}个（至少需${c.rocMinimum || 126}个）。`
+                + ` 日线ROC(12) ${format(c.rocValue)}，MA(6) ${format(c.rocSmooth)}；ROC12分位 ${format(c.rocRank)}，均线分位 ${format(c.rank)}；此前有效原值 / 平滑样本 ${c.rocRankSamples || 0} / ${c.rocSamples || 0}个（各至少需${c.rocMinimum || 126}个）。`
                 + (c.entryDate ? ` 最近低位改善确认日 ${c.entryDate}${c.rebound !== null ? '，自该日收盘变化 ' + format(c.rebound) : ''}；不回溯到最低点计算收益。` : '')
                 + (c.risk?.entryDate ? ` 最近高位转弱确认日 ${c.risk.entryDate}${c.risk.change !== null ? '，自该日收盘变化 ' + format(c.risk.change) : ''}；不回溯到最高点计算收益。` : '')
                 + (Number.isFinite(c.correction?.recentDrawdown) ? ` 近20个交易日最高收盘至今回撤 ${format(c.correction.recentDrawdown)}，与表格年度回撤不同，不设统一跌幅门槛。` : '')
                 + (c.correction?.entryDate ? ` 回调触发日 ${c.correction.seedDate}，改善确认日 ${c.correction.entryDate}，自确认日变化 ${format(c.correction.change)}。` : '');
-            if (latest) r.info.textContent += ` 最新展示：${latest.note}；ROC ${format(latest.last?.roc)}，MA ${format(latest.last?.smooth)}，分位 ${format(latest.last?.rank)}。候选、年度位置和回撤均按确认日线，不由暂估值触发。`;
+            if (latest) r.info.textContent += ` 最新展示：${latest.note}；ROC ${format(latest.last?.roc)}，MA ${format(latest.last?.smooth)}，ROC12分位 ${format(latest.last?.rocRank)}，均线分位 ${format(latest.last?.rank)}。候选、年度位置和回撤均按确认日线，不由暂估值触发；原值分位仅作对照。`;
             r.risk.textContent = `${asset.priceOnly ? asset.description : '估值标签仅比较可核验的自身历史，不跨行业比较绝对PE；PE均下不等于已确认底部。'} ${model.action || ''}。${model.loading ? '其他数据仍在返回，价格候选先展示。' : ''}`;
             r.retry.disabled = !canRetry(asset.id);
             favoriteState(asset, r.favorite);
@@ -221,8 +226,10 @@ const CandidateView = (() => {
                         node('span', '', `年度位置 ${format(c.position)} · 年度回撤 ${format(c.drawdown)}`),
                         node('span', '', `${c.asOf || '—'} · ${c.adjustment === 'raw' ? '未复权参考' : '前复权'}${c.fallback ? ' · 失败回退' : ''}`),
                         node('span', 'pick-gate', `${c.gate || 'ROC约束待判定'}${model.evidence?.roc?.reference ? ' · 参考' : ''}`));
-                    if (model.dailyDisplay?.provisional) button.appendChild(node('span', 'metric-note',
-                        `暂估ROC ${format(model.dailyDisplay.last?.rank)} / ${model.dailyDisplay.last?.date}；上方按确认值筛选`));
+                    const latest = model.dailyDisplay, ranks = latest?.provisional ? latest.last : c;
+                    button.appendChild(node('span', 'metric-note',
+                        `ROC12分位 ${format(ranks?.rocRank)} · 均线分位 ${format(ranks?.rank)}`
+                        + (latest?.provisional ? ` · 暂估${latest.raw ? ' / 未复权参考' : ' / 未确认'} ${latest.last?.date}；按确认值筛选` : '')));
                     button.addEventListener('click', () => {
                         const r = rows.get(asset.id); r.detail.hidden = false; r.expand.setAttribute('aria-expanded', 'true');
                         r.row.scrollIntoView({ block: 'center', behavior: 'smooth' }); r.expand.focus({ preventScroll: true });

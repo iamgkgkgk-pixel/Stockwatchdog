@@ -1,6 +1,6 @@
 {
   "description": "红利低波ETF择时历史数据模板",
-  "lastUpdate": "2026-09-22",
+  "lastUpdate": "2026-09-25",
   "spreadHistory": [
     {
       "date": "2021-01",
@@ -1007,6 +1007,33 @@
       "quality": "observed",
       "instrumentId": "CSIH30269",
       "percentile": 77.36
+    },
+    {
+      "date": "2026-09-22",
+      "value": 8.45,
+      "asOf": "2026-09-22",
+      "source": "蛋卷基金-红利低波",
+      "quality": "observed",
+      "instrumentId": "CSIH30269",
+      "percentile": 77.6
+    },
+    {
+      "date": "2026-09-23",
+      "value": 8.39,
+      "asOf": "2026-09-23",
+      "source": "蛋卷基金-红利低波",
+      "quality": "observed",
+      "instrumentId": "CSIH30269",
+      "percentile": 75.96
+    },
+    {
+      "date": "2026-09-24",
+      "value": 8.45,
+      "asOf": "2026-09-24",
+      "source": "蛋卷基金-红利低波",
+      "quality": "observed",
+      "instrumentId": "CSIH30269",
+      "percentile": 77.68
     }
   ],
   "dividendYieldHistory": [
@@ -1417,6 +1444,30 @@
       "source": "蛋卷基金-红利低波",
       "quality": "observed",
       "instrumentId": "CSIH30269"
+    },
+    {
+      "date": "2026-09-22",
+      "value": 4.4,
+      "asOf": "2026-09-22",
+      "source": "蛋卷基金-红利低波",
+      "quality": "observed",
+      "instrumentId": "CSIH30269"
+    },
+    {
+      "date": "2026-09-23",
+      "value": 4.42,
+      "asOf": "2026-09-23",
+      "source": "蛋卷基金-红利低波",
+      "quality": "observed",
+      "instrumentId": "CSIH30269"
+    },
+    {
+      "date": "2026-09-24",
+      "value": 4.45,
+      "asOf": "2026-09-24",
+      "source": "蛋卷基金-红利低波",
+      "quality": "observed",
+      "instrumentId": "CSIH30269"
     }
   ],
   "bondYieldHistory": [
@@ -1710,45 +1761,45 @@
     }
   ],
   "currentData": {
-    "dividendYield": 4.41,
+    "dividendYield": 4.45,
     "bondYield": 1.73,
     "spread": 3.19,
     "spreadPercentile": 45.2,
-    "pe": 8.44,
-    "pePercentile": 77.36,
+    "pe": 8.45,
+    "pePercentile": 77.68,
     "pb": 0.87,
-    "pbPercentile": 61.4,
+    "pbPercentile": 61.8,
     "price": 0,
     "priceChange": 0,
-    "updateTime": "2026-09-21",
+    "updateTime": "2026-09-24",
     "note": "红利低波指数(CSIH30269)估值数据，来源:蛋卷基金",
     "fieldMeta": {
       "pe": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-红利低波",
         "quality": "observed",
         "instrumentId": "CSIH30269"
       },
       "pb": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-红利低波",
         "quality": "observed",
         "instrumentId": "CSIH30269"
       },
       "pePercentile": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-红利低波",
         "quality": "observed",
         "instrumentId": "CSIH30269"
       },
       "pbPercentile": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-红利低波",
         "quality": "observed",
         "instrumentId": "CSIH30269"
       },
       "dividendYield": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-红利低波",
         "quality": "observed",
         "instrumentId": "CSIH30269"
@@ -1764,13 +1815,13 @@
         "source": "旧版快照（来源待核验）"
       },
       "roe": {
-        "asOf": "2026-09-21",
+        "asOf": "2026-09-24",
         "source": "蛋卷基金-红利低波",
         "quality": "observed",
         "instrumentId": "CSIH30269"
       }
     },
-    "valuationAsOf": "2026-09-21",
+    "valuationAsOf": "2026-09-24",
     "valuationSource": "蛋卷基金-红利低波",
     "roe": 10.26
   },

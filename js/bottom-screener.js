@@ -83,17 +83,19 @@ const BottomScreener = (() => {
         const cut = Number.isFinite(captured.getTime()) && captured < now ? captured : now;
         const bars = E.completedBars(price.bars, cut, market), last = bars.at(-1);
         const roc = bars.length > E.DEFAULTS.length ? E.rocModel(bars, E.DEFAULTS, cut, market) : null;
-        const rank = E.number(roc?.last?.rank), rocMinimum = 126;
+        const rank = E.number(roc?.last?.rank), rocRank = E.number(roc?.last?.rocRank), rocMinimum = 126;
         const rocSamples = (roc?.smooth || []).slice(0, -1).slice(-252).filter(value => E.number(value) !== null).length;
-        const rocMissing = !last ? '无完整收盘记录' : rank === null ? `ROC样本不足 ${rocSamples}/${rocMinimum}` : '';
+        const rocRankSamples = (roc?.roc || []).slice(0, -1).slice(-252).filter(value => E.number(value) !== null).length;
+        const rocMissing = !last ? '无完整收盘记录' : rank === null ? `ROC均线样本不足 ${rocSamples}/${rocMinimum}` : '';
+        const rocRankMissing = !last ? '无完整收盘记录' : rocRank === null ? `ROC12样本不足 ${rocRankSamples}/${rocMinimum}` : '';
         const metrics = windowMetrics(bars, bars.length - 1);
         const priceMissing = !last ? '无完整收盘记录' : bars.length < POLICY.window ? `价格样本不足 ${bars.length}/${POLICY.window}`
             : !metrics ? '价格窗口跨度超过400天' : '';
         const stale = !!last && E.age(last.date, E.clock(now, market).today) > POLICY.maxAge;
         const base = { bars, asOf: last?.date || null, source: price.source || '来源未标注', adjustment: price.adjustment,
             position: null, drawdown: null, samples: Math.min(bars.length, POLICY.window), ...metrics,
-            rank, rocValue: E.number(roc?.last?.roc), rocSmooth: E.number(roc?.last?.smooth),
-            rocSamples, rocMinimum, rocMissing, priceMissing, stale,
+            rank, rocRank, rocValue: E.number(roc?.last?.roc), rocSmooth: E.number(roc?.last?.smooth),
+            rocSamples, rocRankSamples, rocMinimum, rocMissing, rocRankMissing, priceMissing, stale,
             correction: correctionModel(bars, roc, price.adjustment, stale),
             positionMissing: priceMissing || (metrics?.position === null ? '区间价格无变化' : '') };
         if (!last) return { ...base, state: 'pending', reason: '没有可用的完整收盘记录' };
@@ -137,7 +139,7 @@ const BottomScreener = (() => {
             referenceEligible: false, watchLevel: 'none',
             risk: { state: 'pending', eligible: false, referenceEligible: false, label: '风险数据待处理', reason },
             correction: { state: 'pending', eligible: false, referenceEligible: false, triggered: false, reason },
-            valuationSupport: false, position: null, drawdown: null, rank: null, asOf: null });
+            valuationSupport: false, position: null, drawdown: null, rank: null, rocRank: null, asOf: null });
         if (record.asset.id === 'vix-dashboard' || record.asset.id === 'tencent-hk' || ['gold', 'commodity', 'bond'].includes(record.asset.type))
             return empty('excluded', '此视图筛选股票ETF；非股票资产与个股保留在原三档总览');
         if (['queued', 'loading'].includes(record.parts.price)) return empty('pending', '正在请求最新完整价格，暂不展示旧候选');

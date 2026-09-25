@@ -39,12 +39,12 @@ const PriceRocChart = (() => {
                 formatter(params) {
                     if (!Array.isArray(params)) {
                         const event = params.data?.event;
-                        return event ? `${escape(params.name)}<br>发生 ${escape(event.pivotDate)}<br>确认 ${escape(event.confirmedAt)}<br>均线 ${signed(event.value)} · 当时分位 ${rank(event.rank)}` : '';
+                        return event ? `${escape(params.name)}<br>发生 ${escape(event.pivotDate)}<br>确认 ${escape(event.confirmedAt)}<br>均线 ${signed(event.value)} · 当时均线分位 ${rank(event.rank)}` : '';
                     }
                     const i = params[0]?.dataIndex;
                     if (i === undefined || !model.bars[i]) return '';
                     const event = model.events.find(item => item.confirmIndex === i && item.extreme);
-                    return `${escape(dates[i])}${model.provisional && i === dates.length - 1 ? '<br>暂估 · 未确认<br>' + escape(model.timeLabel || '') : ''}<br>${escape(priceLabel)} ${format(model.bars[i].close, 3)}<br>ROC(${options.length}) ${signed(model.roc[i])}<br>ROC均线 ${signed(model.smooth[i])}<br>当时动量分位 ${rank(model.ranks[i])}${event ? '<br>' + (event.type === 'trough' ? '谷' : '峰') + '确认；发生于 ' + escape(event.pivotDate) : ''}`;
+                    return `${escape(dates[i])}${model.provisional && i === dates.length - 1 ? '<br>暂估 · 未确认<br>' + escape(model.timeLabel || '') : ''}<br>${escape(priceLabel)} ${format(model.bars[i].close, 3)}<br>ROC(${options.length}) ${signed(model.roc[i])}<br>ROC均线 MA(${options.smoothing}) ${signed(model.smooth[i])}<br>ROC(${options.length})分位 ${rank(model.rocRanks?.[i])}<br>均线分位 MA(${options.smoothing}) ${rank(model.ranks[i])}${event ? '<br>' + (event.type === 'trough' ? '谷' : '峰') + '确认；发生于 ' + escape(event.pivotDate) : ''}`;
                 } },
             xAxis: [{ ...axis, gridIndex: 0, axisLabel: { show: false } }, { ...axis, gridIndex: 1 }],
             yAxis: [{ type: 'value', scale: true, gridIndex: 0, splitNumber: 4, axisLabel: { color: '#8da3aa', fontSize: 10 }, splitLine: { lineStyle: { color: '#25363e' } } },

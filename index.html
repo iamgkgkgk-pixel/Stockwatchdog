@@ -180,11 +180,11 @@
                 <div class="price-roc-readout"><span id="legacy-roc-price">价格 —</span><span id="legacy-roc-value">ROC —</span><span id="legacy-roc-rank">动量分位 —</span></div>
                 <div id="legacy-roc-chart" role="img" aria-label="价格与ROC联动双图，峰谷标在确认日"></div>
                 <p id="legacy-roc-empty" class="price-roc-empty" hidden>正在读取真实价格数据…</p>
-                <div class="price-roc-footer"><span><i class="price-roc-line price-roc-raw"></i>ROC <i class="price-roc-line price-roc-average"></i>ROC均线 <i class="price-roc-line price-roc-band"></i>历史20% / 80%线</span><span id="legacy-roc-source"></span></div>
+                <div class="price-roc-footer"><span><i class="price-roc-line price-roc-raw"></i>ROC <i class="price-roc-line price-roc-average"></i>ROC均线 <i class="price-roc-line price-roc-band"></i>均线历史20% / 80%阈值</span><span id="legacy-roc-source"></span></div>
                 <p id="legacy-roc-status" class="price-roc-status" role="status" aria-live="polite"></p>
                 <details class="price-roc-settings"><summary>ROC参数与最近峰谷确认</summary>
                     <form id="legacy-roc-form"><label>ROC周期 N<input id="legacy-roc-length" type="number" min="2" max="120" step="1" value="12" required></label><label>均线周期 M<input id="legacy-roc-smoothing" type="number" min="1" max="30" step="1" value="6" required></label><label>右侧确认期数<input id="legacy-roc-confirmation" type="number" min="1" max="5" step="1" value="2" required></label><button type="submit">应用参数</button></form>
-                    <p>手动更新优先获取最新行情；当天日线或本周尚未完成时展示暂估价格与ROC，明确标注未确认。优先使用前复权，指数不复权；未复权备用序列整段独立展示并暂停峰谷确认。峰谷只按完整交易日或完整周确认；不改变原工具评分或仓位建议。</p>
+                    <p>蓝线为ROC原值、金线为ROC均线；两个分位分别比较各自此前历史，排除当前值，并列计半票。日线回看最多252期、至少126个样本；周线104期、至少52个。虚线和峰谷判断仍基于均线，不是原值分位阈值；高分位不等于价格见顶。手动更新优先获取最新行情；当天日线或本周尚未完成时展示暂估价格与ROC，明确标注未确认。优先使用前复权，指数不复权；未复权备用序列整段独立展示并暂停峰谷确认。峰谷只按完整交易日或完整周确认；不改变原工具评分或仓位建议。</p>
                     <div class="price-roc-table"><table><thead><tr><th>形态</th><th>发生 → 确认</th><th>ROC均线</th><th>当时分位</th></tr></thead><tbody id="legacy-roc-turns"><tr><td colspan="4">等待读取</td></tr></tbody></table></div>
                 </details>
             </div>
@@ -399,11 +399,11 @@
     <script src="js/api.js?v=20260921a"></script>
     <script src="js/charts.js?v=20260915a"></script>
     <script src="js/attack-pyramid.js?v=20260915a"></script>
-    <script src="js/gpt-strategy-engine.js?v=20260922a"></script>
-    <script src="js/gpt-strategy-data.js?v=20260922a"></script>
-    <script src="js/price-roc-chart.js?v=20260922a"></script>
+    <script src="js/gpt-strategy-engine.js?v=20260923a"></script>
+    <script src="js/gpt-strategy-data.js?v=20260923a"></script>
+    <script src="js/price-roc-chart.js?v=20260923a"></script>
     <script src="js/strategy-navigation.js?v=20260915d"></script>
-    <script src="js/legacy-price-roc.js?v=20260922a"></script>
+    <script src="js/legacy-price-roc.js?v=20260923a"></script>
     <script src="js/main.js?v=20260921c"></script>
 </body>
 </html>

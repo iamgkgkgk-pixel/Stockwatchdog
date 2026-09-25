@@ -83,12 +83,15 @@
             row.date.textContent = item?.asOf || '—';
             row.row.title = item?.detail || '尚无有效数据';
         }
-        if (model.display?.provisional) {
+        if (model.display?.last) {
             const row = card.rows.roc, latest = model.display;
-            row.label.textContent = `${Number.isFinite(latest.last?.rank) ? latest.last.rank.toFixed(1) + '%' : '样本不足'} · 暂估${latest.raw ? ' · 未复权' : ''}`;
+            const rankText = value => Number.isFinite(value) ? value.toFixed(1) + '%' : '样本不足';
+            row.label.textContent = `ROC(${options.length})分位 ${rankText(latest.last.rocRank)} · 均线分位 MA(${options.smoothing}) ${rankText(latest.last.rank)}`
+                + (latest.provisional ? ' · 暂估 / 未确认' : '')
+                + (latest.raw ? ' · 未复权参考' : '') + (!latest.fresh ? ' · 历史参考' : '');
             row.label.className = 'vote-unknown';
-            row.date.textContent = latest.last?.date || '—';
-            row.row.title = `${latest.note}；确认分位 ${model.evidence.roc?.rank ?? '未知'}%`;
+            row.date.textContent = latest.last.date;
+            row.row.title = `${latest.note}；约束仍按确认均线分位 ${rankText(model.evidence.roc?.rank)}；ROC原值分位仅对照`;
         }
         card.action.textContent = (model.display?.provisional ? `确认值（${model.evidence.roc?.asOf || '无'}）：` : '') + (model.action || '等待ROC，暂不判断买卖节奏');
         card.action.dataset.gate = model.buyBlocked === true ? 'no-buy' : model.sellBlocked === true ? 'no-sell'

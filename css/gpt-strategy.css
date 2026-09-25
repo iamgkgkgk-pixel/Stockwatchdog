@@ -81,7 +81,7 @@ h3 { font-size: 17px; font-weight: 600; }
 .ranges { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .ranges button { border: 0; border-radius: 0; padding: 8px 11px; color: var(--muted); }
 .ranges button[aria-pressed="true"] { background: #334248; color: var(--ink); }
-.chart-readout { display: flex; gap: 26px; color: var(--muted); font-size: 12px; margin-top: 17px; min-height: 24px; font-variant-numeric: tabular-nums; }
+.chart-readout { display: flex; flex-wrap: wrap; gap: 8px 26px; color: var(--muted); font-size: 12px; margin-top: 17px; min-height: 24px; font-variant-numeric: tabular-nums; }
 #strategy-chart { height: 475px; width: 100%; margin-top: 7px; }
 .chart-footer { display: flex; justify-content: space-between; gap: 14px; font-size: 10px; color: var(--dim); }
 .legend-line { width: 18px; border-top: 2px solid; display: inline-block; margin: 0 5px 3px 12px; }

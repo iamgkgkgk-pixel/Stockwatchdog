@@ -179,7 +179,7 @@
         text('price-readout', quote ? `最新报价 ${fmt(quote.close, 3)} / ${quote.timeLabel}；ROC用价 ${fmt(model.last?.close, 3)}`
             : `${model.provisional ? '最新价 · 暂估' : raw ? '未复权收盘' : '前复权收盘'} ${fmt(model.last?.close, 3)}${model.last ? ' / ' + model.last.date : ''}`);
         text('roc-readout', `ROC(${options.length}) ${signed(model.last?.roc)} · MA(${options.smoothing}) ${signed(model.last?.smooth)}${model.provisional ? ' · 暂估' : ''}`);
-        text('rank-readout', `动量分位 ${pct(model.last?.rank)}${model.provisional ? ' · 未确认' : ''}`);
+        text('rank-readout', `ROC(${options.length})分位 ${pct(model.last?.rocRank)} · 均线分位 MA(${options.smoothing}) ${pct(model.last?.rank)}${model.provisional ? ' · 暂估 / 未确认' : ''}`);
         text('price-source', data.price ? `${data.mode} · ${model.source} · ${model.note}${raw ? '。整段使用未复权日线，ROC可能受分红除权影响，暂停峰谷及波段交易提示。' : ''}` : '没有真实价格，不生成模拟行情');
         if (!available) { chart?.clear(); return; }
         if (typeof echarts === 'undefined') {

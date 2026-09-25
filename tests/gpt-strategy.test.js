@@ -94,6 +94,7 @@ test('appending future data cannot rewrite previous ROC, bands or confirmation e
         assert.deepEqual(prefix.roc, full.roc.slice(0, length));
         assert.deepEqual(prefix.smooth, full.smooth.slice(0, length));
         assert.deepEqual(prefix.ranks, full.ranks.slice(0, length));
+        assert.deepEqual(prefix.rocRanks, full.rocRanks.slice(0, length));
         assert.deepEqual(prefix.lowerBand, full.lowerBand.slice(0, length));
         assert.deepEqual(prefix.events, full.events.filter(e => e.confirmIndex < length));
     }
@@ -110,10 +111,25 @@ test('pivot is only released at confirmation date, not at the earlier extremum',
     }
 });
 
-test('historical percentile excludes the current observation', () => {
-    const model = E.rocModel(daily(300), {}, NOW);
-    const i = 200;
-    approximate(model.ranks[i], E.percentile(model.smooth[i], model.smooth.slice(0, i).filter(v => v !== null), 126));
+test('both percentiles use their own past series, exclude current value and respect rolling windows', () => {
+    const model = E.rocModel(daily(500), {}, NOW);
+    const independent = E.rocModel(daily(500), { smoothing: 1 }, NOW);
+    assert.deepEqual(model.rocRanks, independent.ranks);
+    assert.ok(model.rocRanks.some((rank, i) => rank !== null && model.ranks[i] !== null && Math.abs(rank - model.ranks[i]) > 5));
+    for (const i of [138, 143, 200, 499]) {
+        const start = Math.max(0, i - 252);
+        assert.equal(model.rocRanks[i], E.percentile(model.roc[i], model.roc.slice(start, i), 126));
+        assert.equal(model.ranks[i], E.percentile(model.smooth[i], model.smooth.slice(start, i), 126));
+    }
+    assert.equal(model.last.rocRank, model.rocRanks.at(-1));
+    assert.equal(model.rocRanks[137], null);
+    assert.notEqual(model.rocRanks[138], null);
+    assert.equal(model.ranks[142], null);
+    assert.notEqual(model.ranks[143], null);
+    assert.equal(E.rocModel(daily(400, () => 100), {}, NOW).last.rocRank, 50);
+    const weekly = E.rocModel(daily(500), { timeframe: 'week' }, NOW);
+    assert.equal(weekly.lookback, 104); assert.equal(weekly.minimum, 52);
+    assert.equal(weekly.last.rocRank, E.percentile(weekly.last.roc, weekly.roc.slice(0, -1).slice(-104), 52));
 });
 
 test('a constant forward adjustment factor leaves ROC unchanged', () => {

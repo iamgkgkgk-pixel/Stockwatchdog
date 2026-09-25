@@ -77,9 +77,9 @@ const OverviewModel = (() => {
         const vote = rank <= 20 ? -1 : rank >= 80 ? 1 : 0;
         const raw = price.adjustment === 'raw';
         return { title: 'ROC', state: record.parts.price, vote, reference: raw || record.parts.price !== 'ready', asOf: last.date,
-            label: `${number(rank, 1)}%分位 · ${vote < 0 ? '不卖' : vote > 0 ? '不买' : '区间内'}`,
-            detail: `ROC历史分位 ${number(rank, 2)}%（按未四舍五入值判定） · 均线 ${number(last.smooth)}% · 下沿 ${number(lower)}% / 上沿 ${number(upper)}%${raw ? ' · 未复权参考，需核对除权影响' : ''}`,
-            value: last.smooth, lower, upper, rank, raw };
+            label: `均线分位 ${number(rank, 1)}% · ${vote < 0 ? '不卖' : vote > 0 ? '不买' : '区间内'}`,
+            detail: `ROC均线历史分位 ${number(rank, 2)}%（按未四舍五入值判定） · ROC(${model.options.length})分位 ${number(last.rocRank, 1)}%（仅对照） · 均线 ${number(last.smooth)}% · 下沿 ${number(lower)}% / 上沿 ${number(upper)}%${raw ? ' · 未复权参考，需核对除权影响' : ''}`,
+            value: last.smooth, lower, upper, rank, rocRank: Q.number(last.rocRank), raw };
     }
 
     function signalEvidence(record, data, analysis, now) {

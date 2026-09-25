@@ -118,6 +118,12 @@ test('shared chart preserves linked axes, raw ROC and confirmed-day markers', ()
     assert.equal(option.dataZoom[0].filterMode, 'filter');
     assert.deepEqual(option.series[1].data, model.roc);
     assert.deepEqual(option.series[2].data, model.smooth);
+    assert.deepEqual(option.series[3].data, model.lowerBand);
+    assert.deepEqual(option.series[4].data, model.upperBand);
+    const i = 250, tooltip = option.tooltip.formatter([{ dataIndex: i }]);
+    assert.ok(tooltip.includes(`ROC(12)分位 ${model.rocRanks[i].toFixed(1)}%`));
+    assert.ok(tooltip.includes(`均线分位 MA(6) ${model.ranks[i].toFixed(1)}%`));
+    assert.match(option.tooltip.formatter([{ dataIndex: 0 }]), /ROC\(12\)分位 样本不足/);
     for (const marker of option.series[0].markPoint.data) {
         assert.equal(marker.coord[0], marker.event.confirmedAt);
         assert.notEqual(marker.coord[0], marker.event.pivotDate);
